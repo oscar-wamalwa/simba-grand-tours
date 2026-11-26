@@ -5,10 +5,9 @@ const homeBg = '/images/background.jpg';
 
 function HomeSection({ safaris, testimonials, onSelect, onShowReviewForm }) {
   const signatureSafaris = safaris.filter(s => s.isSignature === true);
-  const featuredSafaris = safaris.filter(s => s.is_featured || s.isFeatured);
-  const displaySafaris = featuredSafaris.length > 0
-    ? featuredSafaris.slice(0, 3)
-    : signatureSafaris.length > 0 ? signatureSafaris.slice(0, 3) : safaris.slice(0, 3);
+  const displaySafaris = signatureSafaris.length > 0
+    ? signatureSafaris.slice(0, 3)
+    : safaris.slice(0, 3);
   const displayTestimonials = testimonials && testimonials.length > 0 ? testimonials : [];
 
   return (

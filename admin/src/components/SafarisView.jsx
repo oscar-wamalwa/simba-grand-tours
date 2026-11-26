@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Image, Download, Star, Upload, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 import { formatKes } from '../currency';
 
 const normalizeSafari = (safari) => ({
@@ -37,7 +37,6 @@ export default function SafarisView({ onRefresh }) {
     packing_checklist: [],
     visible: true, 
     isSignature: false,
-    is_featured: false,
   });
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -131,7 +130,7 @@ export default function SafarisView({ onRefresh }) {
       
       setShowModal(false);
       setEditing(null);
-      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false });
+      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false });
       fetchSafaris();
       onRefresh && onRefresh();
     } catch (error) { 
@@ -204,7 +203,6 @@ export default function SafarisView({ onRefresh }) {
       packing_checklist: s.packing_checklist || [],
       visible: s.visible, 
       isSignature: s.isSignature ?? s.is_signature ?? false,
-      is_featured: s.is_featured ?? false,
     });
     setImagePreviews((s.images || []).map(url => ({ url, isNew: false })));
     setShowModal(true);
@@ -216,18 +214,14 @@ export default function SafarisView({ onRefresh }) {
   );
 
   const downloadCSV = () => {
-    const headers = ['Title', 'Location', 'Full Amount (KES)', 'Booking Fee (KES)', 'Booking Terms / Notes', 'Duration', 'Difficulty', 'Status', 'Signature', 'Featured', 'Created At'];
+    const headers = ['Title', 'Location', 'Duration', 'Difficulty', 'Status', 'Signature', 'Created At'];
     const rows = filtered.map(safari => [
       safari.title || '',
       safari.location || '',
-      safari.price || '',
-      safari.booking_fee_kes ?? '',
-      safari.booking_terms || '',
       safari.duration || '',
       safari.difficulty || '',
       safari.visible !== false ? 'Active' : 'Hidden',
       safari.isSignature ? 'Yes' : 'No',
-      safari.is_featured ? 'Yes' : 'No',
       safari.created_at ? new Date(safari.created_at).toLocaleDateString() : ''
     ]);
     
@@ -248,7 +242,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -258,16 +252,12 @@ export default function SafarisView({ onRefresh }) {
 
       <div className="data-table-wrapper">
         <table className="data-table">
-          <thead><tr><th>Image</th><th>Title</th><th>Location</th><th>Full Amount</th><th>Booking Fee</th><th>Booking Terms / Notes</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Title</th><th>Location</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
           <tbody>
             {filtered.map(safari => (
               <tr key={safari.id}>
-                <td>{safari.images && safari.images.length > 0 ? <img src={safari.images[0]} alt="" className="safari-thumb" /> : <div className="safari-thumb-placeholder"><Image size={20} /></div>}</td>
                 <td><p className="safari-title">{safari.title}</p></td>
                 <td><p className="safari-location">{safari.location}</p></td>
-                <td><p className="safari-price">{formatKes(safari.price)}</p></td>
-                <td><p className="safari-price">{safari.booking_fee_kes ? formatKes(safari.booking_fee_kes) : 'Not set'}</p></td>
-                <td><p className="safari-booking-terms">{safari.booking_terms || '—'}</p></td>
                 <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
                 <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
                 <td>
@@ -365,13 +355,6 @@ export default function SafarisView({ onRefresh }) {
                     Visible on website
                   </label>
                 </div>
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })} style={{ width: 'auto' }} />
-                    Feature trip on website
-                  </label>
-                </div>
-
                 {/* Image Upload Section */}
                 <div className="form-group">
                   <label>Images</label>
