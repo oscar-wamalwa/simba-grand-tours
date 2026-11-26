@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import override_settings
+from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
@@ -17,6 +17,17 @@ from .models import (
     TripDeparture,
     WaitlistEntry,
 )
+from .mpesa import _transaction_type
+
+
+class MpesaConfigurationTests(SimpleTestCase):
+    @override_settings(MPESA_ENVIRONMENT='sandbox', MPESA_TRANSACTION_TYPE='')
+    def test_sandbox_defaults_to_paybill_transaction_type(self):
+        self.assertEqual(_transaction_type(), 'CustomerPayBillOnline')
+
+    @override_settings(MPESA_ENVIRONMENT='production', MPESA_TRANSACTION_TYPE='')
+    def test_production_defaults_to_buy_goods_transaction_type_for_till(self):
+        self.assertEqual(_transaction_type(), 'CustomerBuyGoodsOnline')
 
 
 class PublicContentAccessTests(APITestCase):

@@ -11,6 +11,8 @@ The booking flow stores prices and payments as whole Kenyan shillings (KES). Bef
 
 The callback endpoint queries Daraja before confirming a successful STK payment. Test with Safaricom sandbox credentials first, and separately verify live credentials before accepting real payments.
 
+For a live Till, set `MPESA_SHORTCODE` to the Safaricom-issued Till number and `MPESA_TRANSACTION_TYPE=CustomerBuyGoodsOnline`. Sandbox PayBill transactions use `CustomerPayBillOnline`. Keep the consumer key, secret, and passkey in Railway variables; never send them in chat.
+
 The admin Sales Reports page uses the staff-only `GET /api/bookings/report/` endpoint. Optional `start_date` and `end_date` query parameters use `YYYY-MM-DD`; revenue totals include confirmed bookings only.
 
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:

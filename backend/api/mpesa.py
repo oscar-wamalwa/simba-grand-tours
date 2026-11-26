@@ -57,6 +57,14 @@ def _daraja_base_url():
     raise MpesaError('M-Pesa environment must be sandbox or production.')
 
 
+def _transaction_type():
+    configured_type = getattr(settings, 'MPESA_TRANSACTION_TYPE', '')
+    if configured_type:
+        return configured_type
+    environment = getattr(settings, 'MPESA_ENVIRONMENT', 'sandbox').lower()
+    return 'CustomerBuyGoodsOnline' if environment == 'production' else 'CustomerPayBillOnline'
+
+
 def _required_setting(name):
     value = getattr(settings, name, '')
     if not value:
@@ -92,7 +100,7 @@ def initiate_stk_push(*, booking, phone):
         'BusinessShortCode': shortcode,
         'Password': password,
         'Timestamp': timestamp,
-        'TransactionType': getattr(settings, 'MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline'),
+        'TransactionType': _transaction_type(),
         'Amount': booking.amount_kes,
         'PartyA': normalized_phone,
         'PartyB': shortcode,
