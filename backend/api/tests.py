@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
@@ -287,6 +290,91 @@ class BookingFlowTests(APITestCase):
         self.assertEqual(booking.passengers.count(), 2)
         self.assertEqual(booking.payment_phone, '254712345678')
         initiate.assert_called_once()
+
+    def test_staff_sales_report_sums_confirmed_bookings_and_filters_dates(self):
+        Booking.objects.create(
+            departure=self.departure,
+            full_name='Confirmed Guest',
+            email='confirmed@example.com',
+            phone='0711111111',
+            payment_phone='254711111111',
+            participant_count=2,
+            amount_kes=40000,
+            status=Booking.Status.CONFIRMED,
+        )
+        Booking.objects.create(
+            departure=self.departure,
+            full_name='Pending Guest',
+            email='pending@example.com',
+            phone='0722222222',
+            payment_phone='254722222222',
+            participant_count=1,
+            amount_kes=20000,
+            status=Booking.Status.PENDING_PAYMENT,
+        )
+        outside_range = Booking.objects.create(
+            departure=self.departure,
+            full_name='Old Guest',
+            email='old@example.com',
+            phone='0733333333',
+            payment_phone='254733333333',
+            participant_count=1,
+            amount_kes=20000,
+            status=Booking.Status.CONFIRMED,
+        )
+        Booking.objects.filter(pk=outside_range.pk).update(
+            created_at=timezone.now() - timedelta(days=40),
+        )
+
+        staff_user = get_user_model().objects.create_user(
+            username='report-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        start_date = (timezone.localdate() - timedelta(days=1)).isoformat()
+        end_date = (timezone.localdate() + timedelta(days=1)).isoformat()
+        self.client.force_authenticate(user=staff_user)
+
+        response = self.client.get('/api/bookings/report/', {
+            'start_date': start_date,
+            'end_date': end_date,
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['total_bookings'], 2)
+        self.assertEqual(response.data['confirmed_bookings'], 1)
+        self.assertEqual(response.data['participants'], 2)
+        self.assertEqual(response.data['revenue_kes'], 40000)
+        self.assertEqual(response.data['status_counts'], {
+            Booking.Status.CONFIRMED: 1,
+            Booking.Status.PENDING_PAYMENT: 1,
+        })
+        self.assertEqual(response.data['by_safari'], [{
+            'safari_id': self.safari.id,
+            'safari_title': self.safari.title,
+            'confirmed_bookings': 1,
+            'participants': 2,
+            'revenue_kes': 40000,
+        }])
+    def test_sales_report_rejects_invalid_date_range_and_requires_staff(self):
+        unauthorized = self.client.get('/api/bookings/report/')
+        self.assertIn(unauthorized.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+        staff_user = get_user_model().objects.create_user(
+            username='report-validation-staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_user)
+
+        invalid_date = self.client.get('/api/bookings/report/', {'start_date': 'not-a-date'})
+        reversed_range = self.client.get('/api/bookings/report/', {
+            'start_date': '2030-07-02',
+            'end_date': '2030-07-01',
+        })
+
+        self.assertEqual(invalid_date.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(reversed_range.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_checkout_refuses_to_oversell_departure(self):
         Booking.objects.create(

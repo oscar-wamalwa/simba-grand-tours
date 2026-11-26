@@ -1,15 +1,16 @@
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
-from django.db.models import F, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
@@ -87,6 +88,64 @@ class BookingViewSet(viewsets.ModelViewSet):
         if booking_status:
             queryset = queryset.filter(status=booking_status)
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def report(self, request):
+        start_value = request.query_params.get('start_date')
+        end_value = request.query_params.get('end_date')
+        try:
+            start_date = date.fromisoformat(start_value) if start_value else None
+            end_date = date.fromisoformat(end_value) if end_value else None
+        except ValueError:
+            return Response(
+                {'detail': 'Dates must use YYYY-MM-DD format.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if start_date and end_date and start_date > end_date:
+            return Response(
+                {'detail': 'Start date must be on or before end date.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bookings = Booking.objects.select_related('departure__safari').all()
+        if start_date:
+            bookings = bookings.filter(created_at__date__gte=start_date)
+        if end_date:
+            bookings = bookings.filter(created_at__date__lte=end_date)
+        confirmed = bookings.filter(status=Booking.Status.CONFIRMED)
+        revenue = confirmed.aggregate(total=Sum('amount_kes'))['total'] or 0
+        statuses = {
+            row['status']: row['count']
+            for row in bookings.values('status').annotate(count=Count('id'))
+        }
+        trips = confirmed.values(
+            'departure__safari_id',
+            'departure__safari__title',
+        ).annotate(
+            confirmed_bookings=Count('id'),
+            participants=Sum('participant_count'),
+            revenue_kes=Sum('amount_kes'),
+        ).order_by('-revenue_kes', 'departure__safari__title')
+
+        return Response({
+            'start_date': start_date.isoformat() if start_date else None,
+            'end_date': end_date.isoformat() if end_date else None,
+            'total_bookings': bookings.count(),
+            'confirmed_bookings': confirmed.count(),
+            'participants': confirmed.aggregate(total=Sum('participant_count'))['total'] or 0,
+            'revenue_kes': revenue,
+            'status_counts': statuses,
+            'by_safari': [
+                {
+                    'safari_id': row['departure__safari_id'],
+                    'safari_title': row['departure__safari__title'],
+                    'confirmed_bookings': row['confirmed_bookings'],
+                    'participants': row['participants'],
+                    'revenue_kes': row['revenue_kes'],
+                }
+                for row in trips
+            ],
+        })
 
     def partial_update(self, request, *args, **kwargs):
         booking = self.get_object()

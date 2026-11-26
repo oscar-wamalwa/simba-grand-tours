@@ -86,6 +86,10 @@ export const bookingsApi = {
     const response = await apiRequest(`/bookings/${queryString ? `?${queryString}` : ''}`);
     return response.results || response;
   },
+  getReport: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiRequest(`/bookings/report/${queryString ? `?${queryString}` : ''}`);
+  },
   cancel: (id) => apiRequest(`/bookings/${id}/`, { method: 'PATCH', body: { status: 'cancelled' } }),
 };
 

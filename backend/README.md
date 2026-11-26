@@ -11,6 +11,8 @@ The booking flow stores prices and payments as whole Kenyan shillings (KES). Bef
 
 The callback endpoint queries Daraja before confirming a successful STK payment. Test with Safaricom sandbox credentials first, and separately verify live credentials before accepting real payments.
 
+The admin Sales Reports page uses the staff-only `GET /api/bookings/report/` endpoint. Optional `start_date` and `end_date` query parameters use `YYYY-MM-DD`; revenue totals include confirmed bookings only.
+
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
 
 ```sh

@@ -39,7 +39,7 @@ const pageInfo = {
   messages: ['Messages', 'View and respond to contact form submissions.'],
   testimonies: ['Testimonies', 'Choose reviews to feature on the website.'],
   blogs: ['The Simba Pulse', 'Create, publish, and manage website stories.'],
-  analytics: ['Analytics', 'Track your website performance.'],
+  analytics: ['Sales Reports', 'Review confirmed bookings and revenue by safari.'],
   settings: ['Settings', 'Control contact details, social links, and website branding.'],
   bookings: ['Departures and Bookings', 'Schedule trips, track paid seats, and export passenger manifests.'],
   campaigns: ['Promotions and Waitlist', 'Manage promo codes, seasonal announcements, and sold-out trip waitlists.']
@@ -114,7 +114,7 @@ export default function AdminDashboard({ onLogout }) {
     { id: 'subscribers', icon: Users, label: 'Subscribers' },
     { id: 'messages', icon: MessageSquare, label: 'Messages' },
     { id: 'testimonies', icon: MessageCircle, label: 'Testimonies' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'analytics', icon: BarChart3, label: 'Sales Reports' },
     { id: 'settings', icon: Settings, label: 'Settings' },
     { id: 'bookings', icon: CalendarDays, label: 'Departures and Bookings' },
     { id: 'campaigns', icon: Megaphone, label: 'Promotions and Waitlist' }
