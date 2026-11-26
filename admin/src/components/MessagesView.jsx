@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Mail, Clock, Trash2, Download, CheckCircle, Eye, X } from 'lucide-react';
+import { Mail, Clock, Trash2, Download, CheckCircle, Eye, X, Send, RefreshCw } from 'lucide-react';
 
 export default function MessagesView() {
   const [messages, setMessages] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [replyError, setReplyError] = useState('');
+  const [replySuccess, setReplySuccess] = useState('');
 
   useEffect(() => { fetchMessages(); }, []);
 
@@ -23,6 +27,37 @@ export default function MessagesView() {
       fetchMessages(); 
     } catch (error) {
       console.error('Error marking message as read:', error);
+    }
+  };
+
+  const openMessage = (message) => {
+    setSelected(message);
+    setReplyText('');
+    setReplyError('');
+    setReplySuccess('');
+  };
+
+  const sendReply = async (event) => {
+    event.preventDefault();
+    if (!selected) return;
+
+    const body = replyText.trim();
+    if (!body) {
+      setReplyError('Enter a reply before sending.');
+      return;
+    }
+
+    setSendingReply(true);
+    setReplyError('');
+    setReplySuccess('');
+    try {
+      await api.messages.reply(selected.id, body);
+      setReplyText('');
+      setReplySuccess('Reply sent successfully.');
+    } catch (error) {
+      setReplyError(error.message || 'Could not send reply. Check the email settings and try again.');
+    } finally {
+      setSendingReply(false);
     }
   };
   
@@ -78,7 +113,7 @@ export default function MessagesView() {
   ) : (
     <div className="message-list">
       {messages.map(msg => (
-        <div key={msg.id} className={`message-item ${!msg.read ? 'unread' : ''}`} onClick={() => setSelected(msg)} style={{ cursor: 'pointer' }}>
+        <div key={msg.id} className={`message-item ${!msg.read ? 'unread' : ''}`} onClick={() => openMessage(msg)} style={{ cursor: 'pointer' }}>
           <div className="message-avatar">{msg.fullName ? msg.fullName.charAt(0).toUpperCase() : '?'}</div>
           <div className="message-content">
             <div className="message-header"><span className="message-name">{msg.fullName}</span><span className="message-time">{msg.submitted_at ? new Date(msg.submitted_at).toLocaleDateString() : msg.submittedAt ? new Date(msg.submittedAt).toLocaleDateString() : 'N/A'}</span></div>
@@ -107,9 +142,28 @@ export default function MessagesView() {
               <p style={{ fontWeight: '600', marginBottom: '10px' }}>{selected.subject || 'No Subject'}</p>
               <p style={{ color: 'var(--gray-dark)', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>{selected.message}</p>
             </div>
+            <form onSubmit={sendReply} className="contact-reply-form">
+              <div className="form-group">
+                <label htmlFor="contact-message-reply">Reply to {selected.email || 'client'}</label>
+                <textarea
+                  id="contact-message-reply"
+                  rows="5"
+                  maxLength="5000"
+                  value={replyText}
+                  onChange={event => setReplyText(event.target.value)}
+                  disabled={sendingReply}
+                  required
+                />
+              </div>
+              {replyError && <p className="contact-reply-feedback error" role="alert">{replyError}</p>}
+              {replySuccess && <p className="contact-reply-feedback success" role="status">{replySuccess}</p>}
+              <button type="submit" className="btn-primary" disabled={sendingReply || !replyText.trim()}>
+                {sendingReply ? <RefreshCw size={16} className="refresh-spin" /> : <Send size={16} />}
+                {sendingReply ? 'Sending...' : 'Send reply'}
+              </button>
+            </form>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {!selected.read && <button className="btn-success" onClick={() => markRead(selected.id)} style={{ background: 'var(--success)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}><CheckCircle size={16} /> Mark as Read</button>}
-              <a href={`mailto:${selected.email}`} className="btn-primary" style={{ textDecoration: 'none' }}><Mail size={16} /> Reply</a>
               <button className="btn-danger" onClick={() => handleDelete(selected.id)}><Trash2 size={16} /> Delete</button>
             </div>
           </div>

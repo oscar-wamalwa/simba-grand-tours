@@ -6,7 +6,7 @@ The booking flow stores prices and payments as whole Kenyan shillings (KES). Bef
 - `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, and `MPESA_PASSKEY`
 - `MPESA_CALLBACK_URL` as the callback base URL ending in `/api/payments/mpesa/callback`
 - `MPESA_CALLBACK_TOKEN` as a long, unique secret. Never commit secrets or send them in chat.
-- SMTP settings and `DEFAULT_FROM_EMAIL` for booking receipts
+- SMTP settings and `DEFAULT_FROM_EMAIL` for booking receipts and admin replies to contact messages
 - Optional WhatsApp Cloud API credentials plus approved booking, reminder, and waitlist template names
 
 The callback endpoint queries Daraja before confirming a successful STK payment. Test with Safaricom sandbox credentials first, and separately verify live credentials before accepting real payments.

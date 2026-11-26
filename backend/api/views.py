@@ -2,6 +2,11 @@
 Django REST Framework views for Simba Grand Tours API.
 """
 
+import logging
+import smtplib
+
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 try:
@@ -19,8 +24,10 @@ from django.utils import timezone
 from .models import Booking, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
 from .serializers import (
     SafariSerializer, BlogSerializer, SubscriberSerializer,
-    ContactMessageSerializer, SettingsSerializer, TestimonialSerializer
+    ContactMessageSerializer, ContactMessageReplySerializer, SettingsSerializer, TestimonialSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 
 class StaffWritePermission(permissions.BasePermission):
@@ -187,6 +194,53 @@ class ContactMessageViewSet(viewsets.ModelViewSet):
             serializer.save(read_at=timezone.now())
         else:
             serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        contact_message = self.get_object()
+        reply_serializer = ContactMessageReplySerializer(data=request.data)
+        reply_serializer.is_valid(raise_exception=True)
+
+        sender = getattr(settings, 'DEFAULT_FROM_EMAIL', '').strip()
+        if not sender:
+            return Response(
+                {'detail': 'Email sending is not configured. Set DEFAULT_FROM_EMAIL and SMTP settings.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        recipient = (contact_message.email or '').strip()
+        if not recipient or recipient.lower() == 'no-reply@simbagrandtours.com':
+            return Response(
+                {'detail': 'This contact message does not have a valid reply email address.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        original_subject = ' '.join((contact_message.subject or '').splitlines()).strip()
+        subject = f'Re: {original_subject}' if original_subject else 'Reply from Simba Grand Tours'
+        recipient_name = (contact_message.full_name or '').strip() or 'there'
+        body = (
+            f'Hello {recipient_name},\n\n'
+            f'{reply_serializer.validated_data["message"]}\n\n'
+            'Regards,\nSimba Grand Tours'
+        )
+
+        try:
+            sent_count = send_mail(subject, body, sender, [recipient], fail_silently=False)
+        except (OSError, RuntimeError, smtplib.SMTPException) as error:
+            logger.error('Could not send reply for contact message %s: %s', contact_message.pk, error)
+            return Response(
+                {'detail': 'The reply could not be sent. Check the SMTP settings and try again.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        if sent_count != 1:
+            logger.error('Email backend did not accept reply for contact message %s.', contact_message.pk)
+            return Response(
+                {'detail': 'The email provider did not accept the reply. Try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response({'detail': 'Reply sent successfully.'}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def unread_count(self, request):

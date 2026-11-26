@@ -311,6 +311,10 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ContactMessageReplySerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=5000, trim_whitespace=True, allow_blank=False)
+
+
 class SettingsSerializer(serializers.ModelSerializer):
     """Serializer for Settings model."""
     website = URLWithDefaultSchemeField(required=False)

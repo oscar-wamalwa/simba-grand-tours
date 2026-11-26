@@ -166,7 +166,7 @@ export default function BookingsView() {
             <p>Create dated departures with KES pricing and seat capacity.</p>
           </div>
           <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}>
-            <RefreshCw size={17} /> Refresh
+            <RefreshCw size={17} className={loading ? 'refresh-spin' : undefined} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
         {error && <p className="form-status error" role="alert">{error}</p>}

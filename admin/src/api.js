@@ -158,6 +158,7 @@ export const messagesApi = {
   create: (data) => apiRequest('/contact-messages/', { method: 'POST', body: data }),
   partialUpdate: (id, data) => apiRequest(`/contact-messages/${id}/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/contact-messages/${id}/`, { method: 'DELETE' }),
+  reply: (id, message) => apiRequest(`/contact-messages/${id}/reply/`, { method: 'POST', body: { message } }),
   getUnreadCount: () => apiRequest('/contact-messages/unread_count/'),
   getFeatured: () => apiRequest('/contact-messages/featured/'),
 };

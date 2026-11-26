@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
@@ -160,6 +161,60 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual(duplicate.status_code, status.HTTP_409_CONFLICT)
         featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
+
+
+class ContactMessageReplyTests(APITestCase):
+    def setUp(self):
+        self.contact_message = ContactMessage.objects.create(
+            full_name='Amina Guest',
+            email='amina@example.com',
+            subject='Safari inquiry',
+            message='Can you share more details?',
+        )
+        self.staff_user = get_user_model().objects.create_user(
+            username='message-admin',
+            password='test-password',
+            is_staff=True,
+        )
+        self.reply_url = f'/api/contact-messages/{self.contact_message.id}/reply/'
+
+    @override_settings(
+        DEFAULT_FROM_EMAIL='support@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_staff_reply_sends_email_to_contact_and_public_user_cannot_reply(self):
+        unauthorized = self.client.post(self.reply_url, {'message': 'Thank you for reaching out.'}, format='json')
+        self.assertIn(unauthorized.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+        self.client.force_authenticate(user=self.staff_user)
+        response = self.client.post(
+            self.reply_url,
+            {'message': 'Thank you for reaching out.'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['amina@example.com'])
+        self.assertEqual(mail.outbox[0].from_email, 'support@example.com')
+        self.assertEqual(mail.outbox[0].subject, 'Re: Safari inquiry')
+        self.assertIn('Thank you for reaching out.', mail.outbox[0].body)
+
+    @override_settings(
+        DEFAULT_FROM_EMAIL='',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_reply_reports_when_email_is_not_configured(self):
+        self.client.force_authenticate(user=self.staff_user)
+
+        response = self.client.post(
+            self.reply_url,
+            {'message': 'Thank you for reaching out.'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('Email sending is not configured', response.data['detail'])
 
 
 class AdminContentAccessTests(APITestCase):
