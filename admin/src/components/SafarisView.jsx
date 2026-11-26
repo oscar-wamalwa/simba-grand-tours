@@ -1,0 +1,373 @@
+import React, { useState, useEffect } from 'react';
+import api from '../api';
+import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Image, Download, Star, Upload, X } from 'lucide-react';
+
+const normalizeSafari = (safari) => ({
+  ...safari,
+  isSignature: safari.is_signature ?? safari.isSignature ?? false
+});
+
+export default function SafarisView({ onRefresh }) {
+  const [safaris, setSafaris] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [form, setForm] = useState({ 
+    title: '', 
+    description: '', 
+    location: '', 
+    price: '', 
+    duration: '', 
+    difficulty: 'Moderate', 
+    images: [], 
+    highlights: [], 
+    inclusions: [],
+    exclusions: [],
+    itinerary: [],
+    visible: true, 
+    isSignature: false 
+  });
+  const [imagePreviews, setImagePreviews] = useState([]);
+
+  useEffect(() => { fetchSafaris(); }, []);
+
+  const fetchSafaris = async () => {
+    try {
+      const data = await api.safaris.getAll();
+      setSafaris(data.map(d => normalizeSafari({ id: d.id, ...d })));
+    } catch (error) {
+      console.error('Error fetching safaris:', error);
+      setActionError('Could not load safaris. Check the API connection and try again.');
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    try {
+      setUploading(true);
+      console.log('Starting image upload, files:', files.length);
+      console.log('File sizes:', files.map(f => `${f.name}: ${(f.size / 1024 / 1024).toFixed(2)}MB`));
+      
+      const uploadPromises = files.map(async (file, index) => {
+        try {
+          console.log(`Processing file ${index + 1}:`, file.name);
+          
+          // Convert file to base64 for API upload
+          const reader = new FileReader();
+          const base64Data = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          console.log('Image prepared for upload');
+          return base64Data;
+        } catch (uploadError) {
+          console.error(`Error processing ${file.name}:`, uploadError);
+          return null;
+        }
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter(url => url !== null);
+      console.log('Valid uploaded URLs:', validUrls.length);
+      
+      if (validUrls.length > 0) {
+        setForm(prev => ({ ...prev, images: [...prev.images, ...validUrls] }));
+        setImagePreviews(prev => [...prev, ...validUrls.map(url => ({ url, isNew: true }))]);
+      } else {
+        alert('Failed to process images. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert('Error uploading images. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = async (index) => {
+    const newImages = form.images.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setForm(prev => ({ ...prev, images: newImages }));
+    setImagePreviews(newPreviews);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { 
+        ...form, 
+        price: parseFloat(form.price), 
+        highlights: form.highlights,
+        inclusions: form.inclusions,
+        exclusions: form.exclusions,
+        itinerary: form.itinerary,
+        isSignature: form.isSignature
+      };
+      
+      if (editing) {
+        await api.safaris.update(editing.id, data);
+      } else {
+        await api.safaris.create(data);
+      }
+      
+      setShowModal(false);
+      setEditing(null);
+      setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', images: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], visible: true, isSignature: false });
+      fetchSafaris();
+      onRefresh && onRefresh();
+    } catch (error) { 
+      console.error('Error saving safari:', error); 
+      alert('Error saving safari. Please try again.');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Delete this safari?')) {
+      try {
+        await api.safaris.delete(id);
+        fetchSafaris();
+        onRefresh && onRefresh();
+      } catch (error) {
+        console.error('Error deleting safari:', error);
+        alert('Error deleting safari. Please try again.');
+      }
+    }
+  };
+
+  const toggleVisibility = async (safari) => {
+    setActionError('');
+    try {
+      const updated = await api.safaris.partialUpdate(safari.id, { visible: !safari.visible });
+      setSafaris(current => current.map(item => item.id === safari.id
+        ? normalizeSafari(updated)
+        : item));
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+      setActionError('Could not update safari visibility. Please try again.');
+    }
+  };
+
+  const toggleSignature = async (safari) => {
+    setActionError('');
+    try {
+      const updated = await api.safaris.partialUpdate(safari.id, { isSignature: !safari.isSignature });
+      setSafaris(current => current.map(item => item.id === safari.id
+        ? normalizeSafari(updated)
+        : item));
+    } catch (error) {
+      console.error('Error updating signature status:', error);
+      setActionError('Could not update signature status. Please try again.');
+    }
+  };
+
+  const editSafari = (s) => {
+    setEditing(s);
+    setForm({ 
+      title: s.title, 
+      description: s.description, 
+      location: s.location, 
+      price: s.price, 
+      duration: s.duration, 
+      difficulty: s.difficulty, 
+      images: s.images || [], 
+      highlights: s.highlights || [], 
+      inclusions: s.inclusions || [],
+      exclusions: s.exclusions || [],
+      itinerary: s.itinerary || [],
+      visible: s.visible, 
+      isSignature: s.isSignature ?? s.is_signature ?? false
+    });
+    setImagePreviews((s.images || []).map(url => ({ url, isNew: false })));
+    setShowModal(true);
+  };
+
+  const filtered = safaris.filter(s => 
+    s.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.location?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const downloadCSV = () => {
+    const headers = ['Title', 'Location', 'Price (USD)', 'Duration', 'Difficulty', 'Status', 'Signature', 'Created At'];
+    const rows = filtered.map(safari => [
+      safari.title || '',
+      safari.location || '',
+      safari.price || '',
+      safari.duration || '',
+      safari.difficulty || '',
+      safari.visible !== false ? 'Active' : 'Hidden',
+      safari.isSignature ? 'Yes' : 'No',
+      safari.created_at ? new Date(safari.created_at).toLocaleDateString() : ''
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `safaris_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  return (
+    <div className="data-card fade-in">
+      <div className="data-card-header">
+        <h3>Safari Packages Management</h3>
+        <div className="data-actions">
+          <div className="search-box"><Search size={18} /><input type="text" placeholder="Search safaris..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+          <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
+            <Download size={18} /> Download CSV
+          </button>
+          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', images: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], visible: true, isSignature: false }); setShowModal(true); }}>
+            <Plus size={18} /> Add New Safari
+          </button>
+        </div>
+      </div>
+
+      {actionError && <p className="form-status error" role="alert">{actionError}</p>}
+
+      <div className="data-table-wrapper">
+        <table className="data-table">
+          <thead><tr><th>Image</th><th>Title</th><th>Location</th><th>Price</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
+          <tbody>
+            {filtered.map(safari => (
+              <tr key={safari.id}>
+                <td>{safari.images && safari.images.length > 0 ? <img src={safari.images[0]} alt="" className="safari-thumb" /> : <div className="safari-thumb-placeholder"><Image size={20} /></div>}</td>
+                <td><p className="safari-title">{safari.title}</p></td>
+                <td><p className="safari-location">{safari.location}</p></td>
+                <td><p className="safari-price">${safari.price?.toLocaleString()}</p></td>
+                <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
+                <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
+                <td>
+                  <div className="table-actions">
+                    <button className="action-btn" onClick={() => toggleVisibility(safari)} title={safari.visible ? 'Hide' : 'Show'}>{safari.visible ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                    <button className="action-btn signature-btn" onClick={() => toggleSignature(safari)} style={{ color: safari.isSignature ? 'var(--gold-majesty)' : 'var(--gray-dark)' }}>
+                      <Star size={16} fill={safari.isSignature ? 'currentColor' : 'none'} />
+                    </button>
+                    <button className="action-btn" onClick={() => editSafari(safari)}><Edit2 size={16} /></button>
+                    <button className="action-btn delete" onClick={() => handleDelete(safari.id)}><Trash2 size={16} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && (
+        <div className="modal-overlay show" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editing ? 'Edit Safari' : 'Add New Safari'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)} aria-label="Close safari form"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group"><label>Title *</label><input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required /></div>
+                <div className="form-group"><label>Description *</label><textarea rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required /></div>
+                <div className="form-row">
+                  <div className="form-group"><label>Location *</label><input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required /></div>
+                  <div className="form-group"><label>Price (USD) *</label><input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group"><label>Duration</label><input type="text" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="e.g., 7 Days" /></div>
+                  <div className="form-group"><label>Difficulty</label>
+                    <select value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })}>
+                      <option value="Easy">Easy</option><option value="Moderate">Moderate</option><option value="Challenging">Challenging</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Highlights (one per line)</label>
+                  <textarea rows="3" value={(form.highlights || []).join('\n')} onChange={e => setForm({ ...form, highlights: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Included (one per line)</label>
+                    <textarea rows="4" value={(form.inclusions || []).join('\n')} onChange={e => setForm({ ...form, inclusions: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Excluded (one per line)</label>
+                    <textarea rows="4" value={(form.exclusions || []).join('\n')} onChange={e => setForm({ ...form, exclusions: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Itinerary (one day or stop per line)</label>
+                  <textarea rows="5" value={(form.itinerary || []).join('\n')} onChange={e => setForm({ ...form, itinerary: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder={'Day 1 - Arrival and lodge transfer\nDay 2 - Morning and evening game drives'} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input type="checkbox" checked={form.isSignature} onChange={e => setForm({ ...form, isSignature: e.target.checked })} style={{ width: 'auto' }} />
+                    Mark as Signature Safari
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input type="checkbox" checked={form.visible} onChange={e => setForm({ ...form, visible: e.target.checked })} style={{ width: 'auto' }} />
+                    Visible on website
+                  </label>
+                </div>
+
+                {/* Image Upload Section */}
+                <div className="form-group">
+                  <label>Images</label>
+                  <div className="safari-images-upload">
+                    {imagePreviews.length > 0 && (
+                      <div className="image-previews-grid">
+                        {imagePreviews.map((preview, index) => (
+                          <div key={index} className="image-preview-item">
+                            <img src={preview.url} alt={`Safari image ${index + 1}`} className="safari-image-preview" />
+                            <button 
+                              type="button" 
+                              className="remove-image-btn" 
+                              onClick={() => removeImage(index)}
+                              title="Remove image"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="image-upload-area">
+                      {uploading ? (
+                        <div className="upload-loading">
+                          <div className="spinner"></div>
+                          <p>Uploading images...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload size={40} color="var(--gray-dark)" />
+                          <p>Click or drag to upload safari images</p>
+                          <span>Recommended: 1200 x 600px (Max 5MB each)</span>
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        multiple
+                        onChange={handleImageUpload} 
+                        className="file-input" 
+                        disabled={uploading}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">{editing ? 'Save Changes' : 'Add Safari'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

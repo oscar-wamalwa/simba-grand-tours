@@ -1,0 +1,212 @@
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { Menu, X } from 'lucide-react';
+import api from './api';
+
+// Icons - load only what's needed for initial render
+// Lazy load page components - they only load when needed
+const HomeSection = lazy(() => import('./components/HomeSection'));
+const SafarisPage = lazy(() => import('./components/SafarisPage'));
+const PulsePage = lazy(() => import('./components/PulsePage'));
+const ServicesPage = lazy(() => import('./components/ServicesPage'));
+const AboutPage = lazy(() => import('./components/AboutPage'));
+const ContactPage = lazy(() => import('./components/ContactPage'));
+const FooterSection = lazy(() => import('./components/FooterSection'));
+const ReviewModal = lazy(() => import('./components/ReviewModal'));
+
+// Default settings - used immediately while API data loads
+const defaultSettings = {
+  siteName: 'Simba Grand Tours',
+  siteEmail: 'simbagrandtours@gmail.com',
+  sitePhone: '+254 707 984 287',
+  address: 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD',
+  website: 'www.simbagrandtours.com',
+  instagram: 'https://instagram.com/simba.grand.tours',
+  facebook: 'https://web.facebook.com/simbagrandtours',
+  twitter: 'https://x.com/simba_tours',
+  whatsapp: '+254707984287'
+};
+
+// Empty default safaris - data loaded from API only
+const defaultSafaris = [];
+const clientPages = new Set(['home', 'safaris', 'details', 'pulse', 'services', 'about', 'contact']);
+
+// Loading fallback - instant render
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: '60vh',
+    gap: '15px'
+  }}>
+    <div style={{ 
+      width: '40px', 
+      height: '40px', 
+      border: '3px solid #e0e0e0',
+      borderTopColor: '#c49a6c',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite'
+    }} />
+    <style>{`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+export default function App() {
+  const [page, setPage] = useState(() => {
+    const savedPage = sessionStorage.getItem('clientCurrentPage');
+    return clientPages.has(savedPage) ? savedPage : 'home';
+  });
+  const [safaris, setSafaris] = useState(defaultSafaris);
+  const [settings, setSettings] = useState(defaultSettings);
+  const [testimonials, setTestimonials] = useState([]);
+  const [selectedSafari, setSelectedSafari] = useState(null);
+  const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  useEffect(() => {
+    if (!selectedSafariId) return;
+    const safari = safaris.find(item => String(item.id) === selectedSafariId);
+    if (safari) setSelectedSafari(safari);
+  }, [safaris, selectedSafariId]);
+
+  // Fetch data asynchronously - doesn't block UI
+  useEffect(() => {
+    const fetchFeaturedTestimonials = async () => {
+      try {
+        const testimonialsData = await api.testimonials.getFeatured();
+        setTestimonials(testimonialsData.map(d => ({ id: d.id, ...d })));
+      } catch (err) {
+        console.error('Error fetching featured testimonials:', err.message);
+      }
+    };
+
+    const fetchData = async () => {
+      try {
+        // Fetch only visible safaris for client
+        console.log('Fetching safaris from API...');
+        const safarisData = await api.safaris.getAll({ visible: 'true' });
+        console.log('Safaris fetched:', safarisData?.length || 0);
+        setSafaris(safarisData.map(d => ({
+          id: d.id,
+          ...d,
+          isSignature: d.is_signature ?? d.isSignature ?? false
+        })));
+      } catch (err) {
+        console.error('Error fetching safaris:', err.message);
+      }
+
+      try {
+        const settingsData = await api.settings.get();
+        if (settingsData) {
+          setSettings(prev => ({
+            ...prev,
+            siteName: settingsData.site_name || prev.siteName,
+            siteEmail: settingsData.site_email || prev.siteEmail,
+            sitePhone: settingsData.site_phone || prev.sitePhone,
+            address: settingsData.address || prev.address,
+            website: settingsData.website || prev.website,
+            instagram: settingsData.instagram || prev.instagram,
+            facebook: settingsData.facebook || prev.facebook,
+            twitter: settingsData.twitter || prev.twitter,
+            whatsapp: settingsData.whatsapp || prev.whatsapp
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching website settings:', err.message);
+      }
+
+      await fetchFeaturedTestimonials();
+    };
+
+    // Start fetching after a small delay to let initial render complete
+    const timer = setTimeout(fetchData, 100);
+    window.addEventListener('focus', fetchFeaturedTestimonials);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('focus', fetchFeaturedTestimonials);
+    };
+  }, []);
+
+  const navigateTo = (pageName, safariData = null) => {
+    setSelectedSafari(safariData);
+    setSelectedSafariId(safariData?.id == null ? null : String(safariData.id));
+    sessionStorage.setItem('clientCurrentPage', pageName);
+    if (safariData?.id == null) {
+      sessionStorage.removeItem('clientSelectedSafariId');
+    } else {
+      sessionStorage.setItem('clientSelectedSafariId', String(safariData.id));
+    }
+    setPage(pageName);
+    setMobileMenuOpen(false);
+    window.scrollTo(0, 0);
+  };
+
+  return (
+    <div className="site-wrapper">
+      <nav className="navbar">
+        <div className="nav-container">
+          <div className="nav-logo" onClick={() => navigateTo('home')}>
+            <img src="/simbalogo.png" alt="Logo" style={{ width: '100px', height: '100px' }} />
+            <span className="logo-text"></span>
+          </div>
+          
+          <div className={`nav-links-center ${mobileMenuOpen ? 'nav-links-open' : ''}`}>
+            <button className={`nav-link ${page === 'home' ? 'active' : ''}`} onClick={() => navigateTo('home')}>Home</button>
+            <button className={`nav-link ${page === 'safaris' ? 'active' : ''}`} onClick={() => navigateTo('safaris')}>Safaris</button>
+            <button className={`nav-link ${page === 'pulse' ? 'active' : ''}`} onClick={() => navigateTo('pulse')}>The Simba Pulse</button>
+            <button className={`nav-link ${page === 'services' ? 'active' : ''}`} onClick={() => navigateTo('services')}>Services</button>
+            <button className={`nav-link ${page === 'about' ? 'active' : ''}`} onClick={() => navigateTo('about')}>About Us</button>
+            <button className={`nav-link ${page === 'contact' ? 'active' : ''}`} onClick={() => navigateTo('contact')}>Contact</button>
+          </div>
+          
+          <div className="nav-actions">
+            <button className="btn-gold" onClick={() => navigateTo('safaris')}>Plan My Safari</button>
+            <span className="nav-phone">{settings.sitePhone}</span>
+            <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <Suspense fallback={<LoadingFallback />}>
+        {page === 'home' && (
+          <HomeSection 
+            safaris={safaris}
+            testimonials={testimonials}
+            onSelect={navigateTo} 
+            onShowReviewForm={() => setShowReviewModal(true)} 
+          />
+        )}
+        {page === 'safaris' && (
+          <SafarisPage 
+            safaris={safaris} 
+            onSelect={navigateTo}
+            selectedSafari={selectedSafari}
+          />
+        )}
+        {page === 'details' && (
+          <SafarisPage
+            safaris={safaris}
+            onSelect={navigateTo}
+            selectedSafari={selectedSafari}
+          />
+        )}
+        {page === 'pulse' && <PulsePage onNavigate={navigateTo} />}
+        {page === 'services' && <ServicesPage />}
+        {page === 'about' && <AboutPage onNavigate={navigateTo} />}
+        {page === 'contact' && <ContactPage />}
+        
+        <FooterSection onNavigate={navigateTo} settings={settings} />
+        
+        {showReviewModal && <ReviewModal onClose={() => setShowReviewModal(false)} />}
+      </Suspense>
+    </div>
+  );
+}

@@ -1,0 +1,155 @@
+// Django REST API Configuration for Simba Grand Tours
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
+
+// Helper function for API requests
+async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const token = localStorage.getItem('adminToken');
+  
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Token ${token}` } : {}),
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  if (options.body && typeof options.body === 'object') {
+    config.body = JSON.stringify(options.body);
+  }
+
+  try {
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorData;
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json();
+      } else {
+        errorData = await response.text();
+      }
+      console.error(`API Error [${endpoint}]:`, errorData);
+      const message = errorData?.detail
+        || errorData?.message
+        || (errorData && typeof errorData === 'object'
+          ? Object.entries(errorData)
+            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : String(errors)}`)
+            .join('; ')
+          : errorData);
+      throw new Error(message || `HTTP error! status: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error(`API Error [${endpoint}]:`, error);
+    throw error;
+  }
+}
+
+// Safari API
+export const safarisApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/safaris/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  getById: (id) => apiRequest(`/safaris/${id}/`),
+  create: (data) => apiRequest('/safaris/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/safaris/${id}/`, { method: 'PUT', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/safaris/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/safaris/${id}/`, { method: 'DELETE' }),
+  getSignature: () => apiRequest('/safaris/signature/'),
+};
+
+// Blog API
+export const blogsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/blogs/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  getById: (id) => apiRequest(`/blogs/${id}/`),
+  create: (data) => apiRequest('/blogs/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/blogs/${id}/`, { method: 'PUT', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/blogs/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/blogs/${id}/`, { method: 'DELETE' }),
+};
+
+// Subscriber API
+export const subscribersApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/subscribers/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/subscribers/', { method: 'POST', body: data }),
+  delete: (id) => apiRequest(`/subscribers/${id}/`, { method: 'DELETE' }),
+};
+
+// Contact Message API
+export const messagesApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/contact-messages/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  getById: (id) => apiRequest(`/contact-messages/${id}/`),
+  create: (data) => apiRequest('/contact-messages/', { method: 'POST', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/contact-messages/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/contact-messages/${id}/`, { method: 'DELETE' }),
+  getUnreadCount: () => apiRequest('/contact-messages/unread_count/'),
+  getFeatured: () => apiRequest('/contact-messages/featured/'),
+};
+
+// Testimonial API
+export const testimonialsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/testimonials/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  getById: (id) => apiRequest(`/testimonials/${id}/`),
+  create: (data) => apiRequest('/testimonials/', { method: 'POST', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/testimonials/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/testimonials/${id}/`, { method: 'DELETE' }),
+  getFeatured: () => apiRequest('/testimonials/featured/'),
+};
+
+// Settings API
+export const settingsApi = {
+  get: () => apiRequest('/settings/website_settings/'),
+  update: (data) => apiRequest('/settings/website_settings/', { method: 'PATCH', body: data }),
+};
+
+export const authApi = {
+  login: async (username, password) => {
+    const baseUrl = API_BASE_URL.replace(/\/api$/, '');
+    const response = await fetch(`${baseUrl}/api/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!response.ok) {
+      throw new Error('Invalid username or password');
+    }
+    return response.json();
+  }
+};
+
+export default {
+  safaris: safarisApi,
+  blogs: blogsApi,
+  subscribers: subscribersApi,
+  messages: messagesApi,
+  testimonials: testimonialsApi,
+  settings: settingsApi,
+  auth: authApi,
+};
