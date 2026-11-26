@@ -110,7 +110,7 @@ export default function BookingsView() {
     setMessage('');
     try {
       await api.bookings.delete(booking.id);
-      setMessage(`Booking ${booking.reference} was permanently deleted.`);
+      window.alert(`Booking ${booking.reference} deleted successfully.`);
       await refresh();
     } catch (requestError) {
       setError(requestError.message || 'Could not delete booking.');
