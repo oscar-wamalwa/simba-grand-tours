@@ -91,6 +91,7 @@ export const bookingsApi = {
     return apiRequest(`/bookings/report/${queryString ? `?${queryString}` : ''}`);
   },
   cancel: (id) => apiRequest(`/bookings/${id}/`, { method: 'PATCH', body: { status: 'cancelled' } }),
+  delete: (id) => apiRequest(`/bookings/${id}/`, { method: 'DELETE' }),
 };
 
 export const promoCodesApi = {

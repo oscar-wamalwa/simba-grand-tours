@@ -77,7 +77,7 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     permission_classes = [StaffOnly]
-    http_method_names = ['get', 'head', 'options', 'patch']
+    http_method_names = ['get', 'head', 'options', 'patch', 'delete']
 
     def get_queryset(self):
         queryset = Booking.objects.select_related('departure__safari').prefetch_related('passengers')

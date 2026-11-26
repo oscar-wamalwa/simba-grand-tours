@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Download, Plus, RefreshCw, TicketCheck } from 'lucide-react';
+import { CalendarDays, Download, Plus, RefreshCw, TicketCheck, Trash2 } from 'lucide-react';
 import api from '../api';
 import { formatKes } from '../currency';
 
@@ -95,6 +95,25 @@ export default function BookingsView() {
       await refresh();
     } catch (requestError) {
       setError(requestError.message || 'Could not cancel booking.');
+    }
+  };
+
+  const deleteBooking = async (booking) => {
+    const pendingPaymentWarning = booking.status === 'pending_payment'
+      ? '\n\nA payment prompt may still complete, but its callback can no longer be matched.'
+      : '';
+    const confirmed = window.confirm(
+      `Permanently delete booking ${booking.reference} for ${booking.full_name}?\n\nThis removes its passenger details and M-Pesa receipt reference. It does not issue a refund and cannot be undone.${pendingPaymentWarning}`
+    );
+    if (!confirmed) return;
+    setError('');
+    setMessage('');
+    try {
+      await api.bookings.delete(booking.id);
+      setMessage(`Booking ${booking.reference} was permanently deleted.`);
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not delete booking.');
     }
   };
 
@@ -224,7 +243,14 @@ export default function BookingsView() {
                   <td>{formatKes(booking.balance_due_kes)}</td>
                   <td><span className={`status-badge ${booking.status === 'confirmed' ? 'active' : 'archived'}`}>{booking.status.replaceAll('_', ' ')}</span></td>
                   <td>{booking.mpesa_receipt || '—'}</td>
-                  <td>{booking.status === 'pending_payment' && <button type="button" className="btn-danger" onClick={() => cancelBooking(booking)}>Cancel</button>}</td>
+                  <td>
+                    <div className="table-actions">
+                      {booking.status === 'pending_payment' && <button type="button" className="btn-danger" onClick={() => cancelBooking(booking)}>Cancel</button>}
+                      <button type="button" className="btn-danger" onClick={() => deleteBooking(booking)} title="Permanently delete booking and receipt">
+                        <Trash2 size={15} /> Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {!loading && filteredBookings.length === 0 && (

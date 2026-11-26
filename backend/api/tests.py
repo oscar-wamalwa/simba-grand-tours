@@ -10,6 +10,7 @@ from .models import (
     Blog,
     Booking,
     ContactMessage,
+    Passenger,
     PromoCode,
     Safari,
     Subscriber,
@@ -625,6 +626,39 @@ class BookingFlowTests(APITestCase):
         status_response = self.client.get(f'/api/bookings/{booking.reference}/status/')
         self.assertEqual(status_response.status_code, status.HTTP_200_OK)
         self.assertNotIn('email', status_response.data)
+
+    def test_staff_can_permanently_delete_confirmed_booking_and_passengers(self):
+        booking = Booking.objects.create(
+            departure=self.departure,
+            full_name='Amina Guest',
+            email='amina@example.com',
+            phone='0712345678',
+            payment_phone='254712345678',
+            participant_count=1,
+            amount_kes=5000,
+            booking_fee_kes=5000,
+            status=Booking.Status.CONFIRMED,
+            mpesa_receipt='QWE123456',
+        )
+        passenger = Passenger.objects.create(booking=booking, full_name='Amina Guest')
+        unauthorized_response = self.client.delete(f'/api/bookings/{booking.id}/')
+        self.assertIn(
+            unauthorized_response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+        self.assertTrue(Booking.objects.filter(pk=booking.pk).exists())
+
+        self.client.force_authenticate(user=get_user_model().objects.create_user(
+            username='booking-delete-admin',
+            password='test-password',
+            is_staff=True,
+        ))
+
+        response = self.client.delete(f'/api/bookings/{booking.id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Booking.objects.filter(pk=booking.pk).exists())
+        self.assertFalse(Passenger.objects.filter(pk=passenger.pk).exists())
 
 
 class PromoCodeTests(APITestCase):
