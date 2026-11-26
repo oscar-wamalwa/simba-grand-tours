@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Image, Calendar, Upload, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Calendar, Upload, X } from 'lucide-react';
 
 // Hide icon component
 const HideIcon = ({ size = 16, style = {} }) => (
@@ -116,7 +116,6 @@ export default function BlogsView({ onRefresh }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Image</th>
                 <th>Title</th>
                 <th>Category</th>
                 <th>Author</th>
@@ -128,7 +127,7 @@ export default function BlogsView({ onRefresh }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-dark)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-dark)' }}>
                     <FileText size={48} style={{ marginBottom: '15px', opacity: 0.5 }} />
                     <p>No blog posts found. Create your first blog post!</p>
                   </td>
@@ -136,15 +135,6 @@ export default function BlogsView({ onRefresh }) {
               ) : (
                 filtered.map(blog => (
                   <tr key={blog.id}>
-                    <td>
-                      {blog.image ? (
-                        <img src={blog.image} alt={blog.title} className="safari-thumb" />
-                      ) : (
-                        <div className="safari-thumb-placeholder" style={{ background: 'var(--gray-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Image size={20} color="var(--gray-dark)" />
-                        </div>
-                      )}
-                    </td>
                     <td>
                       <p className="safari-title" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {blog.title}
