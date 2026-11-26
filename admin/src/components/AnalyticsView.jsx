@@ -72,7 +72,7 @@ export default function AnalyticsView() {
   const exportReport = () => {
     if (!report) return;
     const rows = [
-      ['Trip', 'Confirmed bookings', 'Participants', 'Revenue (KES)'],
+      ['Trip', 'Confirmed bookings', 'Participants', 'Booking fees paid (KES)'],
       ...report.by_safari.map(trip => [
         trip.safari_title,
         trip.confirmed_bookings,
@@ -85,7 +85,7 @@ export default function AnalyticsView() {
   };
 
   const stats = [
-    { icon: BarChart3, iconClass: 'visitors', value: formatKes(report?.revenue_kes || 0), label: 'Confirmed revenue' },
+    { icon: BarChart3, iconClass: 'visitors', value: formatKes(report?.revenue_kes || 0), label: 'Booking fees collected' },
     { icon: TicketCheck, iconClass: 'safaris', value: report?.confirmed_bookings ?? '—', label: 'Confirmed bookings' },
     { icon: Users, iconClass: 'subscribers', value: report?.participants ?? '—', label: 'Participants' },
   ];
@@ -143,7 +143,7 @@ export default function AnalyticsView() {
       <section className="data-card">
         <div className="data-card-header">
           <div>
-            <h3>Revenue by safari</h3>
+            <h3>Booking fees collected by safari</h3>
             <p>
               {report?.total_bookings ?? 0} bookings in selected period
               {report?.status_counts?.pending_payment

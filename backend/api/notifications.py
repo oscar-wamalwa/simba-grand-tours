@@ -71,9 +71,13 @@ def send_booking_confirmation(booking_id):
     subject = f'Booking confirmed: {booking.reference}'
     body = (
         f'Hello {booking.full_name},\n\n'
-        f'Your payment for {safari_title} on {date} has been confirmed.\n'
+        f'Your booking fee for {safari_title} on {date} has been confirmed.\n'
         f'Booking reference: {booking.reference}\n'
-        f'Amount paid: {amount}\n'
+        f'Full trip amount: KES {booking.full_amount_kes:,}\n'
+        f'Booking fee paid: {amount}\n'
+        f'Promo discount: KES {booking.discount_kes:,}\n'
+        f'Remaining balance: KES {booking.balance_due_kes:,}\n'
+        f'Booking terms: {booking.booking_terms or "None"}\n'
         f'M-Pesa receipt: {booking.mpesa_receipt}\n'
         f'Travellers: {booking.participant_count}\n\n'
         'Please keep this email as your booking receipt. We look forward to welcoming you.'
@@ -95,7 +99,7 @@ def send_booking_confirmation(booking_id):
             booking.reference,
             safari_title,
             date,
-            amount,
+            f'{amount} paid; KES {booking.balance_due_kes:,} balance due',
             booking.mpesa_receipt,
         ],
     )

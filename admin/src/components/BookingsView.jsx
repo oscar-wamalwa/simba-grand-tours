@@ -111,7 +111,9 @@ export default function BookingsView() {
       'Email',
       'Phone',
       'Participants',
-      'Amount (KES)',
+      'Full amount (KES)',
+      'Booking fee paid (KES)',
+      'Balance due (KES)',
       'M-Pesa receipt',
     ]];
     departureBookings.forEach(booking => {
@@ -127,7 +129,9 @@ export default function BookingsView() {
         booking.email,
         booking.phone,
         booking.participant_count,
+        booking.full_amount_kes,
         booking.amount_kes,
+        booking.balance_due_kes,
         booking.mpesa_receipt,
       ]));
     });
@@ -184,7 +188,7 @@ export default function BookingsView() {
               <div>
                 <h4>{departure.safari_title}</h4>
                 <p><CalendarDays size={15} /> {departure.start_date}{departure.end_date ? ` to ${departure.end_date}` : ''}</p>
-                <p>{departure.seats_available} of {departure.seats_total} spots available · {formatKes(departure.price_kes)} per person</p>
+                <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatKes(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatKes(departure.booking_fee_kes) : 'not set'} per reservation</p>
               </div>
               <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
                 <Download size={17} /> Passenger manifest
@@ -207,7 +211,7 @@ export default function BookingsView() {
         </div>
         <div className="data-table-wrapper">
           <table className="data-table booking-table">
-            <thead><tr><th>Reference</th><th>Trip / date</th><th>Traveler</th><th>Guests</th><th>Amount</th><th>Status</th><th>M-Pesa receipt</th><th>Action</th></tr></thead>
+            <thead><tr><th>Reference</th><th>Trip / date</th><th>Traveler</th><th>Guests</th><th>Full amount</th><th>Booking fee paid</th><th>Balance due</th><th>Status</th><th>M-Pesa receipt</th><th>Action</th></tr></thead>
             <tbody>
               {filteredBookings.map(booking => (
                 <tr key={booking.id}>
@@ -215,14 +219,16 @@ export default function BookingsView() {
                   <td>{booking.safari_title}<br />{booking.departure_date}</td>
                   <td>{booking.full_name}<br />{booking.email}<br />{booking.phone}</td>
                   <td>{booking.participant_count}</td>
+                  <td>{formatKes(booking.full_amount_kes)}</td>
                   <td>{formatKes(booking.amount_kes)}</td>
+                  <td>{formatKes(booking.balance_due_kes)}</td>
                   <td><span className={`status-badge ${booking.status === 'confirmed' ? 'active' : 'archived'}`}>{booking.status.replaceAll('_', ' ')}</span></td>
                   <td>{booking.mpesa_receipt || '—'}</td>
                   <td>{booking.status === 'pending_payment' && <button type="button" className="btn-danger" onClick={() => cancelBooking(booking)}>Cancel</button>}</td>
                 </tr>
               ))}
               {!loading && filteredBookings.length === 0 && (
-                <tr><td colSpan="8">No bookings for this selection yet.</td></tr>
+                <tr><td colSpan="10">No bookings for this selection yet.</td></tr>
               )}
             </tbody>
           </table>

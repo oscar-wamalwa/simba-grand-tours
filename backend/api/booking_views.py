@@ -243,7 +243,9 @@ class BookingCreateView(APIView):
                 })
 
             promo = None
-            amount = departure.price_kes * participants
+            full_amount = departure.price_kes * participants
+            discount_amount = 0
+            discounted_total = full_amount
             promo_code = data.get('promo_code', '').strip().upper()
             if promo_code:
                 try:
@@ -270,13 +272,29 @@ class BookingCreateView(APIView):
                         'promo_code': f'This promo code requires at least {promo.min_participants} participants.'
                     })
                 discount = (
-                    Decimal(amount) * promo.value / Decimal(100)
+                    Decimal(full_amount) * promo.value / Decimal(100)
                     if promo.discount_type == PromoCode.DiscountType.PERCENT
                     else promo.value
                 ).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-                if discount >= amount:
+                if discount >= full_amount:
                     raise ValidationError({'promo_code': 'This discount must leave at least KES 1 to pay.'})
-                amount -= int(discount)
+                discount_amount = int(discount)
+                discounted_total -= discount_amount
+
+            booking_fee = departure.safari.booking_fee_kes
+            if not booking_fee:
+                raise ValidationError({
+                    'departure': 'The booking fee has not been configured for this safari yet.'
+                })
+            if booking_fee > full_amount:
+                raise ValidationError({
+                    'departure': 'The booking fee cannot exceed the full trip amount.'
+                })
+            if booking_fee > discounted_total:
+                raise ValidationError({
+                    'promo_code': 'The discount cannot reduce the trip total below the booking fee.'
+                })
+            balance_due = discounted_total - booking_fee
 
             booking = Booking.objects.create(
                 departure=departure,
@@ -285,7 +303,13 @@ class BookingCreateView(APIView):
                 email=data['email'],
                 phone=data['phone'],
                 participant_count=participants,
-                amount_kes=amount,
+                amount_kes=booking_fee,
+                full_amount_kes=full_amount,
+                booking_fee_kes=booking_fee,
+                discount_kes=discount_amount,
+                balance_due_kes=balance_due,
+                booking_terms=departure.safari.booking_terms,
+                terms_accepted_at=now if data.get('terms_accepted') else None,
                 payment_phone=phone,
                 expires_at=now + timedelta(minutes=10),
             )
@@ -322,6 +346,10 @@ class BookingCreateView(APIView):
                     'reference': booking.reference,
                     'status': booking.status,
                     'amount_kes': booking.amount_kes,
+                    'full_amount_kes': booking.full_amount_kes,
+                    'booking_fee_kes': booking.booking_fee_kes,
+                    'discount_kes': booking.discount_kes,
+                    'balance_due_kes': booking.balance_due_kes,
                     'currency': 'KES',
                     'expires_at': booking.expires_at,
                     'message': stk['customer_message'],
@@ -353,6 +381,10 @@ class BookingStatusView(APIView):
             'reference': booking.reference,
             'status': booking.status,
             'amount_kes': booking.amount_kes,
+            'full_amount_kes': booking.full_amount_kes,
+            'booking_fee_kes': booking.booking_fee_kes,
+            'discount_kes': booking.discount_kes,
+            'balance_due_kes': booking.balance_due_kes,
             'currency': 'KES',
             'mpesa_receipt': booking.mpesa_receipt or None,
             'expires_at': booking.expires_at,

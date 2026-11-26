@@ -19,6 +19,12 @@ class Safari(models.Model):
     description = models.TextField()
     location = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    booking_fee_kes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Flat booking fee in whole Kenyan shillings for a reservation.',
+    )
+    booking_terms = models.TextField(blank=True, default='')
     duration = models.CharField(max_length=50, blank=True, null=True)
     difficulty = models.CharField(max_length=50, default='Moderate')
     trip_type = models.CharField(max_length=100, blank=True)
@@ -126,6 +132,12 @@ class Booking(models.Model):
     phone = models.CharField(max_length=30)
     participant_count = models.PositiveIntegerField()
     amount_kes = models.PositiveIntegerField()
+    full_amount_kes = models.PositiveIntegerField(default=0)
+    booking_fee_kes = models.PositiveIntegerField(default=0)
+    discount_kes = models.PositiveIntegerField(default=0)
+    balance_due_kes = models.PositiveIntegerField(default=0)
+    booking_terms = models.TextField(blank=True, default='')
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.PENDING_PAYMENT)
     payment_phone = models.CharField(max_length=30)
     checkout_request_id = models.CharField(max_length=100, unique=True, null=True, blank=True)

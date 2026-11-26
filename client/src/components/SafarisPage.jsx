@@ -31,6 +31,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
   const [bookingError, setBookingError] = useState('');
   const [bookingResult, setBookingResult] = useState(null);
   const [bookingStatus, setBookingStatus] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [waitlistMessage, setWaitlistMessage] = useState('');
   const [waitlistDepartureId, setWaitlistDepartureId] = useState('');
   const [waitlistForm, setWaitlistForm] = useState({
@@ -60,6 +61,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
     setDepartures([]);
     setSelectedDepartureId('');
     setDeparturesError('');
+    setTermsAccepted(false);
     const refreshDepartures = () => api.departures.getForSafari(selectedSafariId)
       .then(data => {
         if (active) {
@@ -129,6 +131,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
       const result = await api.bookings.create({
         ...bookingForm,
         departure: Number(selectedDepartureId),
+        terms_accepted: termsAccepted,
       });
       setBookingResult(result);
       setBookingStatus(result.status);
@@ -195,6 +198,11 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
 
   if (selectedSafari) {
     const safariImage = selectedSafari.images?.[0] || selectedSafari.image || '/images/simbagrandtours.jpg';
+    const selectedDeparture = departures.find(departure => String(departure.id) === selectedDepartureId);
+    const participantCount = Number(bookingForm.participant_count) || 1;
+    const fullAmount = (Number(selectedDeparture?.price_kes) || 0) * participantCount;
+    const bookingFee = Number(selectedDeparture?.booking_fee_kes) || 0;
+    const balanceBeforePromo = Math.max(0, fullAmount - bookingFee);
     const inclusions = selectedSafari.inclusions || [
       'Experienced professional guide',
       'Park entry fees',
@@ -219,7 +227,11 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
               <p className="gold-text">{selectedSafari.location || 'Africa'}</p>
               <h1>{selectedSafari.title}</h1>
               <div className="sig-meta">
-                <span className="gold-text">{formatKes(selectedSafari.price)}</span>
+                <span className="gold-text">From {formatKes(selectedSafari.price)} per person</span>
+                <span>{selectedSafari.booking_fee_kes
+                  ? `Booking fee ${formatKes(selectedSafari.booking_fee_kes)} per reservation`
+                  : 'Booking fee not set'}
+                </span>
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
               </div>
               <p>{selectedSafari.description || 'A carefully designed safari experience with exceptional wildlife encounters and comfortable, memorable stays.'}</p>
@@ -284,6 +296,12 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
               )}
               <section className="departure-booking" hidden={!bookingsEnabled}>
                 <h3><CalendarDays size={20} /> Upcoming departures</h3>
+                {selectedSafari.booking_terms && (
+                  <aside className="booking-terms-notice">
+                    <h4>Booking Terms / Notes</h4>
+                    <p>{selectedSafari.booking_terms}</p>
+                  </aside>
+                )}
                 {departuresError && <p role="alert">{departuresError}</p>}
                 {!departuresError && departures.length === 0 && (
                   <p>No scheduled departures are available yet. Contact us for a custom trip.</p>
@@ -293,7 +311,11 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                     <article className="departure-option">
                       <div>
                         <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</strong>
-                        <span>{formatKes(departure.price_kes)} per person</span>
+                        <span>Full amount: {formatKes(departure.price_kes)} per person</span>
+                        <span>{departure.booking_fee_kes
+                          ? `Booking fee: ${formatKes(departure.booking_fee_kes)} per reservation`
+                          : 'Booking fee not configured'}
+                        </span>
                         <span><Users size={15} /> {departure.seats_available} spots left</span>
                         {departure.pickup_time && <span><Clock size={15} /> Pickup: {departure.pickup_time}</span>}
                       </div>
@@ -301,13 +323,17 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                         <button
                           type="button"
                           className="btn-gold-sm"
+                          disabled={!departure.booking_fee_kes}
                           onClick={() => {
                             setSelectedDepartureId(String(departure.id));
+                            setTermsAccepted(false);
                             setBookingResult(null);
                             setBookingStatus('');
                           }}
                         >
-                          {selectedDepartureId === String(departure.id) ? 'Selected' : 'Book'}
+                          {departure.booking_fee_kes
+                            ? selectedDepartureId === String(departure.id) ? 'Selected' : 'Book'
+                            : 'Booking fee not set'}
                         </button>
                       ) : (
                         <button
@@ -360,22 +386,44 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                       </label>
                     ))}
                     <label>Promo code (optional)<input value={bookingForm.promo_code} onChange={event => setBookingForm(prev => ({ ...prev, promo_code: event.target.value }))} /></label>
+                    <div className="booking-summary">
+                      <h4>Booking summary</h4>
+                      <div><span>Full amount ({participantCount} traveler{participantCount === 1 ? '' : 's'})</span><strong>{formatKes(fullAmount)}</strong></div>
+                      <div><span>Booking fee due now</span><strong>{formatKes(bookingFee)}</strong></div>
+                      <div><span>Remaining balance before promo</span><strong>{formatKes(balanceBeforePromo)}</strong></div>
+                      <p>Valid promo codes reduce the full amount. Your booking fee stays fixed; the adjusted balance is shown after checkout validation.</p>
+                      {bookingFee > fullAmount && <p className="form-status error" role="alert">The booking fee is greater than the full trip amount. Please contact us.</p>}
+                    </div>
+                    {selectedSafari.booking_terms && (
+                      <label className="booking-terms-accept">
+                        <input
+                          type="checkbox"
+                          required
+                          checked={termsAccepted}
+                          onChange={event => setTermsAccepted(event.target.checked)}
+                        />
+                        I have read and agree to the booking terms above.
+                      </label>
+                    )}
                     {bookingError && <p className="form-status error" role="alert">{bookingError}</p>}
-                    <button className="btn-gold btn-large" type="submit" disabled={bookingSubmitting}>
-                      {bookingSubmitting ? 'Starting M-Pesa...' : 'Reserve and pay with M-Pesa'}
+                    <button className="btn-gold btn-large" type="submit" disabled={bookingSubmitting || !bookingFee || bookingFee > fullAmount}>
+                      {bookingSubmitting ? 'Starting M-Pesa...' : 'Reserve and pay booking fee'}
                     </button>
-                    <p className="booking-note">Your selected spots are held for 10 minutes while you complete M-Pesa payment.</p>
+                    <p className="booking-note">Your selected spots are held for 10 minutes while you pay the booking fee.</p>
                   </form>
                 )}
                 {bookingResult && (
                   <div className="booking-confirmation" role="status">
                     <h4>Booking reference: {bookingResult.reference}</h4>
-                    <p>Amount: {formatKes(bookingResult.amount_kes)}</p>
+                    <p>Full amount: {formatKes(bookingResult.full_amount_kes)}</p>
+                    {bookingResult.discount_kes > 0 && <p>Promo discount: −{formatKes(bookingResult.discount_kes)}</p>}
+                    <p>Booking fee due now: {formatKes(bookingResult.booking_fee_kes)}</p>
+                    <p>Remaining balance: {formatKes(bookingResult.balance_due_kes)}</p>
                     <p>{bookingStatus === 'confirmed'
-                      ? 'Payment confirmed. Your booking is confirmed.'
+                      ? 'Booking fee received. Your slot is reserved; pay the remaining balance before departure.'
                       : bookingStatus === 'payment_failed'
                         ? 'Payment was not completed. Please start a new booking.'
-                        : bookingResult.message || 'Complete the M-Pesa prompt on your phone. Checking payment status...'}
+                        : bookingResult.message || `Complete the ${formatKes(bookingResult.booking_fee_kes)} booking-fee payment prompt. Checking status...`}
                     </p>
                   </div>
                 )}

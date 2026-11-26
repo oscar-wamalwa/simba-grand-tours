@@ -20,6 +20,8 @@ export default function SafarisView({ onRefresh }) {
     description: '', 
     location: '', 
     price: '', 
+    booking_fee_kes: '',
+    booking_terms: '',
     duration: '', 
     difficulty: 'Moderate', 
     trip_type: '',
@@ -111,6 +113,7 @@ export default function SafarisView({ onRefresh }) {
       const data = { 
         ...form, 
         price: parseFloat(form.price), 
+        booking_fee_kes: form.booking_fee_kes === '' ? null : Number(form.booking_fee_kes),
         highlights: form.highlights,
         inclusions: form.inclusions,
         exclusions: form.exclusions,
@@ -128,7 +131,7 @@ export default function SafarisView({ onRefresh }) {
       
       setShowModal(false);
       setEditing(null);
-      setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false });
+      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false });
       fetchSafaris();
       onRefresh && onRefresh();
     } catch (error) { 
@@ -184,6 +187,8 @@ export default function SafarisView({ onRefresh }) {
       description: s.description, 
       location: s.location, 
       price: s.price, 
+      booking_fee_kes: s.booking_fee_kes ?? '',
+      booking_terms: s.booking_terms || '',
       duration: s.duration, 
       difficulty: s.difficulty, 
       trip_type: s.trip_type || '',
@@ -211,11 +216,13 @@ export default function SafarisView({ onRefresh }) {
   );
 
   const downloadCSV = () => {
-    const headers = ['Title', 'Location', 'Price (KES)', 'Duration', 'Difficulty', 'Status', 'Signature', 'Featured', 'Created At'];
+    const headers = ['Title', 'Location', 'Full Amount (KES)', 'Booking Fee (KES)', 'Booking Terms / Notes', 'Duration', 'Difficulty', 'Status', 'Signature', 'Featured', 'Created At'];
     const rows = filtered.map(safari => [
       safari.title || '',
       safari.location || '',
       safari.price || '',
+      safari.booking_fee_kes ?? '',
+      safari.booking_terms || '',
       safari.duration || '',
       safari.difficulty || '',
       safari.visible !== false ? 'Active' : 'Hidden',
@@ -241,7 +248,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -251,7 +258,7 @@ export default function SafarisView({ onRefresh }) {
 
       <div className="data-table-wrapper">
         <table className="data-table">
-          <thead><tr><th>Image</th><th>Title</th><th>Location</th><th>Price</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Image</th><th>Title</th><th>Location</th><th>Full Amount</th><th>Booking Fee</th><th>Booking Terms / Notes</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
           <tbody>
             {filtered.map(safari => (
               <tr key={safari.id}>
@@ -259,6 +266,8 @@ export default function SafarisView({ onRefresh }) {
                 <td><p className="safari-title">{safari.title}</p></td>
                 <td><p className="safari-location">{safari.location}</p></td>
                 <td><p className="safari-price">{formatKes(safari.price)}</p></td>
+                <td><p className="safari-price">{safari.booking_fee_kes ? formatKes(safari.booking_fee_kes) : 'Not set'}</p></td>
+                <td><p className="safari-booking-terms">{safari.booking_terms || '—'}</p></td>
                 <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
                 <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
                 <td>
@@ -290,7 +299,12 @@ export default function SafarisView({ onRefresh }) {
                 <div className="form-group"><label>Description *</label><textarea rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required /></div>
                 <div className="form-row">
                   <div className="form-group"><label>Destination *</label><input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required /></div>
-                  <div className="form-group"><label>Price (KES) *</label><input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
+                  <div className="form-group"><label>Full Amount (KES) *</label><input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
+                  <div className="form-group"><label>Booking Fee (KES)</label><input type="number" min="1" step="1" value={form.booking_fee_kes} onChange={e => setForm({ ...form, booking_fee_kes: e.target.value })} /></div>
+                </div>
+                <div className="form-group">
+                  <label>Booking Terms / Notes</label>
+                  <textarea rows="3" value={form.booking_terms} onChange={e => setForm({ ...form, booking_terms: e.target.value })} placeholder="e.g. Booking fee is non-refundable" />
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label>County</label><input type="text" value={form.county} onChange={e => setForm({ ...form, county: e.target.value })} /></div>

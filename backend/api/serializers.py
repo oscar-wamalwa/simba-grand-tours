@@ -46,7 +46,8 @@ class SafariSerializer(serializers.ModelSerializer):
     class Meta:
         model = Safari
         fields = [
-            'id', 'title', 'description', 'location', 'price', 'duration',
+            'id', 'title', 'description', 'location', 'price', 'booking_fee_kes',
+            'booking_terms', 'duration',
             'difficulty', 'images', 'videos', 'highlights', 'inclusions', 'exclusions',
             'itinerary', 'visible', 'is_signature', 'trip_type', 'trip_mode',
             'county', 'pickup_points', 'packing_checklist', 'is_featured',
@@ -89,13 +90,20 @@ class SafariSerializer(serializers.ModelSerializer):
 class TripDepartureSerializer(serializers.ModelSerializer):
     seats_available = serializers.IntegerField(read_only=True)
     safari_title = serializers.CharField(source='safari.title', read_only=True)
+    booking_fee_kes = serializers.IntegerField(
+        source='safari.booking_fee_kes',
+        read_only=True,
+        allow_null=True,
+    )
+    booking_terms = serializers.CharField(source='safari.booking_terms', read_only=True)
 
     class Meta:
         model = TripDeparture
         fields = [
             'id', 'safari', 'safari_title', 'start_date', 'end_date',
-            'seats_total', 'seats_available', 'price_kes', 'pickup_points',
-            'pickup_time', 'is_open', 'created_at', 'updated_at',
+            'seats_total', 'seats_available', 'price_kes', 'booking_fee_kes',
+            'booking_terms', 'pickup_points', 'pickup_time', 'is_open',
+            'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -127,6 +135,7 @@ class BookingCreateSerializer(serializers.Serializer):
     payment_phone = serializers.CharField(max_length=30)
     participant_count = serializers.IntegerField(min_value=1, max_value=20)
     promo_code = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    terms_accepted = serializers.BooleanField(required=False, default=False, write_only=True)
     passengers = serializers.ListField(
         child=serializers.DictField(),
         required=False,
@@ -135,6 +144,10 @@ class BookingCreateSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
+        if attrs['departure'].safari.booking_terms.strip() and not attrs.get('terms_accepted'):
+            raise serializers.ValidationError({
+                'terms_accepted': 'Accept the safari booking terms before checkout.'
+            })
         passengers = attrs.get('passengers') or []
         if len(passengers) != attrs['participant_count']:
             raise serializers.ValidationError({
@@ -171,6 +184,8 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'reference', 'departure', 'departure_date', 'safari_title',
             'full_name', 'email', 'phone', 'participant_count', 'amount_kes',
+            'full_amount_kes', 'booking_fee_kes', 'discount_kes', 'balance_due_kes',
+            'booking_terms', 'terms_accepted_at',
             'status', 'payment_phone', 'mpesa_receipt', 'expires_at', 'created_at',
             'passengers',
         ]

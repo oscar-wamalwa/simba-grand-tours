@@ -260,6 +260,8 @@ class BookingFlowTests(APITestCase):
             description='Three-day group trip',
             location='Narok',
             price='20000.00',
+            booking_fee_kes=5000,
+            booking_terms='Booking fee is non-refundable.',
         )
         self.departure = TripDeparture.objects.create(
             safari=self.safari,
@@ -274,6 +276,7 @@ class BookingFlowTests(APITestCase):
             'phone': '0712345678',
             'payment_phone': '0712345678',
             'participant_count': 2,
+            'terms_accepted': True,
             'passengers': [
                 {'full_name': 'Amina Guest'},
                 {'full_name': 'Sam Guest'},
@@ -294,13 +297,69 @@ class BookingFlowTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['currency'], 'KES')
-        self.assertEqual(response.data['amount_kes'], 40000)
+        self.assertEqual(response.data['amount_kes'], 5000)
+        self.assertEqual(response.data['full_amount_kes'], 40000)
+        self.assertEqual(response.data['booking_fee_kes'], 5000)
+        self.assertEqual(response.data['balance_due_kes'], 35000)
         self.assertEqual(self.departure.__class__.objects.get(pk=self.departure.pk).seats_available, 1)
         booking = Booking.objects.get(reference=response.data['reference'])
         self.assertEqual(booking.status, Booking.Status.PENDING_PAYMENT)
         self.assertEqual(booking.passengers.count(), 2)
         self.assertEqual(booking.payment_phone, '254712345678')
+        self.assertEqual(booking.booking_terms, self.safari.booking_terms)
+        self.assertIsNotNone(booking.terms_accepted_at)
         initiate.assert_called_once()
+
+    def test_booking_requires_acceptance_of_admin_terms(self):
+        from unittest.mock import patch
+
+        payload = {**self.booking_data, 'terms_accepted': False}
+        with patch('api.booking_views.initiate_stk_push') as initiate:
+            response = self.client.post('/api/bookings/create/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('terms_accepted', response.data)
+        initiate.assert_not_called()
+
+    def test_booking_fee_stays_fixed_and_promo_reduces_balance(self):
+        PromoCode.objects.create(
+            code='SAVE10',
+            discount_type=PromoCode.DiscountType.PERCENT,
+            value=10,
+        )
+        from unittest.mock import patch
+
+        payload = {**self.booking_data, 'promo_code': 'SAVE10'}
+        with patch('api.booking_views.initiate_stk_push', return_value={
+            'checkout_request_id': 'checkout-promo',
+            'merchant_request_id': 'merchant-promo',
+            'customer_message': 'Check your phone.',
+            'payment_phone': '254712345678',
+        }) as initiate:
+            response = self.client.post('/api/bookings/create/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['amount_kes'], 5000)
+        self.assertEqual(response.data['full_amount_kes'], 40000)
+        self.assertEqual(response.data['discount_kes'], 4000)
+        self.assertEqual(response.data['balance_due_kes'], 31000)
+        self.assertEqual(initiate.call_args.kwargs['booking'].amount_kes, 5000)
+
+    def test_booking_rejects_discount_that_reduces_total_below_booking_fee(self):
+        PromoCode.objects.create(
+            code='TOOLOW',
+            discount_type=PromoCode.DiscountType.FIXED_KES,
+            value=38000,
+        )
+        from unittest.mock import patch
+
+        payload = {**self.booking_data, 'promo_code': 'TOOLOW'}
+        with patch('api.booking_views.initiate_stk_push') as initiate:
+            response = self.client.post('/api/bookings/create/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('promo_code', response.data)
+        initiate.assert_not_called()
 
     def test_staff_sales_report_sums_confirmed_bookings_and_filters_dates(self):
         Booking.objects.create(
@@ -460,7 +519,10 @@ class BookingFlowTests(APITestCase):
             phone='0712345678',
             payment_phone='254712345678',
             participant_count=1,
-            amount_kes=20000,
+            amount_kes=5000,
+            full_amount_kes=20000,
+            booking_fee_kes=5000,
+            balance_due_kes=15000,
             checkout_request_id='checkout-paid',
             merchant_request_id='merchant-paid',
         )
@@ -471,7 +533,7 @@ class BookingFlowTests(APITestCase):
                     'CheckoutRequestID': 'checkout-paid',
                     'ResultCode': 0,
                     'CallbackMetadata': {'Item': [
-                        {'Name': 'Amount', 'Value': 20000},
+                        {'Name': 'Amount', 'Value': 5000},
                         {'Name': 'MpesaReceiptNumber', 'Value': 'QWE123456'},
                         {'Name': 'PhoneNumber', 'Value': 254712345678},
                     ]},
@@ -496,10 +558,12 @@ class BookingFlowTests(APITestCase):
         booking.refresh_from_db()
         self.assertEqual(booking.status, Booking.Status.CONFIRMED)
         self.assertEqual(booking.mpesa_receipt, 'QWE123456')
+        self.assertEqual(booking.balance_due_kes, 15000)
         self.assertEqual(self.departure.__class__.objects.get(pk=self.departure.pk).seats_available, 2)
         from django.core import mail
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(booking.reference, mail.outbox[0].body)
+        self.assertIn('Remaining balance: KES 15,000', mail.outbox[0].body)
 
     @override_settings(MPESA_CALLBACK_TOKEN='callback-secret')
     def test_callback_does_not_confirm_when_daraja_query_disagrees(self):

@@ -15,6 +15,8 @@ For a live Till, set `MPESA_SHORTCODE` to the Safaricom-issued Till number and `
 
 The admin Sales Reports page uses the staff-only `GET /api/bookings/report/` endpoint. Optional `start_date` and `end_date` query parameters use `YYYY-MM-DD`; revenue totals include confirmed bookings only.
 
+Admins can set a flat reservation booking fee and terms on each safari. The booking fee is charged once per reservation; the departure's per-person price remains the full trip amount. Promo discounts apply to the full amount, and the M-Pesa prompt charges only the configured fee. A successful fee payment reserves the seats and leaves the discounted balance due for collection separately.
+
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
 
 ```sh

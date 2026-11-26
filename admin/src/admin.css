@@ -499,7 +499,8 @@
 .departure-admin-card p { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--gray-dark); font-size: 0.85rem; }
 .departure-admin-card .btn-secondary { flex-shrink: 0; display: flex; align-items: center; gap: 7px; }
 .booking-filter { min-width: 230px; }
-.booking-table { min-width: 900px; }
+.booking-table { min-width: 1200px; }
+.safari-booking-terms { max-width: 280px; white-space: normal; overflow-wrap: anywhere; }
 .analytics-view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .analytics-view .data-card-header p { color: var(--gray-dark); font-size: 0.9rem; margin-top: 5px; }
 .report-filters { display: flex; align-items: end; gap: 14px; padding: 20px; }
