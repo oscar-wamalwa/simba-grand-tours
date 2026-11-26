@@ -4,6 +4,7 @@ import api from '../api';
 import { formatKes } from '../currency';
 
 const safarisBg = '/images/greatmigration.jpg';
+const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED === 'true';
 
 function SafarisPage({ safaris, onSelect, selectedSafari }) {
   const maxPrice = Math.max(10000, ...safaris.map(safari => Number(safari.price) || 0));
@@ -281,7 +282,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                   </ul>
                 </>
               )}
-              <section className="departure-booking">
+              <section className="departure-booking" hidden={!bookingsEnabled}>
                 <h3><CalendarDays size={20} /> Upcoming departures</h3>
                 {departuresError && <p role="alert">{departuresError}</p>}
                 {!departuresError && departures.length === 0 && (
