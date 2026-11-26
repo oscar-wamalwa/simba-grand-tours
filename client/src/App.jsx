@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Menu, X } from 'lucide-react';
 import api from './api';
 
@@ -69,6 +69,38 @@ export default function App() {
   const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const initialHistoryState = useRef({ page, safariId: selectedSafariId });
+
+  useEffect(() => {
+    window.history.replaceState(
+      initialHistoryState.current,
+      '',
+      window.location.href,
+    );
+
+    const handlePopState = (event) => {
+      const state = event.state;
+      const nextPage = state && clientPages.has(state.page) ? state.page : 'home';
+      const nextSafariId = state?.safariId == null ? null : String(state.safariId);
+
+      setPage(nextPage);
+      setSelectedSafariId(nextSafariId);
+      setSelectedSafari(current => (
+        current && String(current.id) === nextSafariId ? current : null
+      ));
+      setMobileMenuOpen(false);
+      sessionStorage.setItem('clientCurrentPage', nextPage);
+      if (nextSafariId) {
+        sessionStorage.setItem('clientSelectedSafariId', nextSafariId);
+      } else {
+        sessionStorage.removeItem('clientSelectedSafariId');
+      }
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     if (!selectedSafariId) return;
@@ -142,13 +174,22 @@ export default function App() {
   }, []);
 
   const navigateTo = (pageName, safariData = null) => {
+    const safariId = safariData?.id == null ? null : String(safariData.id);
+    const currentState = window.history.state;
+    if (currentState?.page !== pageName || currentState?.safariId !== safariId) {
+      window.history.pushState(
+        { page: pageName, safariId },
+        '',
+        window.location.href,
+      );
+    }
     setSelectedSafari(safariData);
-    setSelectedSafariId(safariData?.id == null ? null : String(safariData.id));
+    setSelectedSafariId(safariId);
     sessionStorage.setItem('clientCurrentPage', pageName);
-    if (safariData?.id == null) {
+    if (!safariId) {
       sessionStorage.removeItem('clientSelectedSafariId');
     } else {
-      sessionStorage.setItem('clientSelectedSafariId', String(safariData.id));
+      sessionStorage.setItem('clientSelectedSafariId', safariId);
     }
     setPage(pageName);
     setMobileMenuOpen(false);
