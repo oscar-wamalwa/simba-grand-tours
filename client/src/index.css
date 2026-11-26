@@ -533,7 +533,7 @@ a { text-decoration: none; color: inherit; }
 /* Contact Page */
 .contact-layout { display: grid; grid-template-columns: 350px 1fr; gap: 50px; margin-bottom: 60px; }
 
-.contact-sidebar { position: sticky; top: 100px; height: fit-content; }
+.contact-sidebar { height: fit-content; }
 .contact-sidebar h2 { font-size: 1.5rem; color: var(--savanna-black); margin-bottom: 25px; }
 
 .contact-info-card {
