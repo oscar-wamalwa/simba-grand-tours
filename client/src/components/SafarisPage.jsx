@@ -4,7 +4,7 @@ import api from '../api';
 import { formatKes } from '../currency';
 
 const safarisBg = '/images/greatmigration.jpg';
-const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED === 'true';
+const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
 
 function SafarisPage({ safaris, onSelect, selectedSafari }) {
   const maxPrice = Math.max(10000, ...safaris.map(safari => Number(safari.price) || 0));
