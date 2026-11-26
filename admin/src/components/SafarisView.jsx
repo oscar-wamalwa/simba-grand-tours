@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Image, Download, Star, Upload, X } from 'lucide-react';
+import { formatKes } from '../currency';
 
 const normalizeSafari = (safari) => ({
   ...safari,
@@ -21,13 +22,20 @@ export default function SafarisView({ onRefresh }) {
     price: '', 
     duration: '', 
     difficulty: 'Moderate', 
+    trip_type: '',
+    trip_mode: 'either',
+    county: '',
     images: [], 
+    videos: [],
     highlights: [], 
     inclusions: [],
     exclusions: [],
     itinerary: [],
+    pickup_points: [],
+    packing_checklist: [],
     visible: true, 
-    isSignature: false 
+    isSignature: false,
+    is_featured: false,
   });
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -107,6 +115,8 @@ export default function SafarisView({ onRefresh }) {
         inclusions: form.inclusions,
         exclusions: form.exclusions,
         itinerary: form.itinerary,
+        pickup_points: form.pickup_points,
+        packing_checklist: form.packing_checklist,
         isSignature: form.isSignature
       };
       
@@ -118,7 +128,7 @@ export default function SafarisView({ onRefresh }) {
       
       setShowModal(false);
       setEditing(null);
-      setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', images: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], visible: true, isSignature: false });
+      setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false });
       fetchSafaris();
       onRefresh && onRefresh();
     } catch (error) { 
@@ -176,13 +186,20 @@ export default function SafarisView({ onRefresh }) {
       price: s.price, 
       duration: s.duration, 
       difficulty: s.difficulty, 
+      trip_type: s.trip_type || '',
+      trip_mode: s.trip_mode || 'either',
+      county: s.county || '',
       images: s.images || [], 
+      videos: s.videos || [],
       highlights: s.highlights || [], 
       inclusions: s.inclusions || [],
       exclusions: s.exclusions || [],
       itinerary: s.itinerary || [],
+      pickup_points: s.pickup_points || [],
+      packing_checklist: s.packing_checklist || [],
       visible: s.visible, 
-      isSignature: s.isSignature ?? s.is_signature ?? false
+      isSignature: s.isSignature ?? s.is_signature ?? false,
+      is_featured: s.is_featured ?? false,
     });
     setImagePreviews((s.images || []).map(url => ({ url, isNew: false })));
     setShowModal(true);
@@ -194,7 +211,7 @@ export default function SafarisView({ onRefresh }) {
   );
 
   const downloadCSV = () => {
-    const headers = ['Title', 'Location', 'Price (USD)', 'Duration', 'Difficulty', 'Status', 'Signature', 'Created At'];
+    const headers = ['Title', 'Location', 'Price (KES)', 'Duration', 'Difficulty', 'Status', 'Signature', 'Featured', 'Created At'];
     const rows = filtered.map(safari => [
       safari.title || '',
       safari.location || '',
@@ -203,6 +220,7 @@ export default function SafarisView({ onRefresh }) {
       safari.difficulty || '',
       safari.visible !== false ? 'Active' : 'Hidden',
       safari.isSignature ? 'Yes' : 'No',
+      safari.is_featured ? 'Yes' : 'No',
       safari.created_at ? new Date(safari.created_at).toLocaleDateString() : ''
     ]);
     
@@ -223,7 +241,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', images: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], visible: true, isSignature: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false, is_featured: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -240,7 +258,7 @@ export default function SafarisView({ onRefresh }) {
                 <td>{safari.images && safari.images.length > 0 ? <img src={safari.images[0]} alt="" className="safari-thumb" /> : <div className="safari-thumb-placeholder"><Image size={20} /></div>}</td>
                 <td><p className="safari-title">{safari.title}</p></td>
                 <td><p className="safari-location">{safari.location}</p></td>
-                <td><p className="safari-price">${safari.price?.toLocaleString()}</p></td>
+                <td><p className="safari-price">{formatKes(safari.price)}</p></td>
                 <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
                 <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
                 <td>
@@ -271,11 +289,20 @@ export default function SafarisView({ onRefresh }) {
                 <div className="form-group"><label>Title *</label><input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required /></div>
                 <div className="form-group"><label>Description *</label><textarea rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required /></div>
                 <div className="form-row">
-                  <div className="form-group"><label>Location *</label><input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required /></div>
-                  <div className="form-group"><label>Price (USD) *</label><input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
+                  <div className="form-group"><label>Destination *</label><input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required /></div>
+                  <div className="form-group"><label>Price (KES) *</label><input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group"><label>County</label><input type="text" value={form.county} onChange={e => setForm({ ...form, county: e.target.value })} /></div>
+                  <div className="form-group"><label>Trip type</label><input type="text" value={form.trip_type} onChange={e => setForm({ ...form, trip_type: e.target.value })} placeholder="e.g. Wildlife safari" /></div>
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label>Duration</label><input type="text" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="e.g., 7 Days" /></div>
+                  <div className="form-group"><label>Trip style</label>
+                    <select value={form.trip_mode} onChange={e => setForm({ ...form, trip_mode: e.target.value })}>
+                      <option value="either">Group or private</option><option value="group">Group</option><option value="private">Private</option>
+                    </select>
+                  </div>
                   <div className="form-group"><label>Difficulty</label>
                     <select value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })}>
                       <option value="Easy">Easy</option><option value="Moderate">Moderate</option><option value="Challenging">Challenging</option>
@@ -301,6 +328,18 @@ export default function SafarisView({ onRefresh }) {
                   <textarea rows="5" value={(form.itinerary || []).join('\n')} onChange={e => setForm({ ...form, itinerary: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder={'Day 1 - Arrival and lodge transfer\nDay 2 - Morning and evening game drives'} />
                 </div>
                 <div className="form-group">
+                  <label>Pickup points (one per line; add times after a dash)</label>
+                  <textarea rows="3" value={(form.pickup_points || []).map(item => typeof item === 'string' ? item : `${item.name}${item.time ? ` - ${item.time}` : ''}`).join('\n')} onChange={e => setForm({ ...form, pickup_points: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="Nairobi CBD - 6:00 AM" />
+                </div>
+                <div className="form-group">
+                  <label>Packing checklist (one item per line)</label>
+                  <textarea rows="3" value={(form.packing_checklist || []).join('\n')} onChange={e => setForm({ ...form, packing_checklist: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="Comfortable walking shoes" />
+                </div>
+                <div className="form-group">
+                  <label>Video URLs (one per line)</label>
+                  <textarea rows="3" value={(form.videos || []).join('\n')} onChange={e => setForm({ ...form, videos: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="https://example.com/safari-video.mp4" />
+                </div>
+                <div className="form-group">
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input type="checkbox" checked={form.isSignature} onChange={e => setForm({ ...form, isSignature: e.target.checked })} style={{ width: 'auto' }} />
                     Mark as Signature Safari
@@ -310,6 +349,12 @@ export default function SafarisView({ onRefresh }) {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input type="checkbox" checked={form.visible} onChange={e => setForm({ ...form, visible: e.target.checked })} style={{ width: 'auto' }} />
                     Visible on website
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })} style={{ width: 'auto' }} />
+                    Feature trip on website
                   </label>
                 </div>
 

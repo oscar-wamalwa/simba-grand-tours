@@ -51,6 +51,29 @@ export const safarisApi = {
   getSignature: () => apiRequest('/safaris/signature/'),
 };
 
+export const departuresApi = {
+  getForSafari: async (safariId) => {
+    const response = await apiRequest(`/departures/?safari=${encodeURIComponent(safariId)}`);
+    return response.results || response;
+  },
+};
+
+export const bookingsApi = {
+  create: (data) => apiRequest('/bookings/create/', { method: 'POST', body: data }),
+  getStatus: (reference) => apiRequest(`/bookings/${encodeURIComponent(reference)}/status/`),
+};
+
+export const waitlistApi = {
+  create: (data) => apiRequest('/waitlist/', { method: 'POST', body: data }),
+};
+
+export const announcementsApi = {
+  getAll: async () => {
+    const response = await apiRequest('/announcements/');
+    return response.results || response;
+  },
+};
+
 // Blog API
 export const blogsApi = {
   getAll: async (params = {}) => {
@@ -93,6 +116,10 @@ export const settingsApi = {
 
 export default {
   safaris: safarisApi,
+  departures: departuresApi,
+  bookings: bookingsApi,
+  waitlist: waitlistApi,
+  announcements: announcementsApi,
   blogs: blogsApi,
   subscribers: subscribersApi,
   messages: messagesApi,

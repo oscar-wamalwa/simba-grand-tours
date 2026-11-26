@@ -182,6 +182,31 @@ CORS_ALLOW_CREDENTIALS = True
 # Allow all headers
 CORS_ALLOW_ALL_HEADERS = True
 
+# Safaricom Daraja settings. Keep credentials in the deployment environment.
+MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'sandbox')
+MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', '')
+MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', '')
+MPESA_SHORTCODE = os.environ.get('MPESA_SHORTCODE', '')
+MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', '')
+MPESA_TRANSACTION_TYPE = os.environ.get('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline')
+MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', '')
+MPESA_CALLBACK_TOKEN = os.environ.get('MPESA_CALLBACK_TOKEN', '')
+
+# Transactional email and WhatsApp Cloud API settings.
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in ('true', '1', 'yes')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
+WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+WHATSAPP_API_VERSION = os.environ.get('WHATSAPP_API_VERSION', 'v21.0')
+WHATSAPP_TEMPLATE_LANGUAGE = os.environ.get('WHATSAPP_TEMPLATE_LANGUAGE', 'en')
+WHATSAPP_BOOKING_TEMPLATE = os.environ.get('WHATSAPP_BOOKING_TEMPLATE', '')
+WHATSAPP_REMINDER_TEMPLATE = os.environ.get('WHATSAPP_REMINDER_TEMPLATE', '')
+WHATSAPP_WAITLIST_TEMPLATE = os.environ.get('WHATSAPP_WAITLIST_TEMPLATE', '')
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

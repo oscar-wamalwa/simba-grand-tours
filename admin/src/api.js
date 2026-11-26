@@ -69,6 +69,54 @@ export const safarisApi = {
   getSignature: () => apiRequest('/safaris/signature/'),
 };
 
+export const departuresApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/departures/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/departures/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PUT', body: data }),
+  delete: (id) => apiRequest(`/departures/${id}/`, { method: 'DELETE' }),
+};
+
+export const bookingsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/bookings/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  cancel: (id) => apiRequest(`/bookings/${id}/`, { method: 'PATCH', body: { status: 'cancelled' } }),
+};
+
+export const promoCodesApi = {
+  getAll: async () => {
+    const response = await apiRequest('/promocodes/');
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/promocodes/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/promocodes/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/promocodes/${id}/`, { method: 'DELETE' }),
+};
+
+export const announcementsApi = {
+  getAll: async () => {
+    const response = await apiRequest('/announcements/');
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/announcements/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/announcements/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/announcements/${id}/`, { method: 'DELETE' }),
+};
+
+export const waitlistApi = {
+  getAll: async () => {
+    const response = await apiRequest('/waitlist/');
+    return response.results || response;
+  },
+  update: (id, data) => apiRequest(`/waitlist/${id}/`, { method: 'PATCH', body: data }),
+};
+
 // Blog API
 export const blogsApi = {
   getAll: async (params = {}) => {
@@ -146,6 +194,11 @@ export const authApi = {
 
 export default {
   safaris: safarisApi,
+  departures: departuresApi,
+  bookings: bookingsApi,
+  promoCodes: promoCodesApi,
+  announcements: announcementsApi,
+  waitlist: waitlistApi,
   blogs: blogsApi,
   subscribers: subscribersApi,
   messages: messagesApi,

@@ -15,7 +15,9 @@ import {
   LockKeyhole,
   User,
   Menu,
-  X
+  X,
+  CalendarDays,
+  Megaphone
 } from 'lucide-react';
 import {
   DashboardView,
@@ -25,7 +27,9 @@ import {
   TestimoniesView,
   BlogsView,
   AnalyticsView,
-  SettingsView
+  SettingsView,
+  BookingsView,
+  CampaignsView
 } from './components';
 
 const pageInfo = {
@@ -36,7 +40,9 @@ const pageInfo = {
   testimonies: ['Testimonies', 'Choose reviews to feature on the website.'],
   blogs: ['The Simba Pulse', 'Create, publish, and manage website stories.'],
   analytics: ['Analytics', 'Track your website performance.'],
-  settings: ['Settings', 'Control contact details, social links, and website branding.']
+  settings: ['Settings', 'Control contact details, social links, and website branding.'],
+  bookings: ['Departures and Bookings', 'Schedule trips, track paid seats, and export passenger manifests.'],
+  campaigns: ['Promotions and Waitlist', 'Manage promo codes, seasonal announcements, and sold-out trip waitlists.']
 };
 
 export default function AdminDashboard({ onLogout }) {
@@ -109,7 +115,9 @@ export default function AdminDashboard({ onLogout }) {
     { id: 'messages', icon: MessageSquare, label: 'Messages' },
     { id: 'testimonies', icon: MessageCircle, label: 'Testimonies' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },
-    { id: 'settings', icon: Settings, label: 'Settings' }
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'bookings', icon: CalendarDays, label: 'Departures and Bookings' },
+    { id: 'campaigns', icon: Megaphone, label: 'Promotions and Waitlist' }
   ];
 
   return (
@@ -181,6 +189,8 @@ export default function AdminDashboard({ onLogout }) {
           {currentPage === 'blogs' && <BlogsView onRefresh={fetchStats} />}
           {currentPage === 'analytics' && <AnalyticsView />}
           {currentPage === 'settings' && <SettingsView />}
+          {currentPage === 'bookings' && <BookingsView />}
+          {currentPage === 'campaigns' && <CampaignsView />}
         </div>
       </main>
     </div>

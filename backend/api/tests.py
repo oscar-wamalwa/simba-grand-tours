@@ -1,8 +1,19 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
-from .models import Blog, ContactMessage, Safari, Subscriber, Testimonial
+from .models import (
+    Blog,
+    Booking,
+    ContactMessage,
+    PromoCode,
+    Safari,
+    Subscriber,
+    Testimonial,
+    TripDeparture,
+    WaitlistEntry,
+)
 
 
 class PublicContentAccessTests(APITestCase):
@@ -27,6 +38,7 @@ class PublicContentAccessTests(APITestCase):
             full_name='Featured guest',
             message='Wonderful trip',
             is_featured=True,
+            is_verified=True,
         )
         Testimonial.objects.create(
             full_name='Unapproved guest',
@@ -65,7 +77,13 @@ class PublicContentAccessTests(APITestCase):
         )
         review = self.client.post(
             '/api/testimonials/',
-            {'full_name': 'Guest', 'email': 'guest@example.com', 'message': 'Great', 'rating': 5},
+            {
+                'full_name': 'Guest',
+                'email': 'guest@example.com',
+                'booking_reference': 'SGT-INVALID',
+                'message': 'Great',
+                'rating': 5,
+            },
             format='json',
         )
         subscriber = self.client.post(
@@ -75,8 +93,58 @@ class PublicContentAccessTests(APITestCase):
         )
 
         self.assertEqual(contact.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(review.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(review.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(subscriber.status_code, status.HTTP_201_CREATED)
+
+    def test_public_reviews_require_a_confirmed_booking_and_matching_email(self):
+        safari = Safari.objects.create(
+            title='Completed safari',
+            description='Details',
+            location='Kenya',
+            price='20000.00',
+        )
+        departure = TripDeparture.objects.create(
+            safari=safari,
+            start_date='2030-07-01',
+            seats_total=2,
+            price_kes=20000,
+        )
+        booking = Booking.objects.create(
+            departure=departure,
+            full_name='Verified guest',
+            email='verified@example.com',
+            phone='0712345678',
+            payment_phone='254712345678',
+            participant_count=1,
+            amount_kes=20000,
+            status=Booking.Status.CONFIRMED,
+        )
+        payload = {
+            'full_name': 'Verified guest',
+            'email': 'verified@example.com',
+            'booking_reference': booking.reference,
+            'message': 'Great trip',
+            'rating': 5,
+            'is_featured': True,
+        }
+
+        mismatch = self.client.post(
+            '/api/testimonials/',
+            {**payload, 'email': 'other@example.com'},
+            format='json',
+        )
+        submitted = self.client.post('/api/testimonials/', payload, format='json')
+        duplicate = self.client.post('/api/testimonials/', payload, format='json')
+
+        self.assertEqual(mismatch.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(submitted.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(submitted.data['is_verified'])
+        self.assertFalse(submitted.data['is_featured'])
+        self.assertNotIn('email', submitted.data)
+        self.assertNotIn('booking', submitted.data)
+        self.assertEqual(duplicate.status_code, status.HTTP_409_CONFLICT)
+        featured = APIClient().get('/api/testimonials/featured/').data
+        self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
 
 
 class AdminContentAccessTests(APITestCase):
@@ -101,6 +169,7 @@ class AdminContentAccessTests(APITestCase):
             full_name='New guest',
             message='A great experience',
             is_featured=False,
+            is_verified=True,
         )
 
     def test_non_staff_users_cannot_write_content(self):
@@ -168,3 +237,252 @@ class AdminContentAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['website'], 'https://www.simbagrandtours.com')
         self.assertEqual(response.data['instagram'], 'https://instagram.com/simba.grand.tours')
+
+
+class BookingFlowTests(APITestCase):
+    def setUp(self):
+        self.safari = Safari.objects.create(
+            title='Maasai Mara',
+            description='Three-day group trip',
+            location='Narok',
+            price='20000.00',
+        )
+        self.departure = TripDeparture.objects.create(
+            safari=self.safari,
+            start_date='2030-07-01',
+            seats_total=3,
+            price_kes=20000,
+        )
+        self.booking_data = {
+            'departure': self.departure.id,
+            'full_name': 'Amina Guest',
+            'email': 'amina@example.com',
+            'phone': '0712345678',
+            'payment_phone': '0712345678',
+            'participant_count': 2,
+            'passengers': [
+                {'full_name': 'Amina Guest'},
+                {'full_name': 'Sam Guest'},
+            ],
+        }
+
+    @override_settings(MPESA_CALLBACK_TOKEN='callback-secret')
+    def test_booking_holds_seats_and_starts_kes_payment(self):
+        with self.settings(MPESA_CALLBACK_TOKEN='callback-secret'):
+            from unittest.mock import patch
+            with patch('api.booking_views.initiate_stk_push', return_value={
+                'checkout_request_id': 'checkout-1',
+                'merchant_request_id': 'merchant-1',
+                'customer_message': 'Check your phone.',
+                'payment_phone': '254712345678',
+            }) as initiate:
+                response = self.client.post('/api/bookings/create/', self.booking_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['currency'], 'KES')
+        self.assertEqual(response.data['amount_kes'], 40000)
+        self.assertEqual(self.departure.__class__.objects.get(pk=self.departure.pk).seats_available, 1)
+        booking = Booking.objects.get(reference=response.data['reference'])
+        self.assertEqual(booking.status, Booking.Status.PENDING_PAYMENT)
+        self.assertEqual(booking.passengers.count(), 2)
+        self.assertEqual(booking.payment_phone, '254712345678')
+        initiate.assert_called_once()
+
+    def test_checkout_refuses_to_oversell_departure(self):
+        Booking.objects.create(
+            departure=self.departure,
+            full_name='Existing',
+            email='existing@example.com',
+            phone='0711111111',
+            payment_phone='254711111111',
+            participant_count=2,
+            amount_kes=40000,
+            status=Booking.Status.CONFIRMED,
+        )
+
+        response = self.client.post('/api/bookings/create/', self.booking_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('participant_count', response.data)
+
+    def test_public_waitlist_only_accepts_sold_out_departures(self):
+        Booking.objects.create(
+            departure=self.departure,
+            full_name='Existing',
+            email='existing@example.com',
+            phone='0711111111',
+            payment_phone='254711111111',
+            participant_count=3,
+            amount_kes=60000,
+            status=Booking.Status.CONFIRMED,
+        )
+        response = self.client.post('/api/waitlist/', {
+            'departure': self.departure.id,
+            'full_name': 'Amina Guest',
+            'email': 'amina@example.com',
+            'phone': '0712345678',
+            'participant_count': 1,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @override_settings(
+        DEFAULT_FROM_EMAIL='bookings@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_waitlist_is_notified_when_spots_are_available(self):
+        from api.booking_views import notify_waitlist_for_departure
+        from django.core import mail
+
+        entry = WaitlistEntry.objects.create(
+            departure=self.departure,
+            full_name='Amina Guest',
+            email='amina@example.com',
+            phone='0712345678',
+            participant_count=2,
+        )
+
+        notify_waitlist_for_departure(self.departure.id)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.status, WaitlistEntry.Status.NOTIFIED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('spots are available', mail.outbox[0].body)
+
+    @override_settings(
+        MPESA_CALLBACK_TOKEN='callback-secret',
+        DEFAULT_FROM_EMAIL='bookings@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_only_matching_mpesa_callback_confirms_and_sends_receipt(self):
+        booking = Booking.objects.create(
+            departure=self.departure,
+            full_name='Amina Guest',
+            email='amina@example.com',
+            phone='0712345678',
+            payment_phone='254712345678',
+            participant_count=1,
+            amount_kes=20000,
+            checkout_request_id='checkout-paid',
+            merchant_request_id='merchant-paid',
+        )
+        callback = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'merchant-paid',
+                    'CheckoutRequestID': 'checkout-paid',
+                    'ResultCode': 0,
+                    'CallbackMetadata': {'Item': [
+                        {'Name': 'Amount', 'Value': 20000},
+                        {'Name': 'MpesaReceiptNumber', 'Value': 'QWE123456'},
+                        {'Name': 'PhoneNumber', 'Value': 254712345678},
+                    ]},
+                },
+            },
+        }
+
+        from unittest.mock import patch
+        with patch('api.booking_views.query_stk_push', return_value={
+            'CheckoutRequestID': 'checkout-paid',
+            'MerchantRequestID': 'merchant-paid',
+            'ResultCode': '0',
+        }):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(
+                    '/api/payments/mpesa/callback/callback-secret/',
+                    callback,
+                    format='json',
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Booking.Status.CONFIRMED)
+        self.assertEqual(booking.mpesa_receipt, 'QWE123456')
+        self.assertEqual(self.departure.__class__.objects.get(pk=self.departure.pk).seats_available, 2)
+        from django.core import mail
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(booking.reference, mail.outbox[0].body)
+
+    @override_settings(MPESA_CALLBACK_TOKEN='callback-secret')
+    def test_callback_does_not_confirm_when_daraja_query_disagrees(self):
+        booking = Booking.objects.create(
+            departure=self.departure,
+            full_name='Amina Guest',
+            email='amina@example.com',
+            phone='0712345678',
+            payment_phone='254712345678',
+            participant_count=1,
+            amount_kes=20000,
+            checkout_request_id='checkout-pending',
+            merchant_request_id='merchant-pending',
+        )
+        callback = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'merchant-pending',
+                    'CheckoutRequestID': 'checkout-pending',
+                    'ResultCode': 0,
+                    'CallbackMetadata': {'Item': [
+                        {'Name': 'Amount', 'Value': 20000},
+                        {'Name': 'MpesaReceiptNumber', 'Value': 'QWE123456'},
+                        {'Name': 'PhoneNumber', 'Value': 254712345678},
+                    ]},
+                },
+            },
+        }
+
+        from unittest.mock import patch
+        with patch('api.booking_views.query_stk_push', return_value={
+            'CheckoutRequestID': 'checkout-pending',
+            'MerchantRequestID': 'merchant-pending',
+            'ResultCode': '1032',
+        }):
+            response = self.client.post(
+                '/api/payments/mpesa/callback/callback-secret/',
+                callback,
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Booking.Status.PENDING_PAYMENT)
+        self.assertFalse(booking.mpesa_receipt)
+
+    def test_booking_records_are_private_to_staff(self):
+        booking = Booking.objects.create(
+            departure=self.departure,
+            full_name='Amina Guest',
+            email='amina@example.com',
+            phone='0712345678',
+            payment_phone='254712345678',
+            participant_count=1,
+            amount_kes=20000,
+        )
+        response = self.client.get('/api/bookings/')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        status_response = self.client.get(f'/api/bookings/{booking.reference}/status/')
+        self.assertEqual(status_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('email', status_response.data)
+
+
+class PromoCodeTests(APITestCase):
+    def test_promo_code_limits_discount_to_valid_percentage(self):
+        staff = get_user_model().objects.create_user(
+            username='promo-admin',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff)
+        invalid = self.client.post('/api/promocodes/', {
+            'code': 'summer',
+            'discount_type': 'percent',
+            'value': '101',
+        }, format='json')
+        valid = self.client.post('/api/promocodes/', {
+            'code': ' summer ',
+            'discount_type': 'percent',
+            'value': '10',
+        }, format='json')
+
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(valid.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(PromoCode.objects.get().code, 'SUMMER')

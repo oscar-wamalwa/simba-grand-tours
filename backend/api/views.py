@@ -16,7 +16,7 @@ except Exception:
             # DRF's Response uses `safe=False` for non-dict JSON; keep that behaviour.
             super().__init__(data, status=status, safe=False, *args, **kwargs)
 from django.utils import timezone
-from .models import Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
+from .models import Booking, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
 from .serializers import (
     SafariSerializer, BlogSerializer, SubscriberSerializer,
     ContactMessageSerializer, SettingsSerializer, TestimonialSerializer
@@ -257,7 +257,7 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         """Get all testimonials ordered by creation date."""
         queryset = Testimonial.objects.all()
         if not (self.request.user and self.request.user.is_staff):
-            queryset = queryset.filter(is_featured=True)
+            queryset = queryset.filter(is_featured=True, is_verified=True)
         return queryset.order_by('-created_at')
 
     def perform_update(self, serializer):
@@ -268,22 +268,40 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         
-        logger.info(f"[TESTIMONIAL] Received create request: {dict(request.data)}")
-        # Convert isFeatured to is_featured
         data = dict(request.data)
-        if 'isFeatured' in data:
-            logger.info(f"[TESTIMONIAL] Found isFeatured: {data['isFeatured']}")
-            data['is_featured'] = data.pop('isFeatured')
-        logger.info(f"[TESTIMONIAL] Converted data: {data}")
+        booking_reference = str(data.pop('booking_reference', '')).strip()
+        email = str(data.get('email', '')).strip()
+        if not booking_reference or not email:
+            return Response(
+                {'detail': 'A confirmed booking reference and booking email are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        booking = Booking.objects.filter(
+            reference__iexact=booking_reference,
+            email__iexact=email,
+            status=Booking.Status.CONFIRMED,
+        ).first()
+        if not booking:
+            return Response(
+                {'detail': 'No confirmed booking matches that reference and email.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if booking.reviews.exists():
+            return Response(
+                {'detail': 'A review has already been submitted for this booking.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        data.pop('isFeatured', None)
+        data.pop('is_featured', None)
         
         serializer = self.get_serializer(data=data)
         if not serializer.is_valid():
             logger.error(f"[TESTIMONIAL] Validation errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        self.perform_create(serializer)
+        serializer.save(booking=booking, is_verified=True, is_featured=False)
         headers = self.get_success_headers(serializer.data)
-        logger.info(f"[TESTIMONIAL] Created successfully with ID: {serializer.data.get('id')}")
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def list(self, request, *args, **kwargs):
@@ -323,7 +341,7 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"[TESTIMONIAL] Fetching featured testimonials")
-        featured = Testimonial.objects.filter(is_featured=True)
+        featured = Testimonial.objects.filter(is_featured=True, is_verified=True)
         serializer = self.get_serializer(featured, many=True)
         logger.info(f"[TESTIMONIAL] Found {len(serializer.data)} featured testimonials")
         return Response(serializer.data)

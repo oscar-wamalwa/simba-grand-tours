@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Star, Send, CheckCircle, X } from 'lucide-react';
 import api from '../api';
 
 function ReviewModal({ onClose }) {
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
+    bookingReference: '',
     location: '',
     safari: '',
     rating: 5,
@@ -32,29 +35,23 @@ function ReviewModal({ onClose }) {
     setError(null);
 
     try {
-      console.log('Submitting review...');
-      console.log('Form data:', formData);
-
-      // Send the review as a testimonial
       const data = {
         full_name: formData.fullName,
-        email: 'no-reply@simbagrandtours.com',
+        email: formData.email,
+        booking_reference: formData.bookingReference,
         location: formData.location,
         safari: formData.safari || '',
         rating: formData.rating,
         message: formData.message
       };
 
-      console.log('Sending testimonial data to API:', data);
-
       await api.testimonials.create(data);
 
-      console.log('Review submitted successfully!');
       setSubmitted(true);
       setTimeout(() => {
         onClose();
         setSubmitted(false);
-        setFormData({ fullName: '', location: '', safari: '', rating: 5, message: '' });
+        setFormData({ fullName: '', email: '', bookingReference: '', location: '', safari: '', rating: 5, message: '' });
       }, 2000);
     } catch (err) {
       console.error('Error submitting review:', err);
@@ -79,12 +76,12 @@ function ReviewModal({ onClose }) {
           <div className="modal-success">
             <CheckCircle size={64} color="#c49a6c" />
             <h2>Thank You!</h2>
-            <p>Your review has been submitted successfully.</p>
+            <p>Your verified review has been submitted successfully.</p>
           </div>
         ) : (
           <>
             <h2>Share Your Experience</h2>
-            <p className="modal-subtitle">Tell us about your safari adventure with Simba Grand Tours</p>
+            <p className="modal-subtitle">Reviews are available to travelers with a confirmed booking.</p>
             <form onSubmit={handleSubmit} className="review-form">
               <div className="form-row">
                 <div className="form-group">
@@ -97,6 +94,16 @@ function ReviewModal({ onClose }) {
                     required
                     placeholder="Enter your name"
                   />
+                </div>
+              </div>
+              <div className="form-row two-col">
+                <div className="form-group">
+                  <label>Booking email *</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Booking reference *</label>
+                  <input name="bookingReference" value={formData.bookingReference} onChange={handleChange} required placeholder="SGT-..." />
                 </div>
               </div>
               <div className="form-row two-col">
@@ -176,5 +183,3 @@ function ReviewModal({ onClose }) {
 }
 
 export default ReviewModal;
-
-import { useState } from 'react';

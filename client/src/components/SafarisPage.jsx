@@ -1,31 +1,195 @@
-import { ArrowLeft, CheckCircle, MapPin, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock } from 'lucide-react';
+import api from '../api';
+import { formatKes } from '../currency';
 
 const safarisBg = '/images/greatmigration.jpg';
 
 function SafarisPage({ safaris, onSelect, selectedSafari }) {
+  const maxPrice = Math.max(10000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
-    destinations: [],
-    priceRange: 10000
+    destination: '',
+    tripType: '',
+    duration: '',
+    tripMode: '',
+    priceRange: maxPrice,
+  });
+  const [departures, setDepartures] = useState([]);
+  const [departuresError, setDeparturesError] = useState('');
+  const [selectedDepartureId, setSelectedDepartureId] = useState('');
+  const [bookingForm, setBookingForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    payment_phone: '',
+    participant_count: 1,
+    promo_code: '',
+    passengers: [{ full_name: '' }],
+  });
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [bookingResult, setBookingResult] = useState(null);
+  const [bookingStatus, setBookingStatus] = useState('');
+  const [waitlistMessage, setWaitlistMessage] = useState('');
+  const [waitlistDepartureId, setWaitlistDepartureId] = useState('');
+  const [waitlistForm, setWaitlistForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    participant_count: 1,
+  });
+  const [customTripForm, setCustomTripForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    destination: '',
+    trip_mode: 'group',
+    preferred_date: '',
+    participant_count: 1,
+    details: '',
+  });
+  const [customTripMessage, setCustomTripMessage] = useState('');
+  const [customTripError, setCustomTripError] = useState('');
+  const [customTripSubmitting, setCustomTripSubmitting] = useState(false);
+  const selectedSafariId = selectedSafari?.id;
+
+  useEffect(() => {
+    if (!selectedSafariId) return undefined;
+    let active = true;
+    setDepartures([]);
+    setSelectedDepartureId('');
+    setDeparturesError('');
+    const refreshDepartures = () => api.departures.getForSafari(selectedSafariId)
+      .then(data => {
+        if (active) {
+          setDepartures(data);
+          setDeparturesError('');
+        }
+      })
+      .catch(error => {
+        if (active) {
+          console.error('Could not load trip departures:', error);
+          setDeparturesError('Departure availability is temporarily unavailable. Please contact us to book.');
+        }
+      });
+    refreshDepartures();
+    const refreshTimer = window.setInterval(refreshDepartures, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+    };
+  }, [selectedSafariId]);
+
+  useEffect(() => {
+    if (!bookingResult?.reference || bookingStatus === 'confirmed' || bookingStatus === 'payment_failed') return undefined;
+    let active = true;
+    const pollStatus = async () => {
+      try {
+        const statusResult = await api.bookings.getStatus(bookingResult.reference);
+        if (active) setBookingStatus(statusResult.status);
+      } catch (error) {
+        console.error('Could not check booking payment status:', error);
+      }
+    };
+    const timer = window.setInterval(pollStatus, 5000);
+    pollStatus();
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [bookingResult?.reference, bookingStatus]);
+
+  const handlePriceChange = (event) => {
+    setFilters(prev => ({ ...prev, priceRange: Number(event.target.value) }));
+  };
+
+  const clearFilters = () => setFilters({
+    destination: '',
+    tripType: '',
+    duration: '',
+    tripMode: '',
+    priceRange: maxPrice,
   });
 
-  const handleDestinationChange = (destination) => {
-    setFilters(prev => ({
+  const handleParticipantCount = (value) => {
+    const count = Math.max(1, Math.min(20, Number(value) || 1));
+    setBookingForm(prev => ({
       ...prev,
-      destinations: prev.destinations.includes(destination)
-        ? prev.destinations.filter(d => d !== destination)
-        : [...prev.destinations, destination]
+      participant_count: count,
+      passengers: Array.from({ length: count }, (_, index) => prev.passengers[index] || { full_name: '' }),
     }));
   };
 
-  const handlePriceChange = (e) => {
-    setFilters(prev => ({
-      ...prev,
-      priceRange: parseInt(e.target.value)
-    }));
+  const handleBooking = async (event) => {
+    event.preventDefault();
+    setBookingSubmitting(true);
+    setBookingError('');
+    try {
+      const result = await api.bookings.create({
+        ...bookingForm,
+        departure: Number(selectedDepartureId),
+      });
+      setBookingResult(result);
+      setBookingStatus(result.status);
+    } catch (error) {
+      setBookingError(error.message || 'Could not start your booking. Please try again.');
+    } finally {
+      setBookingSubmitting(false);
+    }
   };
 
-  const clearFilters = () => {
-    setFilters({ destinations: [], priceRange: 10000 });
+  const handleWaitlist = async (event, departureId) => {
+    event.preventDefault();
+    setBookingError('');
+    setWaitlistMessage('');
+    try {
+      await api.waitlist.create({
+        departure: departureId,
+        ...waitlistForm,
+        participant_count: Number(waitlistForm.participant_count),
+      });
+      setWaitlistMessage('You are on the waitlist. We will contact you if spots open.');
+      setWaitlistDepartureId('');
+    } catch (error) {
+      setBookingError(error.message || 'Could not join the waitlist.');
+    }
+  };
+
+  const handleCustomTripInquiry = async (event) => {
+    event.preventDefault();
+    setCustomTripError('');
+    setCustomTripMessage('');
+    setCustomTripSubmitting(true);
+    try {
+      await api.messages.create({
+        full_name: customTripForm.full_name,
+        email: customTripForm.email,
+        phone: customTripForm.phone,
+        subject: 'Custom group or private trip inquiry',
+        message: [
+          `Destination: ${customTripForm.destination}`,
+          `Trip style: ${customTripForm.trip_mode}`,
+          `Preferred date: ${customTripForm.preferred_date || 'Flexible'}`,
+          `Travelers: ${customTripForm.participant_count}`,
+          `Details: ${customTripForm.details}`,
+        ].join('\n'),
+      });
+      setCustomTripForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        destination: '',
+        trip_mode: 'group',
+        preferred_date: '',
+        participant_count: 1,
+        details: '',
+      });
+      setCustomTripMessage('Your trip inquiry has been sent. Our team will be in touch.');
+    } catch (error) {
+      setCustomTripError(error.message || 'Could not send your inquiry. Please try again.');
+    } finally {
+      setCustomTripSubmitting(false);
+    }
   };
 
   if (selectedSafari) {
@@ -54,7 +218,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
               <p className="gold-text">{selectedSafari.location || 'Africa'}</p>
               <h1>{selectedSafari.title}</h1>
               <div className="sig-meta">
-                <span className="gold-text">${selectedSafari.price?.toLocaleString()}</span>
+                <span className="gold-text">{formatKes(selectedSafari.price)}</span>
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
               </div>
               <p>{selectedSafari.description || 'A carefully designed safari experience with exceptional wildlife encounters and comfortable, memorable stays.'}</p>
@@ -70,8 +234,27 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                 <>
                   <h3>Itinerary</h3>
                   <ol className="detail-itinerary">
-                    {itinerary.map((item) => <li key={item}>{item}</li>)}
+                    {itinerary.map((item, index) => (
+                      <li key={`${item.day || 'day'}-${index}`}>
+                        {typeof item === 'string'
+                          ? item
+                          : <><strong>{item.day || `Day ${index + 1}`}</strong>{item.title ? ` - ${item.title}` : ''}{item.description ? `: ${item.description}` : ''}</>}
+                      </li>
+                    ))}
                   </ol>
+                </>
+              )}
+              {selectedSafari.pickup_points?.length > 0 && (
+                <>
+                  <h3>Pickup points and times</h3>
+                  <ul className="detail-inclusions">
+                    {selectedSafari.pickup_points.map((point, index) => (
+                      <li key={`${point.name || point}-${index}`}>
+                        <MapPin size={18} />
+                        {typeof point === 'string' ? point : `${point.name}${point.time ? ` - ${point.time}` : ''}`}
+                      </li>
+                    ))}
+                  </ul>
                 </>
               )}
               <h3>What's included</h3>
@@ -88,9 +271,139 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                   </ul>
                 </>
               )}
+              {selectedSafari.packing_checklist?.length > 0 && (
+                <>
+                  <h3>What to pack</h3>
+                  <ul className="detail-inclusions">
+                    {selectedSafari.packing_checklist.map(item => (
+                      <li key={item}><PackageCheck size={18} /> {item}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              <section className="departure-booking">
+                <h3><CalendarDays size={20} /> Upcoming departures</h3>
+                {departuresError && <p role="alert">{departuresError}</p>}
+                {!departuresError && departures.length === 0 && (
+                  <p>No scheduled departures are available yet. Contact us for a custom trip.</p>
+                )}
+                {departures.map(departure => (
+                  <div key={departure.id}>
+                    <article className="departure-option">
+                      <div>
+                        <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</strong>
+                        <span>{formatKes(departure.price_kes)} per person</span>
+                        <span><Users size={15} /> {departure.seats_available} spots left</span>
+                        {departure.pickup_time && <span><Clock size={15} /> Pickup: {departure.pickup_time}</span>}
+                      </div>
+                      {departure.seats_available > 0 ? (
+                        <button
+                          type="button"
+                          className="btn-gold-sm"
+                          onClick={() => {
+                            setSelectedDepartureId(String(departure.id));
+                            setBookingResult(null);
+                            setBookingStatus('');
+                          }}
+                        >
+                          {selectedDepartureId === String(departure.id) ? 'Selected' : 'Book'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-outline-full"
+                          onClick={() => {
+                            setWaitlistDepartureId(String(departure.id));
+                            setBookingError('');
+                            setWaitlistMessage('');
+                          }}
+                        >
+                          Join waitlist
+                        </button>
+                      )}
+                    </article>
+                    {waitlistDepartureId === String(departure.id) && departure.seats_available <= 0 && (
+                      <form className="booking-form waitlist-form" onSubmit={event => handleWaitlist(event, departure.id)}>
+                        <h4>Join the waitlist</h4>
+                        <label>Full name<input required value={waitlistForm.full_name} onChange={event => setWaitlistForm(prev => ({ ...prev, full_name: event.target.value }))} /></label>
+                        <label>Email<input type="email" required value={waitlistForm.email} onChange={event => setWaitlistForm(prev => ({ ...prev, email: event.target.value }))} /></label>
+                        <label>Phone<input type="tel" required value={waitlistForm.phone} onChange={event => setWaitlistForm(prev => ({ ...prev, phone: event.target.value }))} placeholder="07XX XXX XXX" /></label>
+                        <label>Number of travelers<input type="number" min="1" max="20" required value={waitlistForm.participant_count} onChange={event => setWaitlistForm(prev => ({ ...prev, participant_count: event.target.value }))} /></label>
+                        {bookingError && <p className="form-status error" role="alert">{bookingError}</p>}
+                        <button className="btn-gold btn-large" type="submit">Join waitlist</button>
+                      </form>
+                    )}
+                  </div>
+                ))}
+                {waitlistMessage && <p className="form-status success" role="status">{waitlistMessage}</p>}
+                {selectedDepartureId && !bookingResult && (
+                  <form className="booking-form" onSubmit={handleBooking}>
+                    <h4>Traveler and payment details</h4>
+                    <label>Full name<input required value={bookingForm.full_name} onChange={event => setBookingForm(prev => ({ ...prev, full_name: event.target.value }))} /></label>
+                    <label>Email<input type="email" required value={bookingForm.email} onChange={event => setBookingForm(prev => ({ ...prev, email: event.target.value }))} /></label>
+                    <label>Contact phone<input type="tel" required value={bookingForm.phone} onChange={event => setBookingForm(prev => ({ ...prev, phone: event.target.value }))} placeholder="07XX XXX XXX" /></label>
+                    <label>M-Pesa phone<input type="tel" required value={bookingForm.payment_phone} onChange={event => setBookingForm(prev => ({ ...prev, payment_phone: event.target.value }))} placeholder="07XX XXX XXX" /></label>
+                    <label>Number of travelers<input type="number" min="1" max="20" required value={bookingForm.participant_count} onChange={event => handleParticipantCount(event.target.value)} /></label>
+                    {bookingForm.passengers.map((passenger, index) => (
+                      <label key={index}>Traveler {index + 1} name
+                        <input
+                          required
+                          value={passenger.full_name}
+                          onChange={event => setBookingForm(prev => ({
+                            ...prev,
+                            passengers: prev.passengers.map((item, passengerIndex) => passengerIndex === index
+                              ? { ...item, full_name: event.target.value }
+                              : item),
+                          }))}
+                        />
+                      </label>
+                    ))}
+                    <label>Promo code (optional)<input value={bookingForm.promo_code} onChange={event => setBookingForm(prev => ({ ...prev, promo_code: event.target.value }))} /></label>
+                    {bookingError && <p className="form-status error" role="alert">{bookingError}</p>}
+                    <button className="btn-gold btn-large" type="submit" disabled={bookingSubmitting}>
+                      {bookingSubmitting ? 'Starting M-Pesa...' : 'Reserve and pay with M-Pesa'}
+                    </button>
+                    <p className="booking-note">Your selected spots are held for 10 minutes while you complete M-Pesa payment.</p>
+                  </form>
+                )}
+                {bookingResult && (
+                  <div className="booking-confirmation" role="status">
+                    <h4>Booking reference: {bookingResult.reference}</h4>
+                    <p>Amount: {formatKes(bookingResult.amount_kes)}</p>
+                    <p>{bookingStatus === 'confirmed'
+                      ? 'Payment confirmed. Your booking is confirmed.'
+                      : bookingStatus === 'payment_failed'
+                        ? 'Payment was not completed. Please start a new booking.'
+                        : bookingResult.message || 'Complete the M-Pesa prompt on your phone. Checking payment status...'}
+                    </p>
+                  </div>
+                )}
+              </section>
               <button className="btn-gold btn-large" onClick={() => onSelect('contact')}>
                 <MapPin size={18} /> Inquire about this safari
               </button>
+              {selectedSafari.images?.length > 1 && (
+                <section className="safari-photo-gallery" aria-label={`${selectedSafari.title} photo gallery`}>
+                  <h3>Trip gallery</h3>
+                  <div>
+                    {selectedSafari.images.slice(1).map((image, index) => (
+                      <img key={`${image}-${index}`} src={image} alt={`${selectedSafari.title} trip photo ${index + 2}`} loading="lazy" />
+                    ))}
+                  </div>
+                </section>
+              )}
+              {selectedSafari.videos?.length > 0 && (
+                <section className="safari-video-gallery" aria-label={`${selectedSafari.title} video gallery`}>
+                  <h3>Trip videos</h3>
+                  <div>
+                    {selectedSafari.videos.map((video, index) => (
+                      <video key={`${video}-${index}`} src={video} controls preload="metadata">
+                        Your browser does not support embedded videos.
+                      </video>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </article>
         </div>
@@ -104,11 +417,17 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
   });
 
   const filteredSafaris = sortedSafaris.filter(safari => {
-    const matchesDestination = filters.destinations.length === 0 || 
-      filters.destinations.some(d => safari.location?.includes(d));
+    const matchesDestination = !filters.destination
+      || `${safari.location || ''} ${safari.county || ''}`.toLowerCase().includes(filters.destination.toLowerCase());
+    const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
+    const matchesDuration = !filters.duration || safari.duration === filters.duration;
+    const matchesMode = !filters.tripMode || safari.trip_mode === filters.tripMode || safari.trip_mode === 'either';
     const matchesPrice = (safari.price || 0) <= filters.priceRange;
-    return matchesDestination && matchesPrice;
+    return matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
   });
+  const destinations = [...new Set(safaris.flatMap(safari => [safari.county, safari.location]).filter(Boolean))].sort();
+  const tripTypes = [...new Set(safaris.map(safari => safari.trip_type).filter(Boolean))].sort();
+  const durations = [...new Set(safaris.map(safari => safari.duration).filter(Boolean))].sort();
 
   return (
     <div className="safaris-page fade-in">
@@ -125,32 +444,46 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
           <h3>Filter Tours</h3>
           <div className="filter-group">
             <label className="filter-label">Destinations</label>
-            {['Serengeti', 'Okavango', 'Amboseli', 'Masai Mara', 'Ngorongoro'].map(d => (
-              <div key={d} className="check-item">
-                <input 
-                  type="checkbox" 
-                  id={d.toLowerCase().replace(' ', '-')} 
-                  checked={filters.destinations.includes(d)} 
-                  onChange={() => handleDestinationChange(d)} 
-                />
-                <label htmlFor={d.toLowerCase().replace(' ', '-')}>{d}</label>
-              </div>
-            ))}
+            <select value={filters.destination} onChange={event => setFilters(prev => ({ ...prev, destination: event.target.value }))}>
+              <option value="">All destinations</option>
+              {destinations.map(destination => <option key={destination} value={destination}>{destination}</option>)}
+            </select>
           </div>
           <div className="filter-group">
-            <label className="filter-label">Max Price: ${filters.priceRange.toLocaleString()}</label>
+            <label className="filter-label">Trip type</label>
+            <select value={filters.tripType} onChange={event => setFilters(prev => ({ ...prev, tripType: event.target.value }))}>
+              <option value="">All trip types</option>
+              {tripTypes.map(type => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Duration</label>
+            <select value={filters.duration} onChange={event => setFilters(prev => ({ ...prev, duration: event.target.value }))}>
+              <option value="">Any duration</option>
+              {durations.map(duration => <option key={duration} value={duration}>{duration}</option>)}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Group or private</label>
+            <select value={filters.tripMode} onChange={event => setFilters(prev => ({ ...prev, tripMode: event.target.value }))}>
+              <option value="">Any trip style</option>
+              <option value="group">Group</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label className="filter-label">Maximum price: {formatKes(filters.priceRange)}</label>
             <input 
               type="range" 
               className="range-slider" 
-              min="1000" 
-              max="10000" 
-              step="500" 
+              min="0"
+              max={maxPrice}
+              step="1000"
               value={filters.priceRange} 
               onChange={handlePriceChange} 
             />
-            <div className="range-labels"><span>$1,000</span><span>$10,000</span></div>
+            <div className="range-labels"><span>{formatKes(0)}</span><span>{formatKes(maxPrice)}</span></div>
           </div>
-          <button className="btn-gold-full">Apply Filters</button>
           <button className="btn-outline-full btn-clear" onClick={clearFilters}>Clear Filters</button>
         </aside>
 
@@ -187,7 +520,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
                     <h3>{safari.title}</h3>
                     <p className="location"><MapPin size={15} aria-hidden="true" /> {safari.location || 'Africa'}</p>
                     <div className="card-footer">
-                      <span className="price">${safari.price?.toLocaleString()}</span>
+                      <span className="price">{formatKes(safari.price)}</span>
                       <button className="btn-gold-sm">View Details</button>
                     </div>
                   </div>
@@ -197,10 +530,30 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
           )}
         </main>
       </div>
+      <section className="container custom-trip-inquiry">
+        <div>
+          <p className="gold-text">Tailored for you</p>
+          <h2>Plan a private or group trip</h2>
+          <p>Tell us where you want to go and what you have in mind. We’ll help shape the itinerary.</p>
+        </div>
+        <form className="booking-form" onSubmit={handleCustomTripInquiry}>
+          <div className="custom-trip-fields">
+            <label>Full name<input required value={customTripForm.full_name} onChange={event => setCustomTripForm(prev => ({ ...prev, full_name: event.target.value }))} /></label>
+            <label>Email<input type="email" required value={customTripForm.email} onChange={event => setCustomTripForm(prev => ({ ...prev, email: event.target.value }))} /></label>
+            <label>Phone<input type="tel" required value={customTripForm.phone} onChange={event => setCustomTripForm(prev => ({ ...prev, phone: event.target.value }))} /></label>
+            <label>Destination or county<input required value={customTripForm.destination} onChange={event => setCustomTripForm(prev => ({ ...prev, destination: event.target.value }))} /></label>
+            <label>Trip style<select value={customTripForm.trip_mode} onChange={event => setCustomTripForm(prev => ({ ...prev, trip_mode: event.target.value }))}><option value="group">Group</option><option value="private">Private</option></select></label>
+            <label>Preferred date<input type="date" value={customTripForm.preferred_date} onChange={event => setCustomTripForm(prev => ({ ...prev, preferred_date: event.target.value }))} /></label>
+            <label>Number of travelers<input type="number" min="1" max="100" required value={customTripForm.participant_count} onChange={event => setCustomTripForm(prev => ({ ...prev, participant_count: event.target.value }))} /></label>
+          </div>
+          <label>What would you like from your trip?<textarea rows="4" value={customTripForm.details} onChange={event => setCustomTripForm(prev => ({ ...prev, details: event.target.value }))} /></label>
+          {customTripError && <p className="form-status error" role="alert">{customTripError}</p>}
+          {customTripMessage && <p className="form-status success" role="status">{customTripMessage}</p>}
+          <button type="submit" className="btn-gold btn-large" disabled={customTripSubmitting}>{customTripSubmitting ? 'Sending...' : 'Request a custom trip'}</button>
+        </form>
+      </section>
     </div>
   );
 }
 
 export default SafarisPage;
-
-import { useState } from 'react';

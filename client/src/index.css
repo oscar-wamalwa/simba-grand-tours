@@ -1101,3 +1101,48 @@ a { text-decoration: none; color: inherit; }
   }
 }
 
+.departure-booking { margin: 32px 0; padding: 22px; border: 1px solid var(--gray-medium); border-radius: 12px; background: var(--gray-light); }
+.departure-booking > h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.departure-option { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-top: 1px solid var(--gray-medium); }
+.departure-option > div { display: flex; flex-direction: column; gap: 5px; }
+.departure-option span { display: flex; align-items: center; gap: 5px; color: var(--text-light); font-size: 0.9rem; }
+.departure-option .btn-outline-full { width: auto; margin: 0; }
+.booking-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--gray-medium); }
+.booking-form h4, .booking-form > button, .booking-form > p { grid-column: 1 / -1; }
+.booking-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.88rem; font-weight: 600; }
+.booking-form input { width: 100%; padding: 11px 12px; border: 1px solid var(--gray-medium); border-radius: 7px; font: inherit; background: var(--white); }
+.booking-form input:focus { outline: 2px solid var(--gold-majesty); }
+.booking-note { color: var(--text-light); font-size: 0.85rem; }
+.booking-confirmation { margin-top: 18px; padding: 18px; border-radius: 9px; background: var(--white); border-left: 4px solid var(--gold-majesty); }
+.booking-confirmation p { margin-top: 6px; overflow-wrap: anywhere; }
+.departure-booking .form-status { margin-top: 12px; }
+.seasonal-announcement { display: flex; align-items: center; gap: 18px; padding: 14px max(20px, calc((100% - 1220px) / 2)); background: #26211e; color: white; }
+.seasonal-announcement > img { width: 76px; height: 56px; object-fit: cover; border-radius: 6px; }
+.seasonal-announcement > div { flex: 1; min-width: 0; }
+.seasonal-announcement p { margin-top: 3px; font-size: 0.9rem; }
+.seasonal-announcement a, .seasonal-announcement button { flex-shrink: 0; border: 0; border-radius: 6px; padding: 9px 14px; background: var(--gold-majesty); color: var(--savanna-black); font: inherit; font-weight: 600; }
+.verified-traveler { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; color: #267744; font-size: 0.78rem; font-weight: 600; }
+.safari-photo-gallery, .safari-video-gallery { margin: 26px 0; }
+.safari-photo-gallery > div, .safari-video-gallery > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+.safari-photo-gallery img, .safari-video-gallery video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #111; }
+.custom-trip-inquiry { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr); gap: 34px; margin: 0 auto 72px; padding: 32px; border-radius: 14px; background: var(--gray-light); }
+.custom-trip-inquiry > div { align-self: start; }
+.custom-trip-inquiry .booking-form { margin: 0; padding: 0; border: 0; }
+.custom-trip-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; grid-column: 1 / -1; }
+.custom-trip-inquiry textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--gray-medium); border-radius: 7px; font: inherit; }
+
+@media (max-width: 600px) {
+  .departure-booking { padding: 16px; }
+  .departure-option { align-items: flex-start; flex-direction: column; }
+  .booking-form { grid-template-columns: minmax(0, 1fr); }
+  .booking-form h4, .booking-form > button, .booking-form > p { grid-column: auto; }
+}
+
+@media (max-width: 700px) {
+  .seasonal-announcement { align-items: flex-start; flex-wrap: wrap; padding: 14px 18px; }
+  .seasonal-announcement > div { flex-basis: calc(100% - 100px); }
+  .seasonal-announcement > a, .seasonal-announcement > button { margin-left: 94px; }
+  .custom-trip-inquiry { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 22px; }
+  .custom-trip-fields { grid-template-columns: minmax(0, 1fr); }
+}
+

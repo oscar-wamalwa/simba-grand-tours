@@ -64,6 +64,7 @@ export default function App() {
   const [safaris, setSafaris] = useState(defaultSafaris);
   const [settings, setSettings] = useState(defaultSettings);
   const [testimonials, setTestimonials] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [selectedSafari, setSelectedSafari] = useState(null);
   const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -122,6 +123,13 @@ export default function App() {
       }
 
       await fetchFeaturedTestimonials();
+
+      try {
+        const announcementData = await api.announcements.getAll();
+        setAnnouncements(announcementData);
+      } catch (err) {
+        console.error('Error fetching trip announcements:', err.message);
+      }
     };
 
     // Start fetching after a small delay to let initial render complete
@@ -184,6 +192,21 @@ export default function App() {
           </div>
         </div>
       </nav>
+
+      {announcements[0] && (
+        <aside className="seasonal-announcement" aria-label="Seasonal announcement">
+          {announcements[0].image && <img src={announcements[0].image} alt="" />}
+          <div>
+            <strong>{announcements[0].title}</strong>
+            <p>{announcements[0].message}</p>
+          </div>
+          {announcements[0].link_url ? (
+            <a href={announcements[0].link_url} target="_blank" rel="noreferrer">Learn more</a>
+          ) : (
+            <button type="button" onClick={() => navigateTo('safaris')}>Explore trips</button>
+          )}
+        </aside>
+      )}
 
       <Suspense fallback={<LoadingFallback />}>
         {page === 'home' && (

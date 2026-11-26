@@ -1,10 +1,14 @@
-import { Star } from 'lucide-react';
+import { CheckCircle, Star } from 'lucide-react';
+import { formatKes } from '../currency';
 
 const homeBg = '/images/background.jpg';
 
 function HomeSection({ safaris, testimonials, onSelect, onShowReviewForm }) {
   const signatureSafaris = safaris.filter(s => s.isSignature === true);
-  const displaySafaris = signatureSafaris.length > 0 ? signatureSafaris.slice(0, 3) : safaris.slice(0, 3);
+  const featuredSafaris = safaris.filter(s => s.is_featured || s.isFeatured);
+  const displaySafaris = featuredSafaris.length > 0
+    ? featuredSafaris.slice(0, 3)
+    : signatureSafaris.length > 0 ? signatureSafaris.slice(0, 3) : safaris.slice(0, 3);
   const displayTestimonials = testimonials && testimonials.length > 0 ? testimonials : [];
 
   return (
@@ -44,7 +48,7 @@ function HomeSection({ safaris, testimonials, onSelect, onShowReviewForm }) {
                 <div className="sig-body">
                   <h3>{safari.title}</h3>
                   <div className="sig-meta">
-                    <span className="gold-text">${safari.price?.toLocaleString()}</span>
+                    <span className="gold-text">{formatKes(safari.price)}</span>
                     <span className="duration">{safari.duration || '7 Days'}</span>
                   </div>
                   <button className="btn-outline-full">Learn More</button>
@@ -88,6 +92,7 @@ function TestimonialsSection({ testimonials, onShowReviewForm }) {
                     <h4>{t?.full_name || t?.fullName || 'Satisfied Traveler'}</h4>
                     <p>{t?.location || 'Kenya'}</p>
                     {t?.safari && <span className="testimonial-safari">{t.safari}</span>}
+                    {t?.is_verified && <span className="verified-traveler"><CheckCircle size={14} /> Verified traveler</span>}
                   </div>
                 </div>
               </div>

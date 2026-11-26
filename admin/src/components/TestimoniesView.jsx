@@ -133,6 +133,11 @@ export default function TestimoniesView() {
                       <Star size={12} /> Featured
                     </span>
                   )}
+                  {t.is_verified ? (
+                    <span className="status-badge active" style={{ marginLeft: '8px' }}>Verified</span>
+                  ) : (
+                    <span className="status-badge archived" style={{ marginLeft: '8px' }}>Unverified</span>
+                  )}
                 </div>
                 <p className="message-preview">{t.message?.substring(0, 80)}...</p>
                 <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
