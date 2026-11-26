@@ -156,7 +156,10 @@ export default function App() {
             <span className="logo-text"></span>
           </div>
           
-          <div className={`nav-links-center ${mobileMenuOpen ? 'nav-links-open' : ''}`}>
+          <div
+            className={`nav-links-center ${mobileMenuOpen ? 'nav-links-open' : ''}`}
+            id="client-navigation"
+          >
             <button className={`nav-link ${page === 'home' ? 'active' : ''}`} onClick={() => navigateTo('home')}>Home</button>
             <button className={`nav-link ${page === 'safaris' ? 'active' : ''}`} onClick={() => navigateTo('safaris')}>Safaris</button>
             <button className={`nav-link ${page === 'pulse' ? 'active' : ''}`} onClick={() => navigateTo('pulse')}>The Simba Pulse</button>
@@ -168,7 +171,14 @@ export default function App() {
           <div className="nav-actions">
             <button className="btn-gold" onClick={() => navigateTo('safaris')}>Plan My Safari</button>
             <span className="nav-phone">{settings.sitePhone}</span>
-            <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <button
+              type="button"
+              className="mobile-menu-btn"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="client-navigation"
+              onClick={() => setMobileMenuOpen(open => !open)}
+            >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>

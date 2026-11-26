@@ -13,7 +13,9 @@ import {
   FileText,
   MessageCircle,
   LockKeyhole,
-  User
+  User,
+  Menu,
+  X
 } from 'lucide-react';
 import {
   DashboardView,
@@ -43,6 +45,7 @@ export default function AdminDashboard({ onLogout }) {
     const savedPage = sessionStorage.getItem('adminCurrentPage');
     return pageInfo[savedPage] ? savedPage : 'dashboard';
   });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [stats, setStats] = useState({
     visitors: 0,
     subscribers: 0,
@@ -79,6 +82,7 @@ export default function AdminDashboard({ onLogout }) {
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
     sessionStorage.removeItem('adminCurrentPage');
+    setMobileNavOpen(false);
     setToken(null);
     onLogout?.();
   };
@@ -86,6 +90,7 @@ export default function AdminDashboard({ onLogout }) {
   const navigateToPage = (pageName) => {
     sessionStorage.setItem('adminCurrentPage', pageName);
     setCurrentPage(pageName);
+    setMobileNavOpen(false);
   };
 
   if (!token) {
@@ -109,11 +114,11 @@ export default function AdminDashboard({ onLogout }) {
 
   return (
     <div className="admin-wrapper">
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${mobileNavOpen ? 'mobile-open' : ''}`} aria-label="Admin navigation">
         <div className="sidebar-header">
           <div className="sidebar-logo"><h2>Simba Grand Tours Admin</h2></div>
         </div>
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" id="admin-navigation">
           <div className="nav-section">
             <p className="nav-section-title">Main Menu</p>
             {navItems.map(({ id, icon: Icon, label }) => (
@@ -134,9 +139,27 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         </nav>
       </aside>
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="admin-sidebar-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
 
       <main className="admin-main">
         <header className="admin-header">
+          <button
+            type="button"
+            className="mobile-nav-toggle"
+            aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileNavOpen}
+            aria-controls="admin-navigation"
+            onClick={() => setMobileNavOpen(open => !open)}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <div className="header-left">
             <img src="/simbalogo.png" alt="Simba Grand Tours" style={{ width: '50px', height: '50px', borderRadius: '50%' }} />
             <div><h1>{title}</h1><p>{subtitle}</p></div>

@@ -28,6 +28,8 @@ function FooterSection({ onNavigate, settings = {} }) {
   const displayPhone = settings.sitePhone || '+254 707 984 287';
   const displayEmail = settings.siteEmail || 'simbagrandtours@gmail.com';
   const displayAddress = settings.address || 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD';
+  const phoneLink = displayPhone.replace(/[^\d+]/g, '');
+  const addressLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`;
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -126,9 +128,9 @@ function FooterSection({ onNavigate, settings = {} }) {
           </div>
           <div className="footer-column">
             <h4>Contact</h4>
-            <p>{displayPhone}</p>
-            <p>{displayEmail}</p>
-            <p>{displayAddress}</p>
+            <a className="footer-contact-link" href={`tel:${phoneLink}`}>{displayPhone}</a>
+            <a className="footer-contact-link" href={`mailto:${displayEmail}`}>{displayEmail}</a>
+            <a className="footer-contact-link" href={addressLink} target="_blank" rel="noopener noreferrer">{displayAddress}</a>
           </div>
         </div>
         
