@@ -1,9 +1,15 @@
-import { MapPin, Phone, Mail, Send, Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Phone, Mail, Send, Check, X, MessageCircle } from 'lucide-react';
 import api from '../api';
 
 const contactBg = '/images/vicfalls.jpg';
 
-function ContactPage() {
+function ContactPage({ settings = {} }) {
+  const phone = String(settings.sitePhone || '+254 707 984 287');
+  const email = String(settings.siteEmail || 'simbagrandtours@gmail.com');
+  const address = String(settings.address || 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD');
+  const phoneHref = phone.replace(/[^\d+]/g, '');
+  const whatsappNumber = String(settings.whatsapp || phone).replace(/\D/g, '');
   const [formData, setFormData] = useState({ fullName: '', email: '', phone: '', subject: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -58,22 +64,34 @@ function ContactPage() {
               <h3>Headquarters</h3>
               <div className="contact-item">
                 <MapPin size={20} />
-                <span>Platinumz Plaza, Tom Mboya Street, Nairobi CBD</span>
+                <span>{address}</span>
               </div>
             </div>
             <div className="contact-info-card">
               <h3>Call Us</h3>
-              <div className="contact-item">
+              <a className="contact-item contact-action" href={`tel:${phoneHref}`}>
                 <Phone size={20} />
-                <span>+254 707 984 287</span>
-              </div>
+                <span>{phone}</span>
+              </a>
             </div>
             <div className="contact-info-card">
               <h3>Email Us</h3>
-              <div className="contact-item">
+              <a className="contact-item contact-action" href={`mailto:${email}`}>
                 <Mail size={20} />
-                <span>simbagrandtours@gmail.com</span>
-              </div>
+                <span>{email}</span>
+              </a>
+            </div>
+            <div className="contact-info-card">
+              <h3>WhatsApp</h3>
+              <a
+                className="contact-item contact-action"
+                href={`https://wa.me/${whatsappNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle size={20} />
+                <span>Message us on WhatsApp</span>
+              </a>
             </div>
           </aside>
 
@@ -169,5 +187,3 @@ function ContactPage() {
 }
 
 export default ContactPage;
-
-import { useState } from 'react';

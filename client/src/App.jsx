@@ -70,6 +70,8 @@ export default function App() {
   const [testimonials, setTestimonials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [dismissedAnnouncementId, setDismissedAnnouncementId] = useState(null);
+  const [focusCustomTripRequest, setFocusCustomTripRequest] = useState(false);
+  const [customTripService, setCustomTripService] = useState('');
   const [selectedSafari, setSelectedSafari] = useState(null);
   const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -92,6 +94,8 @@ export default function App() {
       setPage(nextPage);
       setSelectedSafariId(nextSafariId);
       setPackageFilterIds(nextPackageIds);
+      setFocusCustomTripRequest(Boolean(state?.focusCustomTripRequest));
+      setCustomTripService(state?.customTripService || '');
       setSelectedSafari(current => (
         current && String(current.id) === nextSafariId ? current : null
       ));
@@ -189,17 +193,27 @@ export default function App() {
     };
   }, []);
 
-  const navigateTo = (pageName, safariData = null, nextPackageIds = []) => {
+  const navigateTo = (pageName, safariData = null, nextPackageIds = [], options = {}) => {
     const safariId = safariData?.id == null ? null : String(safariData.id);
     const packageIds = nextPackageIds.map(String);
+    const shouldFocusCustomTripRequest = pageName === 'safaris' && options.focusCustomTripRequest === true;
+    const requestedService = shouldFocusCustomTripRequest ? String(options.serviceTitle || '') : '';
     const currentState = window.history.state;
     if (
       currentState?.page !== pageName
       || currentState?.safariId !== safariId
       || JSON.stringify(currentState?.packageIds || []) !== JSON.stringify(packageIds)
+      || Boolean(currentState?.focusCustomTripRequest) !== shouldFocusCustomTripRequest
+      || (currentState?.customTripService || '') !== requestedService
     ) {
       window.history.pushState(
-        { page: pageName, safariId, packageIds },
+        {
+          page: pageName,
+          safariId,
+          packageIds,
+          focusCustomTripRequest: shouldFocusCustomTripRequest,
+          customTripService: requestedService,
+        },
         '',
         window.location.href,
       );
@@ -207,6 +221,8 @@ export default function App() {
     setSelectedSafari(safariData);
     setSelectedSafariId(safariId);
     setPackageFilterIds(packageIds);
+    setFocusCustomTripRequest(shouldFocusCustomTripRequest);
+    setCustomTripService(requestedService);
     sessionStorage.setItem('clientCurrentPage', pageName);
     if (!safariId) {
       sessionStorage.removeItem('clientSelectedSafariId');
@@ -296,6 +312,8 @@ export default function App() {
             onSelect={navigateTo}
             selectedSafari={selectedSafari}
             packageFilterIds={packageFilterIds}
+            focusCustomTripRequest={focusCustomTripRequest}
+            customTripService={customTripService}
           />
         )}
         {page === 'destinations' && (
@@ -309,12 +327,22 @@ export default function App() {
             safaris={safaris}
             onSelect={navigateTo}
             selectedSafari={selectedSafari}
+            focusCustomTripRequest={focusCustomTripRequest}
+            customTripService={customTripService}
           />
         )}
         {page === 'pulse' && <PulsePage onNavigate={navigateTo} />}
-        {page === 'services' && <ServicesPage />}
+        {page === 'services' && (
+          <ServicesPage
+            onNavigate={navigateTo}
+            onRequestCustomSafari={serviceTitle => navigateTo('safaris', null, [], {
+              focusCustomTripRequest: true,
+              serviceTitle,
+            })}
+          />
+        )}
         {page === 'about' && <AboutPage onNavigate={navigateTo} />}
-        {page === 'contact' && <ContactPage />}
+        {page === 'contact' && <ContactPage settings={settings} />}
         {page === 'privacy' && <LegalPage type="privacy" settings={settings} onNavigate={navigateTo} />}
         {page === 'terms' && <LegalPage type="terms" settings={settings} onNavigate={navigateTo} />}
         

@@ -6,7 +6,14 @@ import { formatKes } from '../currency';
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
 
-function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] }) {
+function SafarisPage({
+  safaris,
+  onSelect,
+  selectedSafari,
+  packageFilterIds = [],
+  focusCustomTripRequest = false,
+  customTripService = '',
+}) {
   const maxPrice = Math.max(800000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
     destination: '',
@@ -54,6 +61,22 @@ function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] 
   const [customTripError, setCustomTripError] = useState('');
   const [customTripSubmitting, setCustomTripSubmitting] = useState(false);
   const selectedSafariId = selectedSafari?.id;
+
+  useEffect(() => {
+    if (!focusCustomTripRequest) return;
+    const section = document.getElementById('custom-trip-inquiry');
+    if (!section) return;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    section.focus({ preventScroll: true });
+  }, [focusCustomTripRequest]);
+
+  useEffect(() => {
+    if (!customTripService) return;
+    setCustomTripForm(prev => ({
+      ...prev,
+      details: `Service of interest: ${customTripService}`,
+    }));
+  }, [customTripService]);
 
   useEffect(() => {
     if (!selectedSafariId) return undefined;
@@ -169,7 +192,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] 
         full_name: customTripForm.full_name,
         email: customTripForm.email,
         phone: customTripForm.phone,
-        subject: 'Custom group or private trip inquiry',
+        subject: 'Custom safari request',
         message: [
           `Destination: ${customTripForm.destination}`,
           `Trip style: ${customTripForm.trip_mode}`,
@@ -584,10 +607,15 @@ function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] 
           )}
         </main>
       </div>
-      <section className="container custom-trip-inquiry">
+      <section
+        id="custom-trip-inquiry"
+        className="container custom-trip-inquiry"
+        tabIndex="-1"
+        aria-labelledby="custom-trip-inquiry-title"
+      >
         <div>
           <p className="gold-text">Tailored for you</p>
-          <h2>Plan a private or group trip</h2>
+          <h2 id="custom-trip-inquiry-title">Request a custom safari</h2>
           <p>Tell us where you want to go and what you have in mind. We’ll help shape the itinerary.</p>
         </div>
         <form className="booking-form" onSubmit={handleCustomTripInquiry}>
@@ -603,7 +631,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] 
           <label>What would you like from your trip?<textarea rows="4" value={customTripForm.details} onChange={event => setCustomTripForm(prev => ({ ...prev, details: event.target.value }))} /></label>
           {customTripError && <p className="form-status error" role="alert">{customTripError}</p>}
           {customTripMessage && <p className="form-status success" role="status">{customTripMessage}</p>}
-          <button type="submit" className="btn-gold btn-large" disabled={customTripSubmitting}>{customTripSubmitting ? 'Sending...' : 'Request a custom trip'}</button>
+          <button type="submit" className="btn-gold btn-large" disabled={customTripSubmitting}>{customTripSubmitting ? 'Sending...' : 'Request custom safari'}</button>
         </form>
       </section>
     </div>
