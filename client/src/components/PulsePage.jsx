@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, PenLine, Send } from 'lucide-react';
 import api from '../api';
 
 const PulsePage = () => {
@@ -129,14 +129,14 @@ const PulsePage = () => {
             </div>
             <button
               type="button"
-              className="btn-primary"
+              className="story-action-btn story-action-btn-write"
               onClick={() => {
                 setShowSubmissionForm(open => !open);
                 setSubmissionError('');
                 setSubmissionSuccess('');
               }}
             >
-              {showSubmissionForm ? 'Close form' : 'Write a story'}
+              {showSubmissionForm ? <><PenLine size={18} /> Close form</> : <><PenLine size={18} /> Write a story</>}
             </button>
           </div>
           {submissionSuccess && <p className="story-submission-feedback success" role="status">{submissionSuccess}</p>}
@@ -198,7 +198,8 @@ const PulsePage = () => {
                 />
               </label>
               {submissionError && <p className="story-submission-feedback error" role="alert">{submissionError}</p>}
-              <button type="submit" className="btn-primary" disabled={submitting}>
+              <button type="submit" className="story-action-btn story-action-btn-submit" disabled={submitting}>
+                <Send size={17} />
                 {submitting ? 'Submitting...' : 'Submit for review'}
               </button>
             </form>
