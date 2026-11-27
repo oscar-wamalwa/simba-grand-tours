@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Edit2, Eye, EyeOff, MapPin, Plus, Trash2, X } from 'lucide-react';
 import api from '../api';
-import { formatKes } from '../currency';
 
 const categories = [
   ['iconic_safaris', 'Iconic Safaris'],
@@ -33,7 +32,7 @@ const makeSlug = (value) => value
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '');
 
-export default function DestinationsView() {
+export default function DestinationsView({ formatPrice }) {
   const [destinations, setDestinations] = useState([]);
   const [safaris, setSafaris] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -197,7 +196,7 @@ export default function DestinationsView() {
               <tr key={destination.id}>
                 <td>{destination.name}</td>
                 <td>{destination.category_label}</td>
-                <td>{destination.starting_price ? formatKes(destination.starting_price) : 'Price on request'}</td>
+                <td>{destination.starting_price ? formatPrice(destination.starting_price) : 'Price on request'}</td>
                 <td><span className={`status-badge ${destination.visible ? 'active' : 'archived'}`}>{destination.visible ? 'Visible' : 'Hidden'}</span></td>
                 <td>{destination.featured_on_home ? 'Featured' : '—'}</td>
                 <td>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Phone, Mail, Send, Check, X, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, Send, Check, X, MessageCircle, Clock } from 'lucide-react';
 import api from '../api';
 
 const contactBg = '/images/vicfalls.jpg';
@@ -73,6 +73,13 @@ function ContactPage({ settings = {} }) {
                 <Mail size={20} />
                 <span>{email}</span>
               </a>
+            </div>
+            <div className="contact-info-card">
+              <h3>Working Hours</h3>
+              <div className="contact-item">
+                <Clock size={20} aria-hidden="true" />
+                <span>Monday to Friday: 8:00 am to 6:00 pm<br />Saturday: 9:00 am to 3:00 pm</span>
+              </div>
             </div>
           </aside>
 

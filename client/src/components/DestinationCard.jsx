@@ -1,7 +1,6 @@
 import { ArrowRight, Check, Clock3, MapPin } from 'lucide-react';
-import { formatKes } from '../currency';
 
-export default function DestinationCard({ destination, onExplore, compact = false }) {
+export default function DestinationCard({ destination, onExplore, formatPrice, compact = false }) {
   const startingPrice = Number(destination.starting_price);
 
   return (
@@ -37,7 +36,7 @@ export default function DestinationCard({ destination, onExplore, compact = fals
         <div className="destination-card-footer">
           <div className="destination-price">
             <span>Starting From</span>
-            <strong>{startingPrice > 0 ? formatKes(startingPrice) : 'Price on request'}</strong>
+            <strong>{startingPrice > 0 ? formatPrice(startingPrice) : 'Price on request'}</strong>
           </div>
           <button type="button" className="destination-cta" onClick={() => onExplore(destination)}>
             {destination.cta_label || `Explore ${destination.name}`}

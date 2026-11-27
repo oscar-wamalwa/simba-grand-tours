@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Download, Plus, RefreshCw, TicketCheck, Trash2 } from 'lucide-react';
 import api from '../api';
-import { formatKes } from '../currency';
 
 const initialDeparture = {
   safari: '',
@@ -25,7 +24,7 @@ function downloadCsv(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function BookingsView() {
+export default function BookingsView({ formatPrice }) {
   const [safaris, setSafaris] = useState([]);
   const [departures, setDepartures] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -207,7 +206,7 @@ export default function BookingsView() {
               <div>
                 <h4>{departure.safari_title}</h4>
                 <p><CalendarDays size={15} /> {departure.start_date}{departure.end_date ? ` to ${departure.end_date}` : ''}</p>
-                <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatKes(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatKes(departure.booking_fee_kes) : 'not set'} per reservation</p>
+                <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatPrice(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatPrice(departure.booking_fee_kes) : 'not set'} per reservation</p>
               </div>
               <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
                 <Download size={17} /> Passenger manifest
@@ -238,9 +237,9 @@ export default function BookingsView() {
                   <td>{booking.safari_title}<br />{booking.departure_date}</td>
                   <td>{booking.full_name}<br />{booking.email}<br />{booking.phone}</td>
                   <td>{booking.participant_count}</td>
-                  <td>{formatKes(booking.full_amount_kes)}</td>
-                  <td>{formatKes(booking.amount_kes)}</td>
-                  <td>{formatKes(booking.balance_due_kes)}</td>
+                  <td>{formatPrice(booking.full_amount_kes)}</td>
+                  <td>{formatPrice(booking.amount_kes)}</td>
+                  <td>{formatPrice(booking.balance_due_kes)}</td>
                   <td><span className={`status-badge ${booking.status === 'confirmed' ? 'active' : 'archived'}`}>{booking.status.replaceAll('_', ' ')}</span></td>
                   <td>{booking.mpesa_receipt || '—'}</td>
                   <td>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw } from 'lucide-react';
 import api from '../api';
-import { formatKes } from '../currency';
 
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
@@ -13,6 +12,7 @@ function SafarisPage({
   packageFilterIds = [],
   focusCustomTripRequest = false,
   customTripService = '',
+  formatPrice,
 }) {
   const maxPrice = Math.max(800000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
@@ -250,9 +250,9 @@ function SafarisPage({
               <p className="gold-text">{selectedSafari.location || 'Africa'}</p>
               <h1>{selectedSafari.title}</h1>
               <div className="sig-meta">
-                <span className="gold-text">From {formatKes(selectedSafari.price)} per person</span>
+                <span className="gold-text">From {formatPrice(selectedSafari.price)} per person</span>
                 <span>{selectedSafari.booking_fee_kes
-                  ? `Booking fee ${formatKes(selectedSafari.booking_fee_kes)} per reservation`
+                  ? `Booking fee ${formatPrice(selectedSafari.booking_fee_kes)} per reservation`
                   : 'Booking fee not set'}
                 </span>
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
@@ -334,9 +334,9 @@ function SafarisPage({
                     <article className="departure-option">
                       <div>
                         <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</strong>
-                        <span>Full amount: {formatKes(departure.price_kes)} per person</span>
+                        <span>Full amount: {formatPrice(departure.price_kes)} per person</span>
                         <span>{departure.booking_fee_kes
-                          ? `Booking fee: ${formatKes(departure.booking_fee_kes)} per reservation`
+                          ? `Booking fee: ${formatPrice(departure.booking_fee_kes)} per reservation`
                           : 'Booking fee not configured'}
                         </span>
                         <span><Users size={15} /> {departure.seats_available} spots left</span>
@@ -411,10 +411,11 @@ function SafarisPage({
                     <label>Promo code (optional)<input value={bookingForm.promo_code} onChange={event => setBookingForm(prev => ({ ...prev, promo_code: event.target.value }))} /></label>
                     <div className="booking-summary">
                       <h4>Booking summary</h4>
-                      <div><span>Full amount ({participantCount} traveler{participantCount === 1 ? '' : 's'})</span><strong>{formatKes(fullAmount)}</strong></div>
-                      <div><span>Booking fee due now</span><strong>{formatKes(bookingFee)}</strong></div>
-                      <div><span>Remaining balance before promo</span><strong>{formatKes(balanceBeforePromo)}</strong></div>
+                      <div><span>Full amount ({participantCount} traveler{participantCount === 1 ? '' : 's'})</span><strong>{formatPrice(fullAmount)}</strong></div>
+                      <div><span>Booking fee due now</span><strong>{formatPrice(bookingFee)}</strong></div>
+                      <div><span>Remaining balance before promo</span><strong>{formatPrice(balanceBeforePromo)}</strong></div>
                       <p>Valid promo codes reduce the full amount. Your booking fee stays fixed; the adjusted balance is shown after checkout validation.</p>
+                      <p>USD estimates are rounded to whole dollars. KES is the base pricing and payment currency.</p>
                       {bookingFee > fullAmount && <p className="form-status error" role="alert">The booking fee is greater than the full trip amount. Please contact us.</p>}
                     </div>
                     {selectedSafari.booking_terms && (
@@ -438,15 +439,15 @@ function SafarisPage({
                 {bookingResult && (
                   <div className="booking-confirmation" role="status">
                     <h4>Booking reference: {bookingResult.reference}</h4>
-                    <p>Full amount: {formatKes(bookingResult.full_amount_kes)}</p>
-                    {bookingResult.discount_kes > 0 && <p>Promo discount: −{formatKes(bookingResult.discount_kes)}</p>}
-                    <p>Booking fee due now: {formatKes(bookingResult.booking_fee_kes)}</p>
-                    <p>Remaining balance: {formatKes(bookingResult.balance_due_kes)}</p>
+                    <p>Full amount: {formatPrice(bookingResult.full_amount_kes)}</p>
+                    {bookingResult.discount_kes > 0 && <p>Promo discount: −{formatPrice(bookingResult.discount_kes)}</p>}
+                    <p>Booking fee due now: {formatPrice(bookingResult.booking_fee_kes)}</p>
+                    <p>Remaining balance: {formatPrice(bookingResult.balance_due_kes)}</p>
                     <p>{bookingStatus === 'confirmed'
                       ? 'Booking fee received. Your slot is reserved; pay the remaining balance before departure.'
                       : bookingStatus === 'payment_failed'
                         ? 'Payment was not completed. Please start a new booking.'
-                        : bookingResult.message || `Complete the ${formatKes(bookingResult.booking_fee_kes)} booking-fee payment prompt. Checking status...`}
+                        : bookingResult.message || `Complete the ${formatPrice(bookingResult.booking_fee_kes)} booking-fee payment prompt. Checking status...`}
                     </p>
                   </div>
                 )}
@@ -546,7 +547,7 @@ function SafarisPage({
             </select>
           </div>
           <div className="filter-group">
-            <label className="filter-label">Maximum price: {formatKes(filters.priceRange)}</label>
+            <label className="filter-label">Maximum price: {formatPrice(filters.priceRange)}</label>
             <input 
               type="range" 
               className="range-slider" 
@@ -556,7 +557,7 @@ function SafarisPage({
               value={filters.priceRange} 
               onChange={handlePriceChange} 
             />
-            <div className="range-labels"><span>{formatKes(0)}</span><span>{formatKes(maxPrice)}</span></div>
+            <div className="range-labels"><span>{formatPrice(0)}</span><span>{formatPrice(maxPrice)}</span></div>
           </div>
           <button type="button" className="filter-reset-button" onClick={clearFilters}>
             <RotateCcw size={16} aria-hidden="true" />
@@ -597,7 +598,7 @@ function SafarisPage({
                     <h3>{safari.title}</h3>
                     <p className="location"><MapPin size={15} aria-hidden="true" /> {safari.location || 'Africa'}</p>
                     <div className="card-footer">
-                      <span className="price">{formatKes(safari.price)}</span>
+                      <span className="price">{formatPrice(safari.price)}</span>
                       <button className="btn-gold-sm">View Details</button>
                     </div>
                   </div>

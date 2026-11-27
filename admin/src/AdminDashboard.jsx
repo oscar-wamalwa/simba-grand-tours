@@ -20,6 +20,7 @@ import {
   CalendarDays,
   Megaphone
 } from 'lucide-react';
+import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
 import {
   DashboardView,
   SafarisView,
@@ -50,6 +51,13 @@ const pageInfo = {
 
 export default function AdminDashboard({ onLogout }) {
   const [token, setToken] = useState(() => localStorage.getItem('adminToken'));
+  const [displayCurrency, setDisplayCurrency] = useState(() => (
+    localStorage.getItem('adminDisplayCurrency') === 'USD' && readCachedUsdKesRate()?.rate
+      ? 'USD'
+      : 'KES'
+  ));
+  const [exchangeRate, setExchangeRate] = useState(readCachedUsdKesRate);
+  const [exchangeRateError, setExchangeRateError] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     const savedPage = sessionStorage.getItem('adminCurrentPage');
     return pageInfo[savedPage] ? savedPage : 'dashboard';
@@ -65,6 +73,23 @@ export default function AdminDashboard({ onLogout }) {
 
   useEffect(() => {
     if (token) fetchStats();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let active = true;
+    fetchUsdKesRate()
+      .then(rateInfo => {
+        if (!active) return;
+        setExchangeRate(rateInfo);
+        setExchangeRateError(false);
+        if (localStorage.getItem('adminDisplayCurrency') === 'USD') setDisplayCurrency('USD');
+      })
+      .catch(error => {
+        console.error('Could not update USD/KES exchange rate:', error);
+        if (active) setExchangeRateError(true);
+      });
+    return () => { active = false; };
   }, [token]);
 
   const fetchStats = async () => {
@@ -100,6 +125,14 @@ export default function AdminDashboard({ onLogout }) {
     sessionStorage.setItem('adminCurrentPage', pageName);
     setCurrentPage(pageName);
     setMobileNavOpen(false);
+  };
+
+  const formatPrice = amountKes => formatCurrencyPair(amountKes, displayCurrency, exchangeRate?.rate);
+  const handleCurrencyChange = event => {
+    const nextCurrency = event.target.value;
+    if (nextCurrency === 'USD' && !exchangeRate?.rate) return;
+    localStorage.setItem('adminDisplayCurrency', nextCurrency);
+    setDisplayCurrency(nextCurrency);
   };
 
   if (!token) {
@@ -177,6 +210,22 @@ export default function AdminDashboard({ onLogout }) {
             <div><h1>{title}</h1><p>{subtitle}</p></div>
           </div>
           <div className="header-right">
+            <label className="admin-currency-control">
+              <span>Display currency</span>
+              <select
+                aria-label="Admin display currency"
+                title={exchangeRate?.rate
+                  ? `USD values are rounded to whole dollars. 1 USD = KES ${exchangeRate.rate.toFixed(2)}.`
+                  : 'USD exchange rate is currently unavailable.'}
+                value={displayCurrency}
+                onChange={handleCurrencyChange}
+              >
+                <option value="KES">KES</option>
+                <option value="USD" disabled={!exchangeRate?.rate}>
+                  {exchangeRateError && exchangeRate?.rate ? 'USD (saved rate)' : !exchangeRate?.rate ? 'USD unavailable' : 'USD'}
+                </option>
+              </select>
+            </label>
             <div className="admin-profile">
               <img src={profilePic} alt="Administrator" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
               <div className="admin-info"><span className="name">Admin</span><span className="role">Website Manager</span></div>
@@ -187,15 +236,15 @@ export default function AdminDashboard({ onLogout }) {
         <div className="admin-content">
           {currentPage === 'dashboard' && <DashboardView stats={stats} />}
           {currentPage === 'safaris' && <SafarisView onRefresh={fetchStats} />}
-          {currentPage === 'destinations' && <DestinationsView />}
+          {currentPage === 'destinations' && <DestinationsView formatPrice={formatPrice} />}
           {currentPage === 'subscribers' && <SubscribersView />}
           {currentPage === 'messages' && <MessagesView />}
           {currentPage === 'testimonies' && <TestimoniesView />}
           {currentPage === 'blogs' && <BlogsView onRefresh={fetchStats} />}
-          {currentPage === 'analytics' && <AnalyticsView />}
+          {currentPage === 'analytics' && <AnalyticsView formatPrice={formatPrice} />}
           {currentPage === 'settings' && <SettingsView />}
-          {currentPage === 'bookings' && <BookingsView />}
-          {currentPage === 'campaigns' && <CampaignsView />}
+          {currentPage === 'bookings' && <BookingsView formatPrice={formatPrice} />}
+          {currentPage === 'campaigns' && <CampaignsView formatPrice={formatPrice} />}
         </div>
       </main>
     </div>

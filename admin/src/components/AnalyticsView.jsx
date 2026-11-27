@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart3, Download, RefreshCw, TicketCheck, Users } from 'lucide-react';
 import api from '../api';
-import { formatKes } from '../currency';
 
 function localDateString(date) {
   const year = date.getFullYear();
@@ -34,7 +33,7 @@ function downloadCsv(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function AnalyticsView() {
+export default function AnalyticsView({ formatPrice }) {
   const [dateRange, setDateRange] = useState(getDefaultRange);
   const [draftRange, setDraftRange] = useState(dateRange);
   const [report, setReport] = useState(null);
@@ -85,7 +84,7 @@ export default function AnalyticsView() {
   };
 
   const stats = [
-    { icon: BarChart3, iconClass: 'visitors', value: formatKes(report?.revenue_kes || 0), label: 'Booking fees collected' },
+    { icon: BarChart3, iconClass: 'visitors', value: formatPrice(report?.revenue_kes || 0), label: 'Booking fees collected' },
     { icon: TicketCheck, iconClass: 'safaris', value: report?.confirmed_bookings ?? '—', label: 'Confirmed bookings' },
     { icon: Users, iconClass: 'subscribers', value: report?.participants ?? '—', label: 'Participants' },
   ];
@@ -163,7 +162,7 @@ export default function AnalyticsView() {
                   <td>{trip.safari_title}</td>
                   <td>{trip.confirmed_bookings}</td>
                   <td>{trip.participants}</td>
-                  <td>{formatKes(trip.revenue_kes)}</td>
+                  <td>{formatPrice(trip.revenue_kes)}</td>
                 </tr>
               ))}
               {!loading && report?.by_safari.length === 0 && (

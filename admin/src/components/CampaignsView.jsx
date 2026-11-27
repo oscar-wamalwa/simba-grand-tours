@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw, Users } from 'lucide-react';
 import api from '../api';
-import { formatKes } from '../currency';
 
 const initialPromo = {
   code: '',
@@ -31,7 +30,7 @@ const asLocalDatetime = value => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
-export default function CampaignsView() {
+export default function CampaignsView({ formatPrice }) {
   const [promos, setPromos] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [waitlist, setWaitlist] = useState([]);
@@ -251,7 +250,7 @@ export default function CampaignsView() {
         <div className="campaign-list">
           {promos.map(promo => (
             <article key={promo.id} className="campaign-row">
-              <div><strong>{promo.code}</strong><p>{promo.discount_type === 'percent' ? `${promo.value}% off` : `${formatKes(promo.value)} off`} · {promo.uses_count}{promo.max_uses ? `/${promo.max_uses}` : ''} uses</p></div>
+              <div><strong>{promo.code}</strong><p>{promo.discount_type === 'percent' ? `${promo.value}% off` : `${formatPrice(promo.value)} off`} · {promo.uses_count}{promo.max_uses ? `/${promo.max_uses}` : ''} uses</p></div>
               <div className="campaign-actions">
                 <button type="button" className={`status-badge ${promo.active ? 'active' : 'archived'}`} onClick={() => togglePromo(promo)}>{promo.active ? 'Active' : 'Inactive'}</button>
                 <button type="button" className="btn-secondary" onClick={() => editPromo(promo)}>Edit</button>

@@ -77,6 +77,8 @@
 .header-left h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--savanna-black); }
 .header-left p { font-size: 0.9rem; color: var(--gray-dark); margin-top: 4px; }
 .header-right { display: flex; align-items: center; gap: 20px; }
+.admin-currency-control { display: flex; align-items: center; gap: 8px; color: var(--gray-dark); font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+.admin-currency-control select { min-width: 70px; padding: 8px 7px; border: 1px solid var(--gray-medium); border-radius: 6px; background: var(--white); color: var(--savanna-black); font: inherit; }
 
 .admin-profile { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--gray-light); border-radius: 50px; cursor: pointer; }
 .admin-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
@@ -427,6 +429,9 @@
   .header-right {
     gap: 8px;
   }
+
+  .admin-currency-control span { display: none; }
+  .admin-currency-control select { min-width: 58px; padding: 7px 4px; font-size: 0.78rem; }
 
   .admin-profile {
     padding: 0;

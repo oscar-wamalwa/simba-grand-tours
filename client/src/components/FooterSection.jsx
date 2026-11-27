@@ -156,6 +156,10 @@ function FooterSection({ onNavigate, settings = {} }) {
             <a className="footer-contact-link" href={`tel:${phoneLink}`}>{displayPhone}</a>
             <a className="footer-contact-link" href={`mailto:${displayEmail}`}>{displayEmail}</a>
             <a className="footer-contact-link" href={addressLink} target="_blank" rel="noopener noreferrer">{displayAddress}</a>
+            <div className="footer-working-hours">
+              <h4>Working Hours</h4>
+              <p>Monday to Friday: 8:00 am to 6:00 pm<br />Saturday: 9:00 am to 3:00 pm</p>
+            </div>
           </div>
         </div>
         

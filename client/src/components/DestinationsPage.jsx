@@ -7,7 +7,7 @@ const categoryOrder = [
   ['hidden_gems_road_trips', 'Hidden Gems and Road Trips'],
 ];
 
-export default function DestinationsPage({ destinations, onExplore }) {
+export default function DestinationsPage({ destinations, formatPrice, onExplore }) {
   return (
     <main className="destinations-page fade-in">
       <header className="destinations-hero" style={{ backgroundImage: "url('/images/lakenakuru.jpg')" }}>
@@ -35,6 +35,7 @@ export default function DestinationsPage({ destinations, onExplore }) {
                   <DestinationCard
                     key={destination.id}
                     destination={destination}
+                    formatPrice={formatPrice}
                     onExplore={onExplore}
                   />
                 ))}

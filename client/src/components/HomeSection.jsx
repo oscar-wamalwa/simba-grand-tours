@@ -3,7 +3,7 @@ import DestinationCard from './DestinationCard';
 
 const homeBg = '/images/background.jpg';
 
-function HomeSection({ destinations, testimonials, onSelect, onExploreDestination, onShowReviewForm }) {
+function HomeSection({ destinations, testimonials, formatPrice, onSelect, onExploreDestination, onShowReviewForm }) {
   const featuredDestinations = destinations.filter(destination => destination.featured_on_home);
   const displayDestinations = featuredDestinations.length > 0
     ? featuredDestinations
@@ -37,6 +37,7 @@ function HomeSection({ destinations, testimonials, onSelect, onExploreDestinatio
               <DestinationCard
                 key={destination.id}
                 destination={destination}
+                formatPrice={formatPrice}
                 onExplore={onExploreDestination}
                 compact
               />

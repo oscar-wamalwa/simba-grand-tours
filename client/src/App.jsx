@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Menu, X } from 'lucide-react';
 import api from './api';
+import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
 
 // Icons - load only what's needed for initial render
 // Lazy load page components - they only load when needed
@@ -67,6 +68,13 @@ export default function App() {
   const [destinations, setDestinations] = useState([]);
   const [packageFilterIds, setPackageFilterIds] = useState([]);
   const [settings, setSettings] = useState(defaultSettings);
+  const [currency, setCurrency] = useState(() => (
+    sessionStorage.getItem('clientDisplayCurrency') === 'USD' && readCachedUsdKesRate()?.rate
+      ? 'USD'
+      : 'KES'
+  ));
+  const [exchangeRate, setExchangeRate] = useState(readCachedUsdKesRate);
+  const [exchangeRateError, setExchangeRateError] = useState(false);
   const [testimonials, setTestimonials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [dismissedAnnouncementId, setDismissedAnnouncementId] = useState(null);
@@ -118,6 +126,21 @@ export default function App() {
     const safari = safaris.find(item => String(item.id) === selectedSafariId);
     if (safari) setSelectedSafari(safari);
   }, [safaris, selectedSafariId]);
+
+  useEffect(() => {
+    let active = true;
+    fetchUsdKesRate()
+      .then(rateInfo => {
+        if (!active) return;
+        setExchangeRate(rateInfo);
+        setExchangeRateError(false);
+      })
+      .catch(error => {
+        console.error('Could not update USD/KES exchange rate:', error);
+        if (active) setExchangeRateError(true);
+      });
+    return () => { active = false; };
+  }, []);
 
   // Fetch data asynchronously - doesn't block UI
   useEffect(() => {
@@ -234,6 +257,14 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const formatPrice = amountKes => formatCurrencyPair(amountKes, currency, exchangeRate?.rate);
+  const handleCurrencyChange = event => {
+    const nextCurrency = event.target.value;
+    if (nextCurrency === 'USD' && !exchangeRate?.rate) return;
+    sessionStorage.setItem('clientDisplayCurrency', nextCurrency);
+    setCurrency(nextCurrency);
+  };
+
   return (
     <div className="site-wrapper">
       <nav className="navbar">
@@ -258,6 +289,21 @@ export default function App() {
           
           <div className="nav-actions">
             <button className="btn-gold" onClick={() => navigateTo('safaris')}>Plan My Safari</button>
+            <label className="currency-select-control">
+              <select
+                aria-label="Display prices in"
+                title={exchangeRate?.rate
+                  ? `USD values are rounded to whole dollars. 1 USD = KES ${exchangeRate.rate.toFixed(2)}.`
+                  : 'USD exchange rate is currently unavailable.'}
+                value={currency}
+                onChange={handleCurrencyChange}
+              >
+                <option value="KES">KES</option>
+                <option value="USD" disabled={!exchangeRate?.rate}>
+                  {exchangeRateError && exchangeRate?.rate ? 'USD (saved rate)' : !exchangeRate?.rate ? 'USD unavailable' : 'USD'}
+                </option>
+              </select>
+            </label>
             <span className="nav-phone">{settings.sitePhone}</span>
             <button
               type="button"
@@ -301,6 +347,7 @@ export default function App() {
           <HomeSection 
             destinations={destinations}
             testimonials={testimonials}
+            formatPrice={formatPrice}
             onSelect={navigateTo} 
             onExploreDestination={destination => navigateTo('safaris', null, destination.package_ids || [])}
             onShowReviewForm={() => setShowReviewModal(true)} 
@@ -314,11 +361,13 @@ export default function App() {
             packageFilterIds={packageFilterIds}
             focusCustomTripRequest={focusCustomTripRequest}
             customTripService={customTripService}
+            formatPrice={formatPrice}
           />
         )}
         {page === 'destinations' && (
           <DestinationsPage
             destinations={destinations}
+            formatPrice={formatPrice}
             onExplore={destination => navigateTo('safaris', null, destination.package_ids || [])}
           />
         )}
@@ -329,6 +378,7 @@ export default function App() {
             selectedSafari={selectedSafari}
             focusCustomTripRequest={focusCustomTripRequest}
             customTripService={customTripService}
+            formatPrice={formatPrice}
           />
         )}
         {page === 'pulse' && <PulsePage onNavigate={navigateTo} />}
