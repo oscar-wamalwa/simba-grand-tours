@@ -183,6 +183,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_HEADERS = True
 
 # Safaricom Daraja settings. Keep credentials in the deployment environment.
+ONLINE_PAYMENTS_ENABLED = os.environ.get('ONLINE_PAYMENTS_ENABLED', 'false').lower() in ('true', '1', 'yes')
 MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'sandbox')
 MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', '')
 MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', '')

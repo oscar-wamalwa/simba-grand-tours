@@ -1,6 +1,12 @@
 # Booking feature deployment
 
-The booking flow stores prices and payments as whole Kenyan shillings (KES). Before enabling bookings in Railway, configure:
+Online booking payments are disabled by default. Customers can contact the team by WhatsApp or phone; inquiries do not automatically reserve seats or create booking records. Existing payment callbacks remain active.
+
+Staff can record and edit manual bookings under Departures and Bookings after checking the M-Pesa payment independently. The booking reference is generated automatically; the contact name, phone, traveler location, payment reference, trip, guest count and amounts are required. The balance is calculated from the full amount and amount received. Confirmed bookings reserve seats automatically; other statuses release them. Editing a record does not process a payment or refund or notify the traveler. The passenger manifest contains only the booking contact for manual bookings. Financial details of online checkout records remain protected.
+
+The default privacy policy and terms are updated for this flow, but admin-customized policy text is preserved. Review any customized text in Settings to ensure it describes the current booking process.
+
+To re-enable online payments later, set `ONLINE_PAYMENTS_ENABLED=true` on the backend and `VITE_ONLINE_PAYMENTS_ENABLED=true` when building the client, then deploy both. Verify the payment flow in a sandbox first. The booking flow stores prices and payments as whole Kenyan shillings (KES). Before enabling online payments in Railway, configure:
 
 - `MPESA_ENVIRONMENT` (`sandbox` for testing, `production` for live payments)
 - `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, and `MPESA_PASSKEY`

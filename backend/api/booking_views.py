@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from django.db.models.deletion import ProtectedError
@@ -13,7 +14,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -40,6 +41,7 @@ from .serializers import (
     BookingCreateSerializer,
     BookingDetailsEditSerializer,
     BookingSerializer,
+    ManualBookingSerializer,
     PromoCodeSerializer,
     TripAnnouncementSerializer,
     TripDepartureSerializer,
@@ -110,7 +112,7 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     permission_classes = [StaffOnly]
-    http_method_names = ['get', 'head', 'options', 'patch', 'delete']
+    http_method_names = ['get', 'head', 'options', 'post', 'patch', 'delete']
 
     def get_queryset(self):
         queryset = Booking.objects.select_related('departure__safari').prefetch_related('passengers')
@@ -121,6 +123,69 @@ class BookingViewSet(viewsets.ModelViewSet):
         if booking_status:
             queryset = queryset.filter(status=booking_status)
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed('POST')
+
+    @action(detail=False, methods=['post'], url_path='manual')
+    @transaction.atomic
+    def manual_create(self, request):
+        return self._save_manual_booking(request)
+
+    @action(detail=True, methods=['patch'], url_path='manual')
+    @transaction.atomic
+    def manual_edit(self, request, pk=None):
+        booking = Booking.objects.select_for_update().get(pk=self.get_object().pk)
+        if not booking.is_manual:
+            raise ValidationError({'detail': 'Payment records from online checkout cannot be edited manually.'})
+        return self._save_manual_booking(request, booking)
+
+    def _save_manual_booking(self, request, booking=None):
+        if not isinstance(request.data, Mapping) or set(request.data) - set(ManualBookingSerializer().fields):
+            raise ValidationError({'detail': 'Only manual booking fields can be saved here.'})
+        serializer = ManualBookingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target_id = data['departure'].pk
+        old_departure_id = booking.departure_id if booking else None
+        old_count = booking.participant_count if booking and booking.status == Booking.Status.CONFIRMED else 0
+        departure_ids = sorted({target_id, *([old_departure_id] if old_departure_id else [])})
+        departures = {
+            departure.pk: departure for departure in TripDeparture.objects.select_for_update()
+            .filter(pk__in=departure_ids).order_by('pk')
+        }
+        target = departures.get(target_id)
+        if target is None or (target.is_archived and target_id != old_departure_id):
+            raise ValidationError({'departure': 'Choose a departure that is not archived.'})
+        if data['status'] == Booking.Status.CONFIRMED:
+            taken = target.seats_taken - (old_count if target_id == old_departure_id else 0)
+            if taken + data['participant_count'] > target.seats_total:
+                raise ValidationError({'participant_count': f'Only {max(0, target.seats_total - taken)} spots are available.'})
+
+        data['departure'] = target
+        data['booking_fee_kes'] = data['amount_kes']
+        data['balance_due_kes'] = data['full_amount_kes'] - data['amount_kes']
+        if booking is None:
+            booking = Booking.objects.create(
+                **data, is_manual=True, payment_phone='', booking_terms=target.safari.booking_terms,
+            )
+            Passenger.objects.create(booking=booking, full_name=booking.full_name, phone=booking.phone)
+        else:
+            for field, value in data.items():
+                setattr(booking, field, value)
+            booking.save()
+            lead = booking.passengers.first()
+            if lead:
+                lead.full_name = booking.full_name
+                lead.phone = booking.phone
+                lead.save(update_fields=['full_name', 'phone'])
+            if old_count and (
+                old_departure_id != target_id
+                or data['status'] != Booking.Status.CONFIRMED
+                or data['participant_count'] < old_count
+            ):
+                transaction.on_commit(lambda: notify_waitlist_for_departure(old_departure_id))
+        return Response(self.get_serializer(booking).data, status=status.HTTP_200_OK if old_departure_id else status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['patch'], url_path='edit-details')
     @transaction.atomic
@@ -300,6 +365,11 @@ class BookingCreateView(APIView):
     parser_classes = [JSONParser]
 
     def post(self, request):
+        if not settings.ONLINE_PAYMENTS_ENABLED:
+            return Response(
+                {'detail': 'Online booking payments are temporarily unavailable. Please contact us by WhatsApp or phone.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         serializer = BookingCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

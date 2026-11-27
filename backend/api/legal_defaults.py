@@ -2,7 +2,7 @@ DEFAULT_PRIVACY_POLICY = """This policy explains how Simba Grand Tours uses the 
 
 ## Information we collect
 
-Depending on how you use the website, we may collect your name, email address, phone number, enquiry message, chosen trip or departure, number of travelers, passenger names and contact details, emergency contacts, and M-Pesa payment phone number.
+Depending on how you use the website, we may collect your name, email address, phone number, location, enquiry message, chosen trip or departure, number of travelers, passenger names and contact details, emergency contacts, and M-Pesa payment phone number or reference.
 
 Newsletter subscribers provide an email address and may optionally provide a phone number. We record SMS consent when you choose to opt in. If you submit a testimonial, we may use booking details to verify it before publication.
 
@@ -34,7 +34,7 @@ We work to keep trip descriptions, photos, prices, and availability current. The
 
 ## Bookings and payments
 
-When requesting a booking, provide accurate contact and traveler information. The booking page displays the applicable trip price, booking fee, balance, and any trip-specific terms. An M-Pesa payment request must be completed and verified before a booking is confirmed.
+When requesting a booking, provide accurate contact and traveler information. Contact us for the applicable price, payment arrangements, balance, and trip-specific terms. A booking is confirmed when our team confirms it or, where online checkout is offered, the online payment is completed and verified.
 
 If a booking or payment remains pending, or you do not receive confirmation, contact us before making another payment.
 

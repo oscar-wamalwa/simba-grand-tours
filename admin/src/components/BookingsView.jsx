@@ -12,6 +12,11 @@ const initialDeparture = {
   pickup_points: '',
 };
 
+const initialManualBooking = {
+  departure: '', full_name: '', email: '', phone: '', traveler_location: '',
+  participant_count: '1', full_amount_kes: '', amount_kes: '', mpesa_receipt: '', status: 'confirmed',
+};
+
 function downloadCsv(filename, rows) {
   const contents = rows
     .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))
@@ -38,6 +43,8 @@ export default function BookingsView({ formatPrice }) {
   const [departureEditForm, setDepartureEditForm] = useState(null);
   const [editingBooking, setEditingBooking] = useState(null);
   const [bookingEditForm, setBookingEditForm] = useState(null);
+  const [manualBooking, setManualBooking] = useState(null);
+  const [manualForm, setManualForm] = useState(null);
   const [editError, setEditError] = useState('');
   const [showArchivedDepartures, setShowArchivedDepartures] = useState(false);
 
@@ -171,6 +178,44 @@ export default function BookingsView({ formatPrice }) {
   };
 
   const bookingTripLocked = editingBooking && ['pending_payment', 'payment_failed'].includes(editingBooking.status);
+
+  const openManualBooking = booking => {
+    setManualBooking(booking);
+    setManualForm(booking ? {
+      departure: String(booking.departure), full_name: booking.full_name, email: booking.email,
+      phone: booking.phone, traveler_location: booking.traveler_location,
+      participant_count: String(booking.participant_count), full_amount_kes: String(booking.full_amount_kes),
+      amount_kes: String(booking.amount_kes), mpesa_receipt: booking.mpesa_receipt, status: booking.status,
+    } : { ...initialManualBooking });
+    setEditError('');
+  };
+
+  const saveManualBooking = async event => {
+    event.preventDefault();
+    if (manualBooking && manualBooking.status !== manualForm.status && manualForm.status !== 'confirmed'
+      && !window.confirm('This releases reserved seats. No refund is issued automatically. Continue?')) return;
+    setSaving(true);
+    setEditError('');
+    try {
+      const data = {
+        ...manualForm,
+        departure: Number(manualForm.departure),
+        participant_count: Number(manualForm.participant_count),
+        full_amount_kes: Number(manualForm.full_amount_kes),
+        amount_kes: Number(manualForm.amount_kes),
+      };
+      if (manualBooking) await api.bookings.editManual(manualBooking.id, data);
+      else await api.bookings.createManual(data);
+      setManualForm(null);
+      setManualBooking(null);
+      setMessage(manualBooking ? 'Manual booking updated.' : 'Manual booking recorded.');
+      await refresh();
+    } catch (requestError) {
+      setEditError(requestError.message || 'Could not save manual booking.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleDepartureArchive = async departure => {
     const restoring = departure.is_archived;
@@ -350,6 +395,7 @@ export default function BookingsView({ formatPrice }) {
       <section className="data-card">
         <div className="data-card-header">
           <h3><TicketCheck size={20} /> Bookings and payment receipts</h3>
+          <button type="button" className="btn-primary" onClick={() => openManualBooking(null)}><Plus size={18} /> Add manual booking</button>
           <label className="booking-filter">Filter by departure
             <select value={selectedDeparture} onChange={event => setSelectedDeparture(event.target.value)}>
               <option value="">All departures</option>
@@ -363,9 +409,9 @@ export default function BookingsView({ formatPrice }) {
             <tbody>
               {filteredBookings.map(booking => (
                 <tr key={booking.id}>
-                  <td>{booking.reference}</td>
+                  <td>{booking.reference}{booking.is_manual && <><br /><small>Manual</small></>}</td>
                   <td>{booking.safari_title}<br />{booking.departure_date}</td>
-                  <td>{booking.full_name}<br />{booking.email}<br />{booking.phone}</td>
+                  <td>{booking.full_name}{booking.email && <><br />{booking.email}</>}<br />{booking.phone}{booking.traveler_location && <><br />{booking.traveler_location}</>}</td>
                   <td>{booking.participant_count}</td>
                   <td>{formatPrice(booking.full_amount_kes)}</td>
                   <td>{formatPrice(booking.amount_kes)}</td>
@@ -374,7 +420,7 @@ export default function BookingsView({ formatPrice }) {
                   <td>{booking.mpesa_receipt || '—'}</td>
                   <td>
                     <div className="table-actions">
-                      <button type="button" className="btn-secondary" onClick={() => openBookingEditor(booking)}><Edit2 size={15} /> Edit</button>
+                      <button type="button" className="btn-secondary" onClick={() => booking.is_manual ? openManualBooking(booking) : openBookingEditor(booking)}><Edit2 size={15} /> Edit</button>
                       {booking.status === 'pending_payment' && <button type="button" className="btn-danger" onClick={() => cancelBooking(booking)}>Cancel</button>}
                       <button type="button" className="btn-danger" onClick={() => deleteBooking(booking)} title="Permanently delete booking and receipt">
                         <Trash2 size={15} /> Delete
@@ -390,6 +436,44 @@ export default function BookingsView({ formatPrice }) {
           </table>
         </div>
       </section>
+
+      {manualForm && (
+        <div className="modal-overlay show">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="manual-booking-title">
+            <div className="modal-header">
+              <h3 id="manual-booking-title">{manualBooking ? `Edit manual booking ${manualBooking.reference}` : 'Add manual booking'}</h3>
+              <button type="button" className="modal-close" aria-label="Close manual booking" disabled={saving} onClick={() => setManualForm(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={saveManualBooking}>
+              <div className="modal-body">
+                {editError && <p className="form-status error" role="alert">{editError}</p>}
+                <p>Record a payment you have checked separately. No payment or refund is processed here. Confirmed bookings reserve seats. Only the booking contact is added to the passenger manifest.</p>
+                <div className="form-group">
+                  <label htmlFor="manual-departure">Trip and date</label>
+                  <select id="manual-departure" required value={manualForm.departure} onChange={event => setManualForm(prev => ({ ...prev, departure: event.target.value }))}>
+                    <option value="">Select a departure</option>
+                    {departures.filter(item => !item.is_archived || item.id === manualBooking?.departure).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group"><label htmlFor="manual-name">Traveler name</label><input id="manual-name" required maxLength="255" value={manualForm.full_name} onChange={event => setManualForm(prev => ({ ...prev, full_name: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-phone">Contact number</label><input id="manual-phone" type="tel" required maxLength="30" value={manualForm.phone} onChange={event => setManualForm(prev => ({ ...prev, phone: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-location">Traveler location</label><input id="manual-location" required maxLength="255" value={manualForm.traveler_location} onChange={event => setManualForm(prev => ({ ...prev, traveler_location: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-email">Email (optional)</label><input id="manual-email" type="email" value={manualForm.email} onChange={event => setManualForm(prev => ({ ...prev, email: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-guests">Guests</label><input id="manual-guests" type="number" min="1" max="20" step="1" required value={manualForm.participant_count} onChange={event => setManualForm(prev => ({ ...prev, participant_count: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-total">Full amount (KES)</label><input id="manual-total" type="number" min="1" max="2147483647" step="1" required value={manualForm.full_amount_kes} onChange={event => setManualForm(prev => ({ ...prev, full_amount_kes: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-paid">Amount received (KES)</label><input id="manual-paid" type="number" min="1" max="2147483647" step="1" required value={manualForm.amount_kes} onChange={event => setManualForm(prev => ({ ...prev, amount_kes: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-receipt">M-Pesa reference code</label><input id="manual-receipt" required maxLength="30" value={manualForm.mpesa_receipt} onChange={event => setManualForm(prev => ({ ...prev, mpesa_receipt: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="manual-status">Status</label><select id="manual-status" value={manualForm.status} onChange={event => setManualForm(prev => ({ ...prev, status: event.target.value }))}><option value="confirmed">Confirmed</option><option value="refund_required">Refund required</option><option value="cancelled">Cancelled</option></select></div>
+                </div>
+                <p>Balance due: {manualForm.full_amount_kes && manualForm.amount_kes && Number(manualForm.amount_kes) <= Number(manualForm.full_amount_kes) ? formatPrice(Number(manualForm.full_amount_kes) - Number(manualForm.amount_kes)) : 'Enter valid amounts'}</p>
+                <p>The booking reference is generated automatically.</p>
+              </div>
+              <div className="modal-footer"><button type="button" className="btn-secondary" disabled={saving} onClick={() => setManualForm(null)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save booking'}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {editingDeparture && (
         <div className="modal-overlay show">

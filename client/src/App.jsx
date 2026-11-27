@@ -362,6 +362,7 @@ export default function App() {
             focusCustomTripRequest={focusCustomTripRequest}
             customTripService={customTripService}
             formatPrice={formatPrice}
+            settings={settings}
           />
         )}
         {page === 'destinations' && (
@@ -379,6 +380,7 @@ export default function App() {
             focusCustomTripRequest={focusCustomTripRequest}
             customTripService={customTripService}
             formatPrice={formatPrice}
+            settings={settings}
           />
         )}
         {page === 'pulse' && <PulsePage onNavigate={navigateTo} />}

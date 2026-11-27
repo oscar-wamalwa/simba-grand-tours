@@ -115,7 +115,7 @@ def send_departure_reminder(booking):
     )
     sender = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
     email_sent = False
-    if sender:
+    if sender and booking.email:
         try:
             email_sent = bool(send_mail(
                 f'Trip reminder: {safari_title} departs tomorrow',
@@ -126,6 +126,8 @@ def send_departure_reminder(booking):
             ))
         except (OSError, RuntimeError, smtplib.SMTPException) as error:
             logger.error('Could not send departure reminder for %s: %s', booking.reference, error)
+    elif not booking.email:
+        logger.info('Departure reminder email skipped for %s because no email was provided.', booking.reference)
     whatsapp_sent = _send_whatsapp_template(
         phone=booking.phone,
         template_name=getattr(settings, 'WHATSAPP_REMINDER_TEMPLATE', ''),
@@ -141,7 +143,9 @@ def send_waitlist_open_spot(entry):
     subject = f'Spots opened: {title}'
     body = (
         f'Hello {entry.full_name}, spots are available for {title} departing on {date}. '
-        'Visit our website or contact Simba Grand Tours to book. Spots are allocated in payment order.'
+        'Visit our website or contact Simba Grand Tours to book. '
+        + ('Spots are allocated in payment order.' if settings.ONLINE_PAYMENTS_ENABLED
+           else 'Our team will confirm availability.')
     )
     sender = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
     email_sent = False

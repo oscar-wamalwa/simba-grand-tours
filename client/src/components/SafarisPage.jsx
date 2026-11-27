@@ -1,9 +1,34 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw } from 'lucide-react';
+import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, MessageCircle, Phone } from 'lucide-react';
 import api from '../api';
 
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
+const onlinePaymentsEnabled = import.meta.env.VITE_ONLINE_PAYMENTS_ENABLED === 'true';
+
+function ContactBookingOptions({ safari, departure, settings }) {
+  const phone = String(settings.sitePhone || '+254 707 984 287');
+  const whatsappNumber = String(settings.whatsapp || phone).replace(/\D/g, '');
+  const date = departure && new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' });
+  const message = `Hello, I would like to enquire about ${safari.title}${date ? ` departing on ${date}` : ''}.`;
+
+  return (
+    <div className="booking-contact">
+      <h4>{date ? `Book for ${date}` : 'Book this safari'}</h4>
+      <p>Contact us to discuss your trip. Your seat is not reserved until our team confirms it.</p>
+      <div className="contact-direct-options">
+        <a className="contact-channel" href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={22} />
+          <span><strong>WhatsApp</strong><small>Send us a message</small></span>
+        </a>
+        <a className="contact-channel" href={`tel:${phone.replace(/[^\d+]/g, '')}`}>
+          <Phone size={22} />
+          <span><strong>Call us</strong><small>{phone}</small></span>
+        </a>
+      </div>
+    </div>
+  );
+}
 
 function SafarisPage({
   safaris,
@@ -13,6 +38,7 @@ function SafarisPage({
   focusCustomTripRequest = false,
   customTripService = '',
   formatPrice,
+  settings = {},
 }) {
   const maxPrice = Math.max(800000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
@@ -251,10 +277,10 @@ function SafarisPage({
               <h1>{selectedSafari.title}</h1>
               <div className="sig-meta">
                 <span className="gold-text">From {formatPrice(selectedSafari.price)} per person</span>
-                <span>{selectedSafari.booking_fee_kes
+                {onlinePaymentsEnabled && <span>{selectedSafari.booking_fee_kes
                   ? `Booking fee ${formatPrice(selectedSafari.booking_fee_kes)} per reservation`
                   : 'Booking fee not set'}
-                </span>
+                </span>}
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
               </div>
               <p>{selectedSafari.description || 'A carefully designed safari experience with exceptional wildlife encounters and comfortable, memorable stays.'}</p>
@@ -317,28 +343,28 @@ function SafarisPage({
                   </ul>
                 </>
               )}
-              <section className="departure-booking" hidden={!bookingsEnabled}>
-                <h3><CalendarDays size={20} /> Upcoming departures</h3>
+              <section className="departure-booking" hidden={!bookingsEnabled && onlinePaymentsEnabled}>
+                <h3><CalendarDays size={20} /> {bookingsEnabled ? 'Upcoming departures' : 'Contact us'}</h3>
                 {selectedSafari.booking_terms && (
                   <aside className="booking-terms-notice">
                     <h4>Booking Terms / Notes</h4>
                     <p>{selectedSafari.booking_terms}</p>
                   </aside>
                 )}
-                {departuresError && <p role="alert">{departuresError}</p>}
-                {!departuresError && departures.length === 0 && (
+                {bookingsEnabled && departuresError && <p role="alert">{departuresError}</p>}
+                {bookingsEnabled && !departuresError && departures.length === 0 && (
                   <p>No scheduled departures are available yet. Contact us for a custom trip.</p>
                 )}
-                {departures.map(departure => (
+                {bookingsEnabled && departures.map(departure => (
                   <div key={departure.id}>
                     <article className="departure-option">
                       <div>
                         <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</strong>
                         <span>Full amount: {formatPrice(departure.price_kes)} per person</span>
-                        <span>{departure.booking_fee_kes
+                        {onlinePaymentsEnabled && <span>{departure.booking_fee_kes
                           ? `Booking fee: ${formatPrice(departure.booking_fee_kes)} per reservation`
                           : 'Booking fee not configured'}
-                        </span>
+                        </span>}
                         <span><Users size={15} /> {departure.seats_available} spots left</span>
                         {departure.pickup_time && <span><Clock size={15} /> Pickup: {departure.pickup_time}</span>}
                       </div>
@@ -346,7 +372,7 @@ function SafarisPage({
                         <button
                           type="button"
                           className="btn-gold-sm"
-                          disabled={!departure.booking_fee_kes}
+                          disabled={onlinePaymentsEnabled && !departure.booking_fee_kes}
                           onClick={() => {
                             setSelectedDepartureId(String(departure.id));
                             setTermsAccepted(false);
@@ -354,7 +380,7 @@ function SafarisPage({
                             setBookingStatus('');
                           }}
                         >
-                          {departure.booking_fee_kes
+                          {!onlinePaymentsEnabled || departure.booking_fee_kes
                             ? selectedDepartureId === String(departure.id) ? 'Selected' : 'Book'
                             : 'Booking fee not set'}
                         </button>
@@ -372,6 +398,9 @@ function SafarisPage({
                         </button>
                       )}
                     </article>
+                    {!onlinePaymentsEnabled && selectedDepartureId === String(departure.id) && departure.seats_available > 0 && (
+                      <ContactBookingOptions safari={selectedSafari} departure={departure} settings={settings} />
+                    )}
                     {waitlistDepartureId === String(departure.id) && departure.seats_available <= 0 && (
                       <form className="booking-form waitlist-form" onSubmit={event => handleWaitlist(event, departure.id)}>
                         <h4>Join the waitlist</h4>
@@ -386,7 +415,10 @@ function SafarisPage({
                   </div>
                 ))}
                 {waitlistMessage && <p className="form-status success" role="status">{waitlistMessage}</p>}
-                {selectedDepartureId && !bookingResult && (
+                {!onlinePaymentsEnabled && (!bookingsEnabled || !selectedDeparture || selectedDeparture.seats_available <= 0) && (
+                  <ContactBookingOptions safari={selectedSafari} settings={settings} />
+                )}
+                {bookingsEnabled && onlinePaymentsEnabled && selectedDepartureId && !bookingResult && (
                   <form className="booking-form" onSubmit={handleBooking}>
                     <h4>Traveler and payment details</h4>
                     <label>Full name<input required value={bookingForm.full_name} onChange={event => setBookingForm(prev => ({ ...prev, full_name: event.target.value }))} /></label>
@@ -436,7 +468,7 @@ function SafarisPage({
                     <p className="booking-note">Your selected spots are held for 10 minutes while you pay the booking fee.</p>
                   </form>
                 )}
-                {bookingResult && (
+                {bookingsEnabled && onlinePaymentsEnabled && bookingResult && (
                   <div className="booking-confirmation" role="status">
                     <h4>Booking reference: {bookingResult.reference}</h4>
                     <p>Full amount: {formatPrice(bookingResult.full_amount_kes)}</p>

@@ -54,6 +54,21 @@ async function apiRequest(endpoint, options = {}) {
   }
 }
 
+async function getAllPages(endpoint, params = {}) {
+  let queryString = new URLSearchParams(params).toString();
+  const seen = new Set();
+  const results = [];
+  do {
+    if (seen.has(queryString)) throw new Error(`${endpoint} pagination returned a repeated page.`);
+    seen.add(queryString);
+    const response = await apiRequest(`${endpoint}${queryString ? `?${queryString}` : ''}`);
+    if (Array.isArray(response)) return [...results, ...response];
+    results.push(...response.results);
+    queryString = response.next ? new URL(response.next, API_BASE_URL + '/').search.slice(1) : '';
+  } while (queryString);
+  return results;
+}
+
 // Safari API
 export const safarisApi = {
   getAll: async (params = {}) => {
@@ -81,20 +96,7 @@ export const destinationsApi = {
 };
 
 export const departuresApi = {
-  getAll: async (params = {}) => {
-    let queryString = new URLSearchParams(params).toString();
-    const seen = new Set();
-    const departures = [];
-    do {
-      if (seen.has(queryString)) throw new Error('Departure pagination returned a repeated page.');
-      seen.add(queryString);
-      const response = await apiRequest(`/departures/${queryString ? `?${queryString}` : ''}`);
-      if (Array.isArray(response)) return [...departures, ...response];
-      departures.push(...response.results);
-      queryString = response.next ? new URL(response.next, API_BASE_URL + '/').search.slice(1) : '';
-    } while (queryString);
-    return departures;
-  },
+  getAll: (params = {}) => getAllPages('/departures/', params),
   create: (data) => apiRequest('/departures/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PUT', body: data }),
   partialUpdate: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PATCH', body: data }),
@@ -102,17 +104,15 @@ export const departuresApi = {
 };
 
 export const bookingsApi = {
-  getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const response = await apiRequest(`/bookings/${queryString ? `?${queryString}` : ''}`);
-    return response.results || response;
-  },
+  getAll: (params = {}) => getAllPages('/bookings/', params),
   getReport: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return apiRequest(`/bookings/report/${queryString ? `?${queryString}` : ''}`);
   },
   cancel: (id) => apiRequest(`/bookings/${id}/`, { method: 'PATCH', body: { status: 'cancelled' } }),
   editDetails: (id, data) => apiRequest(`/bookings/${id}/edit-details/`, { method: 'PATCH', body: data }),
+  createManual: (data) => apiRequest('/bookings/manual/', { method: 'POST', body: data }),
+  editManual: (id, data) => apiRequest(`/bookings/${id}/manual/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/bookings/${id}/`, { method: 'DELETE' }),
 };
 

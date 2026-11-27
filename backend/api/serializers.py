@@ -244,6 +244,26 @@ class BookingDetailsEditSerializer(serializers.Serializer):
         return attrs
 
 
+class ManualBookingSerializer(serializers.Serializer):
+    departure = serializers.PrimaryKeyRelatedField(queryset=TripDeparture.objects.all())
+    full_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    phone = serializers.CharField(max_length=30)
+    traveler_location = serializers.CharField(max_length=255)
+    participant_count = serializers.IntegerField(min_value=1, max_value=20)
+    full_amount_kes = serializers.IntegerField(min_value=1, max_value=2147483647)
+    amount_kes = serializers.IntegerField(min_value=1, max_value=2147483647)
+    mpesa_receipt = serializers.CharField(max_length=30)
+    status = serializers.ChoiceField(choices=[
+        Booking.Status.CONFIRMED, Booking.Status.CANCELLED, Booking.Status.REFUND_REQUIRED,
+    ])
+
+    def validate(self, attrs):
+        if attrs['amount_kes'] > attrs['full_amount_kes']:
+            raise serializers.ValidationError({'amount_kes': 'Amount received cannot exceed the full amount.'})
+        return attrs
+
+
 class BookingSerializer(serializers.ModelSerializer):
     passengers = PassengerSerializer(many=True, read_only=True)
     departure_date = serializers.DateField(source='departure.start_date', read_only=True)
@@ -253,7 +273,7 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'reference', 'departure', 'departure_date', 'safari_title',
-            'full_name', 'email', 'phone', 'participant_count', 'amount_kes',
+            'full_name', 'email', 'phone', 'traveler_location', 'is_manual', 'participant_count', 'amount_kes',
             'full_amount_kes', 'booking_fee_kes', 'discount_kes', 'balance_due_kes',
             'booking_terms', 'terms_accepted_at',
             'status', 'payment_phone', 'mpesa_receipt', 'expires_at', 'created_at',

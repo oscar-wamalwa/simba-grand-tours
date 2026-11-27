@@ -919,6 +919,7 @@ class AdminContentAccessTests(APITestCase):
         self.assertEqual(public_settings['terms_conditions'], '## Booking updates\n\nUpdated terms copy.')
 
 
+@override_settings(ONLINE_PAYMENTS_ENABLED=True)
 class BookingFlowTests(APITestCase):
     def setUp(self):
         self.safari = Safari.objects.create(
@@ -975,6 +976,15 @@ class BookingFlowTests(APITestCase):
         self.assertEqual(booking.booking_terms, self.safari.booking_terms)
         self.assertIsNotNone(booking.terms_accepted_at)
         initiate.assert_called_once()
+
+    @override_settings(ONLINE_PAYMENTS_ENABLED=False)
+    def test_disabled_online_payments_do_not_create_bookings_or_start_payment(self):
+        with patch('api.booking_views.initiate_stk_push') as initiate:
+            response = self.client.post('/api/bookings/create/', self.booking_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('WhatsApp or phone', response.data['detail'])
+        self.assertFalse(Booking.objects.exists())
+        initiate.assert_not_called()
 
     def test_booking_requires_acceptance_of_admin_terms(self):
         from unittest.mock import patch
@@ -1173,6 +1183,7 @@ class BookingFlowTests(APITestCase):
         self.assertIn('spots are available', mail.outbox[0].body)
 
     @override_settings(
+        ONLINE_PAYMENTS_ENABLED=False,
         MPESA_CALLBACK_TOKEN='callback-secret',
         DEFAULT_FROM_EMAIL='bookings@example.com',
         EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
@@ -1474,6 +1485,7 @@ class AdminBookingEditingTests(APITestCase):
         self.assertEqual(public.get(url).status_code, status.HTTP_200_OK)
         notify.assert_called_once_with(self.departure.pk)
 
+    @override_settings(ONLINE_PAYMENTS_ENABLED=True)
     def test_archived_departures_reject_new_bookings_waitlist_and_booking_moves(self):
         self.other.is_archived = True
         self.other.save()
@@ -1512,6 +1524,96 @@ class AdminBookingEditingTests(APITestCase):
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(TripDeparture.objects.filter(pk=self.other.pk).exists())
         self.assertFalse(WaitlistEntry.objects.filter(pk=waitlist.pk).exists())
+
+
+class ManualBookingTests(APITestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(username='manual-admin', is_staff=True)
+        safari = Safari.objects.create(title='Safari', description='Trip', location='Kenya', price='20000.00')
+        self.departure = TripDeparture.objects.create(
+            safari=safari, start_date=timezone.localdate() + timedelta(days=10), seats_total=2, price_kes=20000,
+        )
+        self.data = {
+            'departure': self.departure.pk, 'full_name': 'Guest', 'phone': '0712345678',
+            'traveler_location': 'Nairobi', 'participant_count': 2, 'full_amount_kes': 40000,
+            'amount_kes': 5000, 'mpesa_receipt': 'ABC123', 'status': 'confirmed',
+        }
+
+    def test_staff_creates_paid_booking_without_initiating_payment(self):
+        denied = self.client.post('/api/bookings/manual/', self.data, format='json')
+        self.assertIn(denied.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.client.force_authenticate(user=self.staff)
+        with patch('api.booking_views.initiate_stk_push') as initiate:
+            response = self.client.post('/api/bookings/manual/', self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        booking = Booking.objects.get(pk=response.data['id'])
+        self.assertTrue(booking.is_manual)
+        self.assertTrue(booking.reference)
+        self.assertEqual((booking.traveler_location, booking.mpesa_receipt), ('Nairobi', 'ABC123'))
+        self.assertEqual((booking.amount_kes, booking.booking_fee_kes, booking.balance_due_kes), (5000, 5000, 35000))
+        self.assertEqual(booking.passengers.get().full_name, 'Guest')
+        self.assertEqual(self.departure.seats_available, 0)
+        initiate.assert_not_called()
+
+    def test_required_fields_amounts_and_capacity_are_enforced(self):
+        self.client.force_authenticate(user=self.staff)
+        for field in ('full_name', 'phone', 'traveler_location', 'mpesa_receipt'):
+            response = self.client.post('/api/bookings/manual/', {**self.data, field: ' '}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, field)
+        for changes in ({'amount_kes': 0}, {'amount_kes': 40001}, {'participant_count': 3}):
+            response = self.client.post('/api/bookings/manual/', {**self.data, **changes}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, changes)
+        self.assertFalse(Booking.objects.exists())
+
+    def test_manual_edit_updates_amounts_and_seats_and_protects_online_records(self):
+        self.client.force_authenticate(user=self.staff)
+        created = self.client.post('/api/bookings/manual/', self.data, format='json')
+        url = f"/api/bookings/{created.data['id']}/manual/"
+        with patch('api.booking_views.notify_waitlist_for_departure') as notify:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.patch(url, {
+                    **self.data, 'participant_count': 1, 'amount_kes': 10000,
+                    'traveler_location': 'Mombasa', 'mpesa_receipt': 'NEW123',
+                }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual((response.data['balance_due_kes'], response.data['mpesa_receipt']), (30000, 'NEW123'))
+        self.assertEqual(self.departure.seats_available, 1)
+        notify.assert_called_once_with(self.departure.pk)
+        response = self.client.patch(url, {
+            **self.data, 'status': 'cancelled', 'mpesa_receipt': 'NEW123',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(self.departure.seats_available, 2)
+
+        other = self.client.post('/api/bookings/manual/', {
+            **self.data, 'participant_count': 1, 'mpesa_receipt': 'OTHER123',
+        }, format='json')
+        self.assertEqual(other.status_code, status.HTTP_201_CREATED, other.data)
+        response = self.client.patch(url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.departure.seats_available, 1)
+
+        booking = Booking.objects.get(pk=created.data['id'])
+        booking.is_manual = False
+        booking.save(update_fields=['is_manual'])
+        response = self.client.patch(url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        booking.refresh_from_db()
+        self.assertEqual(booking.mpesa_receipt, 'NEW123')
+
+    @override_settings(DEFAULT_FROM_EMAIL='bookings@example.com')
+    def test_reminder_without_email_skips_email_but_attempts_whatsapp(self):
+        from .notifications import send_departure_reminder
+
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.post('/api/bookings/manual/', self.data, format='json')
+        booking = Booking.objects.get(pk=response.data['id'])
+        with patch('api.notifications.send_mail') as send_email, patch(
+            'api.notifications._send_whatsapp_template', return_value=True,
+        ) as send_whatsapp:
+            self.assertTrue(send_departure_reminder(booking))
+        send_email.assert_not_called()
+        send_whatsapp.assert_called_once()
 
 
 class PromoCodeTests(APITestCase):

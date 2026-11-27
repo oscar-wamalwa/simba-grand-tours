@@ -165,6 +165,8 @@ class Booking(models.Model):
     full_name = models.CharField(max_length=255)
     email = models.EmailField()
     phone = models.CharField(max_length=30)
+    traveler_location = models.CharField(max_length=255, blank=True)
+    is_manual = models.BooleanField(default=False)
     participant_count = models.PositiveIntegerField()
     amount_kes = models.PositiveIntegerField()
     full_amount_kes = models.PositiveIntegerField(default=0)
