@@ -6,6 +6,8 @@ Staff can record and edit manual bookings under Departures and Bookings after ch
 
 The default privacy policy and terms are updated for this flow, but admin-customized policy text is preserved. Review any customized text in Settings to ensure it describes the current booking process.
 
+The staff-only Invoices dashboard saves editable invoice records and generates DOCX files with the Simba Grand Tours logo. Business details are copied from website settings when starting an invoice and can be edited per invoice. Enter line-item prices, tax rate and any prior payment in the selected KES or USD currency; there is no automatic conversion. Each line is rounded to two decimal places, tax is added to the subtotal, and the balance is calculated after payments. Invoice numbers are generated automatically. Generating an invoice does not process a payment or submit a tax invoice to a tax authority; check any applicable invoicing requirements separately. Editing a saved invoice does not change documents already downloaded.
+
 To re-enable online payments later, set `ONLINE_PAYMENTS_ENABLED=true` on the backend and `VITE_ONLINE_PAYMENTS_ENABLED=true` when building the client, then deploy both. Verify the payment flow in a sandbox first. The booking flow stores prices and payments as whole Kenyan shillings (KES). Before enabling online payments in Railway, configure:
 
 - `MPESA_ENVIRONMENT` (`sandbox` for testing, `production` for live payments)

@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   CalendarDays,
+  FilePlus2,
   Megaphone
 } from 'lucide-react';
 import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
@@ -32,7 +33,8 @@ import {
   AnalyticsView,
   SettingsView,
   BookingsView,
-  CampaignsView
+  CampaignsView,
+  InvoicesView
 } from './components';
 
 const pageInfo = {
@@ -46,7 +48,8 @@ const pageInfo = {
   analytics: ['Sales Reports', 'Review confirmed bookings and revenue by safari.'],
   settings: ['Settings', 'Control contact details, social links, and website branding.'],
   bookings: ['Departures and Bookings', 'Schedule trips, track paid seats, and export passenger manifests.'],
-  campaigns: ['Promotions and Waitlist', 'Manage promo codes, seasonal announcements, and sold-out trip waitlists.']
+  campaigns: ['Promotions and Waitlist', 'Manage promo codes, seasonal announcements, and sold-out trip waitlists.'],
+  invoices: ['Invoices', 'Create, edit and download corporate or individual invoices.']
 };
 
 export default function AdminDashboard({ onLogout }) {
@@ -154,6 +157,7 @@ export default function AdminDashboard({ onLogout }) {
     { id: 'analytics', icon: BarChart3, label: 'Sales Reports' },
     { id: 'settings', icon: Settings, label: 'Settings' },
     { id: 'bookings', icon: CalendarDays, label: 'Departures and Bookings' },
+    { id: 'invoices', icon: FilePlus2, label: 'Invoices' },
     { id: 'campaigns', icon: Megaphone, label: 'Promotions and Waitlist' }
   ];
 
@@ -244,6 +248,7 @@ export default function AdminDashboard({ onLogout }) {
           {currentPage === 'analytics' && <AnalyticsView formatPrice={formatPrice} />}
           {currentPage === 'settings' && <SettingsView />}
           {currentPage === 'bookings' && <BookingsView formatPrice={formatPrice} />}
+          {currentPage === 'invoices' && <InvoicesView />}
           {currentPage === 'campaigns' && <CampaignsView formatPrice={formatPrice} />}
         </div>
       </main>

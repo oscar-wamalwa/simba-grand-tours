@@ -31,10 +31,12 @@ from .booking_views import (
     TripDepartureViewSet,
     WaitlistViewSet,
 )
+from .invoices import InvoiceViewSet
 
 router = DefaultRouter()
 router.register(r'departures', TripDepartureViewSet, basename='departure')
 router.register(r'bookings', BookingViewSet, basename='booking')
+router.register(r'invoices', InvoiceViewSet, basename='invoice')
 router.register(r'waitlist', WaitlistViewSet, basename='waitlist')
 router.register(r'promocodes', PromoCodeViewSet, basename='promocode')
 router.register(r'announcements', TripAnnouncementViewSet, basename='announcement')

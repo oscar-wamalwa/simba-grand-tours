@@ -1616,6 +1616,87 @@ class ManualBookingTests(APITestCase):
         send_whatsapp.assert_called_once()
 
 
+class InvoiceTests(APITestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(username='invoice-admin', is_staff=True)
+        self.data = {
+            'issue_date': '2030-01-01', 'due_date': '2030-01-31', 'currency': 'USD',
+            'issuer_name': 'Simba Grand Tours', 'issuer_address': 'Nairobi',
+            'issuer_email': 'business@example.com', 'issuer_phone': '0700000000',
+            'issuer_tax_id': 'P123', 'client_name': 'Example Company', 'client_contact': 'Guest',
+            'client_address': 'Mombasa', 'client_email': 'client@example.com',
+            'client_phone': '0712345678', 'client_tax_id': 'C123',
+            'service_details': 'Three-day safari', 'payment_instructions': 'Pay by bank transfer',
+            'booking_terms': 'Subject to availability', 'notes': 'Thank you',
+            'tax_rate': '16.00', 'amount_paid': '4.37',
+            'items': [
+                {'description': 'Transport & guide', 'quantity': '1.50', 'unit_price': '0.67'},
+                {'description': 'Safari', 'quantity': '2.00', 'unit_price': '10.00'},
+            ],
+        }
+
+    def test_staff_invoice_and_docx_contain_details_logo_and_exact_totals(self):
+        from io import BytesIO
+        from pathlib import Path
+        from zipfile import ZipFile
+        from docx import Document
+
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.post('/api/invoices/', self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertTrue(response.data['number'].startswith('INV-'))
+        self.assertEqual(
+            (response.data['subtotal'], response.data['tax_amount'], response.data['total'], response.data['balance_due']),
+            ('21.01', '3.36', '24.37', '20.00'),
+        )
+        document_response = self.client.get(f"/api/invoices/{response.data['id']}/document/")
+        self.assertEqual(document_response.status_code, status.HTTP_200_OK)
+        self.assertIn('.docx', document_response['Content-Disposition'])
+        self.assertEqual(document_response['Cache-Control'], 'no-store')
+        content = b''.join(document_response.streaming_content)
+        document = Document(BytesIO(content))
+        self.assertEqual(len(document.inline_shapes), 1)
+        with ZipFile(BytesIO(content)) as archive:
+            images = [name for name in archive.namelist() if name.startswith('word/media/')]
+            self.assertEqual(len(images), 1)
+            self.assertEqual(archive.read(images[0]), Path(__file__).with_name('invoice-logo.png').read_bytes())
+        text = '\n'.join(p.text for p in document.paragraphs)
+        table_text = '\n'.join(cell.text for row in document.tables[0].rows for cell in row.cells)
+        for expected in [response.data['number'], 'Example Company', 'Subject to availability',
+                         'Pay by bank transfer', 'Balance due: USD 20.00']:
+            self.assertIn(expected, text)
+        self.assertIn('Transport & guide', table_text)
+        self.assertIn('USD 1.01', table_text)
+
+    def test_edit_preserves_number_replaces_items_and_recalculates(self):
+        self.client.force_authenticate(user=self.staff)
+        created = self.client.post('/api/invoices/', self.data, format='json')
+        updated = self.client.put(f"/api/invoices/{created.data['id']}/", {
+            **self.data, 'tax_rate': '0', 'amount_paid': '50',
+            'items': [{'description': 'Updated trip', 'quantity': '1', 'unit_price': '100'}],
+        }, format='json')
+        self.assertEqual(updated.status_code, status.HTTP_200_OK, updated.data)
+        self.assertEqual(updated.data['number'], created.data['number'])
+        self.assertEqual((updated.data['total'], updated.data['balance_due']), ('100.00', '50.00'))
+        self.assertEqual(len(updated.data['items']), 1)
+        self.assertEqual(updated.data['items'][0]['description'], 'Updated trip')
+
+    def test_invoice_access_and_validation(self):
+        self.assertIn(self.client.get('/api/invoices/').status_code, (401, 403))
+        self.assertIn(self.client.post('/api/invoices/', self.data, format='json').status_code, (401, 403))
+        self.client.force_authenticate(user=self.staff)
+        for changes in (
+            {'due_date': '2029-12-31'}, {'amount_paid': '999'}, {'tax_rate': '101'},
+            {'items': []}, {'items': [{'description': 'Trip', 'quantity': '0', 'unit_price': '10'}]},
+        ):
+            response = self.client.post('/api/invoices/', {**self.data, **changes}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, changes)
+        created = self.client.post('/api/invoices/', self.data, format='json')
+        self.client.force_authenticate(user=None)
+        denied = self.client.get(f"/api/invoices/{created.data['id']}/document/")
+        self.assertIn(denied.status_code, (401, 403))
+
+
 class PromoCodeTests(APITestCase):
     def test_promo_code_limits_discount_to_valid_percentage(self):
         staff = get_user_model().objects.create_user(

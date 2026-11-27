@@ -2,10 +2,23 @@
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
 
+function formatApiErrors(value) {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => (
+      item && typeof item === 'object' ? `${index + 1}: ${formatApiErrors(item)}` : formatApiErrors(item)
+    )).filter(Boolean).join('; ');
+  }
+  if (value && typeof value === 'object') {
+    return Object.entries(value).map(([field, errors]) => `${field}: ${formatApiErrors(errors)}`).join('; ');
+  }
+  return String(value ?? '');
+}
+
 // Helper function for API requests
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = localStorage.getItem('adminToken');
+  const { responseType, ...requestOptions } = options;
   
   const config = {
     headers: {
@@ -13,7 +26,7 @@ async function apiRequest(endpoint, options = {}) {
       ...(token ? { Authorization: `Token ${token}` } : {}),
       ...options.headers,
     },
-    ...options,
+    ...requestOptions,
   };
 
   if (options.body && typeof options.body === 'object') {
@@ -34,15 +47,17 @@ async function apiRequest(endpoint, options = {}) {
       console.error(`API Error [${endpoint}]:`, errorData);
       const message = errorData?.detail
         || errorData?.message
-        || (errorData && typeof errorData === 'object'
-          ? Object.entries(errorData)
-            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : String(errors)}`)
-            .join('; ')
-          : errorData);
+        || formatApiErrors(errorData);
       throw new Error(message || `HTTP error! status: ${response.status}`);
     }
     
     const contentType = response.headers.get('content-type');
+    if (responseType === 'docx') {
+      if (!contentType?.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+        throw new Error('The server did not return a Word document.');
+      }
+      return await response.blob();
+    }
     if (contentType && contentType.includes('application/json')) {
       return await response.json();
     }
@@ -114,6 +129,13 @@ export const bookingsApi = {
   createManual: (data) => apiRequest('/bookings/manual/', { method: 'POST', body: data }),
   editManual: (id, data) => apiRequest(`/bookings/${id}/manual/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/bookings/${id}/`, { method: 'DELETE' }),
+};
+
+export const invoicesApi = {
+  getAll: () => getAllPages('/invoices/'),
+  create: (data) => apiRequest('/invoices/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/invoices/${id}/`, { method: 'PUT', body: data }),
+  document: (id) => apiRequest(`/invoices/${id}/document/`, { responseType: 'docx' }),
 };
 
 export const promoCodesApi = {
@@ -237,6 +259,7 @@ export default {
   destinations: destinationsApi,
   departures: departuresApi,
   bookings: bookingsApi,
+  invoices: invoicesApi,
   promoCodes: promoCodesApi,
   announcements: announcementsApi,
   waitlist: waitlistApi,

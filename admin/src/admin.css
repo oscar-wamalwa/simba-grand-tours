@@ -170,6 +170,21 @@
 .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--gold-majesty); box-shadow: 0 0 0 3px rgba(225, 173, 61, 0.1); }
 .form-group textarea { resize: vertical; min-height: 100px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.invoice-editor { margin-top: 24px; }
+.invoice-form { padding: 30px; }
+.invoice-form > p { margin-bottom: 20px; color: var(--gray-dark); }
+.invoice-form h4 { margin: 20px 0 14px; }
+.invoice-item { display: grid; grid-template-columns: minmax(0, 3fr) minmax(110px, 1fr) minmax(150px, 1fr) auto; gap: 12px; align-items: start; }
+.invoice-item button { margin-top: 30px; }
+.invoice-amounts { margin-top: 24px; }
+.invoice-totals { margin-bottom: 24px; padding: 16px; background: var(--gray-light); border-radius: 8px; }
+.invoice-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.invoice-status { margin: 16px 30px; }
+@media (max-width: 768px) {
+  .invoice-form { padding: 18px; }
+  .invoice-item { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .invoice-item button { margin: 0 0 20px; justify-self: start; }
+}
 .form-group select[multiple] { min-height: 150px; }
 .form-group small { display: block; margin-top: 6px; color: var(--gray-dark); }
 .destination-checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; }

@@ -9,4 +9,5 @@ export { default as AnalyticsView } from './AnalyticsView';
 export { default as SettingsView } from './SettingsView';
 export { default as BookingsView } from './BookingsView';
 export { default as CampaignsView } from './CampaignsView';
+export { default as InvoicesView } from './InvoicesView';
 

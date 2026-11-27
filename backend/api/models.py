@@ -15,6 +15,53 @@ def generate_booking_reference():
     return f"SGT-{uuid.uuid4().hex[:16].upper()}"
 
 
+def generate_invoice_number():
+    return f"INV-{uuid.uuid4().hex[:16].upper()}"
+
+
+class Invoice(models.Model):
+    number = models.CharField(max_length=20, unique=True, default=generate_invoice_number, editable=False)
+    issue_date = models.DateField()
+    due_date = models.DateField(null=True, blank=True)
+    currency = models.CharField(max_length=3, choices=[('KES', 'KES'), ('USD', 'USD')], default='KES')
+    issuer_name = models.CharField(max_length=255)
+    issuer_address = models.TextField(blank=True)
+    issuer_email = models.EmailField(blank=True)
+    issuer_phone = models.CharField(max_length=50, blank=True)
+    issuer_tax_id = models.CharField(max_length=100, blank=True)
+    client_name = models.CharField(max_length=255)
+    client_contact = models.CharField(max_length=255, blank=True)
+    client_address = models.TextField(blank=True)
+    client_email = models.EmailField(blank=True)
+    client_phone = models.CharField(max_length=50, blank=True)
+    client_tax_id = models.CharField(max_length=100, blank=True)
+    service_details = models.TextField(blank=True)
+    payment_instructions = models.TextField(blank=True)
+    booking_terms = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return self.number
+
+
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    description = models.TextField()
+    quantity = models.DecimalField(max_digits=8, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    position = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ['position', 'id']
+
+
 class Safari(models.Model):
     """Safari package model."""
     title = models.CharField(max_length=255)
