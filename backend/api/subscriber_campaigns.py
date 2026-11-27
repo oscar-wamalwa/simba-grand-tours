@@ -78,17 +78,25 @@ def send_subscriber_sms(recipients, message):
             continue
 
         accepted = 0
+        status_codes = set()
         for result in recipients_result:
             if not isinstance(result, dict):
                 continue
             try:
-                if int(result.get('statusCode')) in (101, 102):
+                status_code = int(result.get('statusCode'))
+                status_codes.add(status_code)
+                if status_code in (101, 102):
                     accepted += 1
             except (TypeError, ValueError):
                 continue
         sent += min(accepted, len(batch))
         failed += len(batch) - min(accepted, len(batch))
         if accepted < len(batch):
-            errors.append('SMS provider rejected one or more recipients.')
+            if status_codes:
+                codes = ', '.join(str(code) for code in sorted(status_codes))
+                logger.error('Africa’s Talking rejected SMS recipients with status codes: %s', codes)
+                errors.append(f'SMS provider rejected one or more recipients (status codes: {codes}).')
+            else:
+                errors.append('SMS provider rejected one or more recipients.')
 
     return {'attempted': len(recipients), 'sent': sent, 'failed': failed, 'errors': errors}

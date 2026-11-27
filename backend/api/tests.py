@@ -337,6 +337,33 @@ class AfricaTalkingSmsTests(SimpleTestCase):
         AFRICASTALKING_ENVIRONMENT='production',
     )
     @patch('api.subscriber_campaigns.urllib.request.urlopen')
+    def test_reports_recipient_rejection_codes_without_exposing_phone_numbers(self, urlopen):
+        response_context = MagicMock()
+        response_context.read.return_value = json.dumps({
+            'SMSMessageData': {
+                'Recipients': [
+                    {'statusCode': 403, 'status': 'Rejected', 'number': '+254712345678'},
+                ],
+            },
+        }).encode()
+        urlopen.return_value.__enter__.return_value = response_context
+
+        result = send_subscriber_sms([Subscriber(phone='254712345678')], 'Safari update')
+
+        self.assertEqual(result['sent'], 0)
+        self.assertEqual(result['failed'], 1)
+        self.assertEqual(
+            result['errors'],
+            ['SMS provider rejected one or more recipients (status codes: 403).'],
+        )
+        self.assertNotIn('254712345678', str(result))
+
+    @override_settings(
+        AFRICASTALKING_USERNAME='test-user',
+        AFRICASTALKING_API_KEY='test-key',
+        AFRICASTALKING_ENVIRONMENT='production',
+    )
+    @patch('api.subscriber_campaigns.urllib.request.urlopen')
     def test_reports_http_status_when_provider_rejects_batch(self, urlopen):
         urlopen.side_effect = HTTPError(
             'https://api.africastalking.com/version1/messaging',
