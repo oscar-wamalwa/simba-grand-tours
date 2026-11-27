@@ -282,7 +282,10 @@ class SubscriberCampaignTests(APITestCase):
         )
         self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
-    @override_settings(DEFAULT_FROM_EMAIL='updates@example.com')
+    @override_settings(
+        DEFAULT_FROM_EMAIL='updates@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
     @patch('api.views.send_mail', side_effect=TimeoutError)
     def test_email_campaign_reports_smtp_timeout(self, send_mail):
         self.client.force_authenticate(user=self.staff_user)
@@ -305,6 +308,39 @@ class SubscriberCampaignTests(APITestCase):
             ['Email provider failed to accept one or more messages.'],
         )
         self.assertEqual(send_mail.call_count, 2)
+
+    @override_settings(
+        DEFAULT_FROM_EMAIL='updates@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    @patch('api.views.send_mail')
+    @patch('api.views.get_connection')
+    def test_email_campaign_reuses_one_connection_for_individual_messages(self, get_connection, send_mail):
+        connection = get_connection.return_value
+        send_mail.return_value = 1
+        self.client.force_authenticate(user=self.staff_user)
+
+        response = self.client.post(
+            '/api/subscribers/send_update/',
+            {
+                'channel': 'email',
+                'subject': 'Safari updates',
+                'message': 'New trips are now available.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results']['email']['sent'], 2)
+        self.assertEqual(get_connection.call_count, 1)
+        connection.open.assert_called_once_with()
+        connection.close.assert_called_once_with()
+        self.assertEqual(send_mail.call_count, 2)
+        self.assertTrue(all(call.kwargs['connection'] is connection for call in send_mail.call_args_list))
+        self.assertEqual(
+            sorted(call.args[3][0] for call in send_mail.call_args_list),
+            ['email-subscriber@example.com', 'sms-subscriber@example.com'],
+        )
 
     def test_staff_can_add_phone_and_sms_consent_to_existing_subscriber(self):
         subscriber = Subscriber.objects.create(email='existing@example.com')

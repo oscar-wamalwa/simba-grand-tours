@@ -6,7 +6,7 @@ import logging
 import smtplib
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import get_connection, send_mail
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.throttling import AnonRateThrottle
@@ -237,25 +237,41 @@ class SubscriberViewSet(viewsets.ModelViewSet):
             email_sent = 0
             email_failed = 0
             email_errors = []
-            for subscriber in email_recipients:
-                try:
-                    accepted = send_mail(
-                        subject,
-                        message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        [subscriber.email],
-                        fail_silently=False,
-                    )
-                except (OSError, RuntimeError, smtplib.SMTPException) as error:
-                    logger.error('Subscriber email delivery failed: %s', type(error).__name__)
-                    email_failed += 1
-                    email_errors.append('Email provider failed to accept one or more messages.')
-                    continue
-                if accepted == 1:
-                    email_sent += 1
-                else:
-                    email_failed += 1
-                    email_errors.append('Email provider did not accept one or more messages.')
+            email_connection = None
+            try:
+                email_connection = get_connection()
+                email_connection.open()
+            except (OSError, RuntimeError, smtplib.SMTPException) as error:
+                logger.error('Subscriber email connection failed: %s', type(error).__name__)
+                email_failed = len(email_recipients)
+                email_errors.append('Email provider failed to accept one or more messages.')
+            else:
+                for subscriber in email_recipients:
+                    try:
+                        accepted = send_mail(
+                            subject,
+                            message,
+                            settings.DEFAULT_FROM_EMAIL,
+                            [subscriber.email],
+                            fail_silently=False,
+                            connection=email_connection,
+                        )
+                    except (OSError, RuntimeError, smtplib.SMTPException) as error:
+                        logger.error('Subscriber email delivery failed: %s', type(error).__name__)
+                        email_failed += 1
+                        email_errors.append('Email provider failed to accept one or more messages.')
+                        continue
+                    if accepted == 1:
+                        email_sent += 1
+                    else:
+                        email_failed += 1
+                        email_errors.append('Email provider did not accept one or more messages.')
+            finally:
+                if email_connection:
+                    try:
+                        email_connection.close()
+                    except (OSError, RuntimeError, smtplib.SMTPException) as error:
+                        logger.warning('Subscriber email connection close failed: %s', type(error).__name__)
             results['email'] = {
                 'attempted': len(email_recipients),
                 'sent': email_sent,
