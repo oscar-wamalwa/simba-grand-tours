@@ -73,8 +73,8 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
         if safari_id:
             queryset = queryset.filter(safari_id=safari_id)
         if not (self.request.user and self.request.user.is_staff):
-            # Closed departures stay public so visitors can see them marked "Closed".
             queryset = queryset.filter(
+                is_open=True,
                 is_archived=False,
                 safari__visible=True,
                 start_date__gte=timezone.localdate(),
