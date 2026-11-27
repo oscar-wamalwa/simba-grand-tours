@@ -53,10 +53,20 @@ def send_subscriber_sms(recipients, message):
         try:
             with urllib.request.urlopen(request, timeout=20) as response:
                 provider_response = json.loads(response.read().decode('utf-8'))
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        except urllib.error.HTTPError as error:
+            logger.error('Africa’s Talking SMS batch failed with HTTP %s.', error.code)
+            failed += len(batch)
+            errors.append(f'SMS provider rejected the request (HTTP {error.code}).')
+            continue
+        except (urllib.error.URLError, TimeoutError) as error:
             logger.error('Africa’s Talking SMS batch failed: %s', type(error).__name__)
             failed += len(batch)
-            errors.append('SMS provider request failed for a batch.')
+            errors.append('Could not connect to the SMS provider for a batch.')
+            continue
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            logger.error('Africa’s Talking SMS batch returned an unreadable response: %s', type(error).__name__)
+            failed += len(batch)
+            errors.append('SMS provider returned an unreadable response for a batch.')
             continue
 
         message_data = provider_response.get('SMSMessageData') if isinstance(provider_response, dict) else None

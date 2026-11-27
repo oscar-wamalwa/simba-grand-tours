@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 from urllib.parse import parse_qs
 
 from django.contrib.auth import get_user_model
@@ -329,6 +330,27 @@ class AfricaTalkingSmsTests(SimpleTestCase):
         self.assertEqual(payload['to'], ['+254712345678,+254711222333'])
         self.assertEqual(payload['from'], ['SIMBATEST'])
         self.assertEqual(result, {'attempted': 2, 'sent': 2, 'failed': 0, 'errors': []})
+
+    @override_settings(
+        AFRICASTALKING_USERNAME='test-user',
+        AFRICASTALKING_API_KEY='test-key',
+        AFRICASTALKING_ENVIRONMENT='production',
+    )
+    @patch('api.subscriber_campaigns.urllib.request.urlopen')
+    def test_reports_http_status_when_provider_rejects_batch(self, urlopen):
+        urlopen.side_effect = HTTPError(
+            'https://api.africastalking.com/version1/messaging',
+            401,
+            'Unauthorized',
+            None,
+            None,
+        )
+
+        result = send_subscriber_sms([Subscriber(phone='254712345678')], 'Safari update')
+
+        self.assertEqual(result['sent'], 0)
+        self.assertEqual(result['failed'], 1)
+        self.assertEqual(result['errors'], ['SMS provider rejected the request (HTTP 401).'])
 
 class ContactMessageReplyTests(APITestCase):
     def setUp(self):
