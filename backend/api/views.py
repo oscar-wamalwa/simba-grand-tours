@@ -25,13 +25,19 @@ from django.utils import timezone
 from .models import Booking, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
 from .serializers import (
     SafariSerializer, BlogSerializer, SubscriberSerializer,
-    ContactMessageSerializer, ContactMessageReplySerializer, SettingsSerializer, TestimonialSerializer
+    ContactMessageSerializer, ContactMessageReplySerializer, SettingsSerializer,
+    SubscriberUpdateSerializer, TestimonialSerializer
 )
+from .subscriber_campaigns import SubscriberSmsError, send_subscriber_sms
 
 logger = logging.getLogger(__name__)
 
 
 class PublicBlogSubmissionThrottle(AnonRateThrottle):
+    rate = '5/hour'
+
+
+class PublicSubscriberThrottle(AnonRateThrottle):
     rate = '5/hour'
 
 
@@ -169,9 +175,14 @@ class SubscriberViewSet(viewsets.ModelViewSet):
     """ViewSet for Subscriber CRUD operations."""
     queryset = Subscriber.objects.all()
     serializer_class = SubscriberSerializer
-    http_method_names = ['get', 'head', 'options', 'post', 'delete']  # No PUT/PATCH
+    http_method_names = ['get', 'head', 'options', 'post', 'patch', 'delete']
     permission_classes = [StaffWritePermission]
     public_create = True
+
+    def get_throttles(self):
+        if self.action == 'create' and not (self.request.user and self.request.user.is_staff):
+            return [PublicSubscriberThrottle()]
+        return super().get_throttles()
 
     def create(self, request, *args, **kwargs):
         """Handle subscriber creation with duplicate check."""
@@ -182,6 +193,92 @@ class SubscriberViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return super().create(request, *args, **kwargs)
+
+    @action(detail=False, methods=['post'])
+    def send_update(self, request):
+        campaign_serializer = SubscriberUpdateSerializer(data=request.data)
+        campaign_serializer.is_valid(raise_exception=True)
+        channel = campaign_serializer.validated_data['channel']
+        subject = campaign_serializer.validated_data.get('subject', '').strip()
+        message = campaign_serializer.validated_data['message']
+
+        subscribers = list(Subscriber.objects.all())
+        email_recipients = [subscriber for subscriber in subscribers if subscriber.email]
+        sms_recipients = [
+            subscriber for subscriber in subscribers
+            if subscriber.sms_opt_in and subscriber.phone
+        ]
+        if channel in ('email', 'both') and not email_recipients:
+            return Response(
+                {'detail': 'There are no subscribers with email addresses to receive this update.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if channel in ('sms', 'both') and not sms_recipients:
+            return Response(
+                {'detail': 'There are no subscribers who opted in to SMS updates.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if channel in ('email', 'both') and not getattr(settings, 'DEFAULT_FROM_EMAIL', '').strip():
+            return Response(
+                {'detail': 'Email sending is not configured. Set DEFAULT_FROM_EMAIL and SMTP settings.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if channel in ('sms', 'both') and (
+            not getattr(settings, 'AFRICASTALKING_USERNAME', '')
+            or not getattr(settings, 'AFRICASTALKING_API_KEY', '')
+        ):
+            return Response(
+                {'detail': 'Africa’s Talking is not configured on the backend.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        results = {}
+        if channel in ('email', 'both'):
+            email_sent = 0
+            email_failed = 0
+            email_errors = []
+            for subscriber in email_recipients:
+                try:
+                    accepted = send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [subscriber.email],
+                        fail_silently=False,
+                    )
+                except (OSError, RuntimeError, smtplib.SMTPException) as error:
+                    logger.error('Subscriber email delivery failed: %s', type(error).__name__)
+                    email_failed += 1
+                    email_errors.append('Email provider failed to accept one or more messages.')
+                    continue
+                if accepted == 1:
+                    email_sent += 1
+                else:
+                    email_failed += 1
+                    email_errors.append('Email provider did not accept one or more messages.')
+            results['email'] = {
+                'attempted': len(email_recipients),
+                'sent': email_sent,
+                'failed': email_failed,
+                'errors': sorted(set(email_errors)),
+            }
+
+        if channel in ('sms', 'both'):
+            try:
+                results['sms'] = send_subscriber_sms(sms_recipients, message)
+            except SubscriberSmsError as error:
+                logger.error('Subscriber SMS campaign failed: %s', error)
+                results['sms'] = {
+                    'attempted': len(sms_recipients),
+                    'sent': 0,
+                    'failed': len(sms_recipients),
+                    'errors': [str(error)],
+                }
+
+        return Response({
+            'detail': 'Subscriber update dispatch completed. Review each channel’s delivery counts.',
+            'results': results,
+        })
 
 
 class ContactMessageViewSet(viewsets.ModelViewSet):

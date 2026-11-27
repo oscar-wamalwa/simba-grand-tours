@@ -19,6 +19,8 @@ Admins can set a flat reservation booking fee and terms on each safari. The book
 
 Visitors can submit stories from The Simba Pulse. Public submissions are rate-limited and always enter pending review; staff must approve and publish them before they appear publicly.
 
+Newsletter signups can optionally provide a Kenyan mobile number and explicitly opt in to SMS updates. Staff can send subscriber updates by email, SMS, or both from the Subscribers page. Email delivery uses the configured SMTP settings; SMS delivery uses Africa's Talking. Configure `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_ENVIRONMENT` (`sandbox` or `production`), and the optional `AFRICASTALKING_SENDER_ID` in the backend environment. Keep the API key private. SMS campaigns only target subscribers with recorded SMS consent and a valid phone number; provider charges may apply.
+
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
 
 ```sh

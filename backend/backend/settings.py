@@ -192,13 +192,17 @@ MPESA_TRANSACTION_TYPE = os.environ.get('MPESA_TRANSACTION_TYPE', '')
 MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', '')
 MPESA_CALLBACK_TOKEN = os.environ.get('MPESA_CALLBACK_TOKEN', '')
 
-# Transactional email and WhatsApp Cloud API settings.
+# Email, Africa's Talking SMS, and WhatsApp Cloud API settings.
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in ('true', '1', 'yes')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
+AFRICASTALKING_USERNAME = os.environ.get('AFRICASTALKING_USERNAME', '')
+AFRICASTALKING_API_KEY = os.environ.get('AFRICASTALKING_API_KEY', '')
+AFRICASTALKING_SENDER_ID = os.environ.get('AFRICASTALKING_SENDER_ID', '')
+AFRICASTALKING_ENVIRONMENT = os.environ.get('AFRICASTALKING_ENVIRONMENT', 'sandbox').lower()
 WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', '')
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
 WHATSAPP_API_VERSION = os.environ.get('WHATSAPP_API_VERSION', 'v21.0')

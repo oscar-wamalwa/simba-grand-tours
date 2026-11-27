@@ -144,7 +144,9 @@ export const subscribersApi = {
     return response.results || response;
   },
   create: (data) => apiRequest('/subscribers/', { method: 'POST', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/subscribers/${id}/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/subscribers/${id}/`, { method: 'DELETE' }),
+  sendUpdate: (data) => apiRequest('/subscribers/send_update/', { method: 'POST', body: data }),
 };
 
 // Contact Message API

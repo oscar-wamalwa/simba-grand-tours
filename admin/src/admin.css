@@ -527,6 +527,20 @@
 }
 
 .campaigns-admin-view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.subscriber-campaign-form { display: grid; gap: 14px; padding: 22px; background: var(--gray-light); border-bottom: 1px solid var(--gray-medium); }
+.subscriber-campaign-form h4 { display: flex; align-items: center; gap: 9px; margin: 0; }
+.subscriber-campaign-form > p { margin: 0; color: var(--gray-dark); font-size: 0.9rem; }
+.subscriber-campaign-form label { display: grid; gap: 6px; font-size: 0.88rem; font-weight: 600; }
+.subscriber-campaign-form input, .subscriber-campaign-form select, .subscriber-campaign-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-medium); border-radius: 7px; font: inherit; background: var(--white); }
+.subscriber-campaign-form textarea { resize: vertical; }
+.subscriber-campaign-form > button { justify-self: start; }
+.subscriber-sms-count { display: inline-flex; align-items: center; gap: 7px; color: var(--gray-dark); font-size: 0.88rem; }
+.subscriber-edit-label { display: grid; gap: 7px; margin: 18px 0; font-weight: 600; }
+.subscriber-edit-label input { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-medium); border-radius: 7px; font: inherit; }
+.subscriber-sms-consent-admin { display: flex; align-items: flex-start; gap: 9px; font-size: 0.9rem; }
+.subscriber-sms-consent-admin input { margin-top: 3px; accent-color: var(--gold-majesty); }
+.form-status.error { color: #b42318; }
+.form-status.success { color: var(--success); }
 .campaign-list { display: flex; flex-direction: column; padding: 0 20px 20px; }
 .campaign-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--gray-light); }
 .campaign-row p { margin-top: 4px; color: var(--gray-dark); font-size: 0.88rem; overflow-wrap: anywhere; }

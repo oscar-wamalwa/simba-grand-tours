@@ -29,6 +29,7 @@ from .models import (
     TripDeparture,
     WaitlistEntry,
 )
+from .mpesa import normalize_phone_number
 
 
 class URLWithDefaultSchemeField(serializers.URLField):
@@ -264,8 +265,47 @@ class SubscriberSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Subscriber
-        fields = ['id', 'email', 'name', 'subscribed_at']
-        read_only_fields = ['id', 'subscribed_at']
+        fields = [
+            'id', 'email', 'name', 'phone', 'sms_opt_in', 'sms_opt_in_at',
+            'subscribed_at',
+        ]
+        read_only_fields = ['id', 'sms_opt_in_at', 'subscribed_at']
+
+    def validate(self, attrs):
+        phone = attrs.get('phone', getattr(self.instance, 'phone', ''))
+        sms_opt_in = attrs.get('sms_opt_in', getattr(self.instance, 'sms_opt_in', False))
+        if phone:
+            try:
+                attrs['phone'] = normalize_phone_number(phone)
+            except ValueError as error:
+                raise serializers.ValidationError({'phone': str(error)}) from error
+        if sms_opt_in and not phone:
+            raise serializers.ValidationError({'phone': 'A phone number is required to opt in to SMS updates.'})
+        return attrs
+
+    def create(self, validated_data):
+        if validated_data.get('sms_opt_in'):
+            validated_data['sms_opt_in_at'] = timezone.now()
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        if validated_data.get('sms_opt_in') and not instance.sms_opt_in:
+            validated_data['sms_opt_in_at'] = timezone.now()
+        return super().update(instance, validated_data)
+
+
+class SubscriberUpdateSerializer(serializers.Serializer):
+    channel = serializers.ChoiceField(choices=['email', 'sms', 'both'])
+    subject = serializers.CharField(max_length=180, required=False, allow_blank=True, trim_whitespace=True)
+    message = serializers.CharField(max_length=5000, trim_whitespace=True, allow_blank=False)
+
+    def validate(self, attrs):
+        channel = attrs['channel']
+        if channel in ('email', 'both') and not attrs.get('subject', '').strip():
+            raise serializers.ValidationError({'subject': 'An email subject is required for email updates.'})
+        if channel in ('sms', 'both') and len(attrs['message']) > 1600:
+            raise serializers.ValidationError({'message': 'SMS updates must be 1600 characters or fewer.'})
+        return attrs
 
 
 class ContactMessageSerializer(serializers.ModelSerializer):

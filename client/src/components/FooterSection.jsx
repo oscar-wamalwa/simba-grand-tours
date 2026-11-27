@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Instagram, Facebook, MessageCircle } from 'lucide-react';
 import api from '../api';
 
@@ -16,6 +17,8 @@ const XIcon = ({ size = 20, style = {} }) => (
 
 function FooterSection({ onNavigate, settings = {} }) {
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -34,7 +37,7 @@ function FooterSection({ onNavigate, settings = {} }) {
   const handleSubscribe = async (e) => {
     e.preventDefault();
     
-    if (!email) {
+    if (!email.trim()) {
       setMessage({ type: 'error', text: 'Please enter your email address' });
       return;
     }
@@ -43,19 +46,36 @@ function FooterSection({ onNavigate, settings = {} }) {
       setMessage({ type: 'error', text: 'Please enter a valid email address' });
       return;
     }
+    if (smsOptIn && !phone.trim()) {
+      setMessage({ type: 'error', text: 'Enter a phone number to opt in to SMS updates.' });
+      return;
+    }
 
     setLoading(true);
     setMessage(null);
 
     try {
-      await api.subscribers.create({ email });
-      setMessage({ type: 'success', text: 'Thank you for subscribing! Check your inbox for confirmation.' });
+      await api.subscribers.create({
+        email,
+        phone: phone.trim(),
+        sms_opt_in: smsOptIn,
+      });
+      setMessage({
+        type: 'success',
+        text: smsOptIn
+          ? 'Thank you for subscribing to email and SMS updates.'
+          : 'Thank you for subscribing! You will receive email updates.',
+      });
       setEmail('');
+      setPhone('');
+      setSmsOptIn(false);
     } catch (error) {
       console.error('Subscription error:', error);
       setMessage({
         type: 'error',
-        text: error.message?.toLowerCase().includes('email') ? 'This email is already subscribed.' : 'Connection error. Please check your internet and try again.'
+        text: error.message?.toLowerCase().includes('already subscribed')
+          ? 'This email is already subscribed.'
+          : error.message || 'Connection error. Please check your internet and try again.'
       });
     } finally {
       setLoading(false);
@@ -69,21 +89,38 @@ function FooterSection({ onNavigate, settings = {} }) {
           <h2>Ready for Your African Adventure?</h2>
           <p>Subscribe to our newsletter for exclusive offers and safari tips</p>
           <div className="newsletter-box">
-            <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '400px' }}>
+            <form onSubmit={handleSubscribe} className="newsletter-subscribe-form">
               <input 
                 type="email" 
+                required
                 placeholder="Your email address" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                style={{ flex: 1, padding: '12px 16px', border: '1px solid #ddd', borderRadius: '4px' }}
               />
+              <input
+                type="tel"
+                placeholder="Phone number (optional, e.g. 0712 345 678)"
+                value={phone}
+                onChange={event => setPhone(event.target.value)}
+                disabled={loading}
+                aria-label="Phone number for optional SMS updates"
+              />
+              <label className="newsletter-sms-consent">
+                <input
+                  type="checkbox"
+                  checked={smsOptIn}
+                  onChange={event => setSmsOptIn(event.target.checked)}
+                  disabled={loading}
+                />
+                <span>I agree to receive occasional SMS updates. SMS charges may apply. I can opt out by contacting Simba Grand Tours.</span>
+              </label>
               <button 
                 type="submit" 
                 className="btn-gold"
                 disabled={loading}
               >
-                {loading ? '...' : 'Subscribe'}
+                {loading ? 'Subscribing...' : 'Subscribe'}
               </button>
             </form>
           </div>
@@ -143,4 +180,3 @@ function FooterSection({ onNavigate, settings = {} }) {
 }
 
 export default FooterSection;
-import { useState } from 'react';

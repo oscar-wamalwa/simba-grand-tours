@@ -1,4 +1,7 @@
+import json
 from datetime import timedelta
+from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -20,6 +23,7 @@ from .models import (
     WaitlistEntry,
 )
 from .mpesa import _transaction_type
+from .subscriber_campaigns import send_subscriber_sms
 
 
 class MpesaConfigurationTests(SimpleTestCase):
@@ -112,6 +116,29 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual(review.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(subscriber.status_code, status.HTTP_201_CREATED)
 
+    def test_subscriber_sms_opt_in_requires_a_valid_phone_and_records_consent(self):
+        missing_phone = self.client.post(
+            '/api/subscribers/',
+            {'email': 'sms@example.com', 'sms_opt_in': True},
+            format='json',
+        )
+        self.assertEqual(missing_phone.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(
+            '/api/subscribers/',
+            {
+                'email': 'sms@example.com',
+                'phone': '+254 712 345 678',
+                'sms_opt_in': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['phone'], '254712345678')
+        self.assertTrue(response.data['sms_opt_in'])
+        self.assertIsNotNone(response.data['sms_opt_in_at'])
+
     def test_public_blog_submission_requires_staff_approval_before_publication(self):
         response = self.client.post(
             '/api/blogs/',
@@ -202,6 +229,106 @@ class PublicContentAccessTests(APITestCase):
         featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
 
+
+class SubscriberCampaignTests(APITestCase):
+    def setUp(self):
+        self.staff_user = get_user_model().objects.create_user(
+            username='subscriber-campaign-admin',
+            password='test-password',
+            is_staff=True,
+        )
+        self.sms_subscriber = Subscriber.objects.create(
+            email='sms-subscriber@example.com',
+            phone='254712345678',
+            sms_opt_in=True,
+            sms_opt_in_at=timezone.now(),
+        )
+        self.email_subscriber = Subscriber.objects.create(email='email-subscriber@example.com')
+
+    @override_settings(
+        DEFAULT_FROM_EMAIL='updates@example.com',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        AFRICASTALKING_USERNAME='test-user',
+        AFRICASTALKING_API_KEY='test-key',
+    )
+    @patch('api.views.send_subscriber_sms')
+    def test_staff_can_send_both_channels_without_texting_non_opted_subscribers(self, send_sms):
+        send_sms.return_value = {'attempted': 1, 'sent': 1, 'failed': 0}
+        self.client.force_authenticate(user=self.staff_user)
+
+        response = self.client.post(
+            '/api/subscribers/send_update/',
+            {
+                'channel': 'both',
+                'subject': 'Safari updates',
+                'message': 'New trips are now available.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results']['email']['sent'], 2)
+        self.assertEqual(response.data['results']['sms']['sent'], 1)
+        self.assertEqual(len(mail.outbox), 2)
+        send_sms.assert_called_once_with([self.sms_subscriber], 'New trips are now available.')
+
+    def test_public_users_cannot_send_subscriber_campaigns(self):
+        response = self.client.post(
+            '/api/subscribers/send_update/',
+            {'channel': 'sms', 'message': 'Update'},
+            format='json',
+        )
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+    def test_staff_can_add_phone_and_sms_consent_to_existing_subscriber(self):
+        subscriber = Subscriber.objects.create(email='existing@example.com')
+        self.client.force_authenticate(user=self.staff_user)
+
+        response = self.client.patch(
+            f'/api/subscribers/{subscriber.id}/',
+            {'phone': '0712345678', 'sms_opt_in': True},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['phone'], '254712345678')
+        self.assertTrue(response.data['sms_opt_in'])
+        self.assertIsNotNone(response.data['sms_opt_in_at'])
+
+
+class AfricaTalkingSmsTests(SimpleTestCase):
+    @override_settings(
+        AFRICASTALKING_USERNAME='test-user',
+        AFRICASTALKING_API_KEY='test-key',
+        AFRICASTALKING_ENVIRONMENT='sandbox',
+        AFRICASTALKING_SENDER_ID='SIMBATEST',
+    )
+    @patch('api.subscriber_campaigns.urllib.request.urlopen')
+    def test_sends_sms_to_provider_and_counts_accepted_recipients(self, urlopen):
+        response_context = MagicMock()
+        response_context.read.return_value = json.dumps({
+            'SMSMessageData': {
+                'Recipients': [
+                    {'statusCode': 101},
+                    {'statusCode': 102},
+                ],
+            },
+        }).encode()
+        urlopen.return_value.__enter__.return_value = response_context
+        recipients = [
+            Subscriber(phone='254712345678'),
+            Subscriber(phone='254711222333'),
+        ]
+
+        result = send_subscriber_sms(recipients, 'Safari update')
+
+        request = urlopen.call_args.args[0]
+        payload = parse_qs(request.data.decode())
+        self.assertEqual(request.full_url, 'https://api.sandbox.africastalking.com/version1/messaging')
+        self.assertEqual(request.get_header('Apikey'), 'test-key')
+        self.assertEqual(payload['to'], ['+254712345678,+254711222333'])
+        self.assertEqual(payload['from'], ['SIMBATEST'])
+        self.assertEqual(result, {'attempted': 2, 'sent': 2, 'failed': 0, 'errors': []})
 
 class ContactMessageReplyTests(APITestCase):
     def setUp(self):

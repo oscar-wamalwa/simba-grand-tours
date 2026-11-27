@@ -256,6 +256,9 @@ class Subscriber(models.Model):
     """Newsletter subscriber model."""
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, default='')
+    sms_opt_in = models.BooleanField(default=False)
+    sms_opt_in_at = models.DateTimeField(null=True, blank=True)
     subscribed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

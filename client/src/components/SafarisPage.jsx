@@ -7,7 +7,7 @@ const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
 
 function SafarisPage({ safaris, onSelect, selectedSafari }) {
-  const maxPrice = Math.max(10000, ...safaris.map(safari => Number(safari.price) || 0));
+  const maxPrice = Math.max(800000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
     destination: '',
     tripType: '',
