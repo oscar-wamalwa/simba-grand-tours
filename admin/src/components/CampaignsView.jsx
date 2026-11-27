@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Plus, RefreshCw, TicketPercent, Users } from 'lucide-react';
+import { Plus, RefreshCw, Users } from 'lucide-react';
 import api from '../api';
 import { formatKes } from '../currency';
 
@@ -24,12 +24,21 @@ const initialAnnouncement = {
 
 const asUtcTimestamp = value => value ? new Date(value).toISOString() : null;
 
+const asLocalDatetime = value => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 export default function CampaignsView() {
   const [promos, setPromos] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [waitlist, setWaitlist] = useState([]);
   const [promoForm, setPromoForm] = useState(initialPromo);
   const [announcementForm, setAnnouncementForm] = useState(initialAnnouncement);
+  const [editingPromoId, setEditingPromoId] = useState(null);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -61,19 +70,25 @@ export default function CampaignsView() {
     setError('');
     setMessage('');
     try {
-      await api.promoCodes.create({
+      const promoData = {
         ...promoForm,
         value: Number(promoForm.value),
         starts_at: asUtcTimestamp(promoForm.starts_at),
         ends_at: asUtcTimestamp(promoForm.ends_at),
         max_uses: promoForm.max_uses ? Number(promoForm.max_uses) : null,
         min_participants: Number(promoForm.min_participants),
-      });
+      };
+      if (editingPromoId !== null) {
+        await api.promoCodes.update(editingPromoId, promoData);
+      } else {
+        await api.promoCodes.create(promoData);
+      }
       setPromoForm(initialPromo);
-      setMessage('Promo code created.');
+      setEditingPromoId(null);
+      setMessage(editingPromoId !== null ? 'Promo code updated.' : 'Promo code created.');
       await refresh();
     } catch (requestError) {
-      setError(requestError.message || 'Could not create promo code.');
+      setError(requestError.message || 'Could not save promo code.');
     }
   };
 
@@ -82,16 +97,96 @@ export default function CampaignsView() {
     setError('');
     setMessage('');
     try {
-      await api.announcements.create({
+      const announcementData = {
         ...announcementForm,
         starts_at: asUtcTimestamp(announcementForm.starts_at),
         ends_at: asUtcTimestamp(announcementForm.ends_at),
-      });
+      };
+      if (editingAnnouncementId !== null) {
+        await api.announcements.update(editingAnnouncementId, announcementData);
+      } else {
+        await api.announcements.create(announcementData);
+      }
       setAnnouncementForm(initialAnnouncement);
-      setMessage('Announcement published.');
+      setEditingAnnouncementId(null);
+      setMessage(editingAnnouncementId !== null ? 'Announcement updated.' : 'Announcement published.');
       await refresh();
     } catch (requestError) {
-      setError(requestError.message || 'Could not publish announcement.');
+      setError(requestError.message || 'Could not save announcement.');
+    }
+  };
+
+  const editPromo = promo => {
+    setPromoForm({
+      code: promo.code || '',
+      discount_type: promo.discount_type || 'percent',
+      value: String(promo.value ?? ''),
+      starts_at: asLocalDatetime(promo.starts_at),
+      ends_at: asLocalDatetime(promo.ends_at),
+      max_uses: promo.max_uses == null ? '' : String(promo.max_uses),
+      min_participants: promo.min_participants ?? 1,
+    });
+    setEditingPromoId(promo.id);
+    setError('');
+    setMessage('');
+  };
+
+  const editAnnouncement = item => {
+    setAnnouncementForm({
+      title: item.title || '',
+      message: item.message || '',
+      image: item.image || '',
+      link_url: item.link_url || '',
+      starts_at: asLocalDatetime(item.starts_at),
+      ends_at: asLocalDatetime(item.ends_at),
+    });
+    setEditingAnnouncementId(item.id);
+    setError('');
+    setMessage('');
+  };
+
+  const cancelPromoEdit = () => {
+    setPromoForm(initialPromo);
+    setEditingPromoId(null);
+    setError('');
+    setMessage('');
+  };
+
+  const cancelAnnouncementEdit = () => {
+    setAnnouncementForm(initialAnnouncement);
+    setEditingAnnouncementId(null);
+    setError('');
+    setMessage('');
+  };
+
+  const deletePromo = async promo => {
+    const confirmed = window.confirm(
+      `Delete promo code "${promo.code}"? This cannot be undone. Existing bookings will keep their recorded discount but lose their link to this promo code.`,
+    );
+    if (!confirmed) return;
+
+    setError('');
+    setMessage('');
+    try {
+      await api.promoCodes.delete(promo.id);
+      setMessage('Promo code deleted.');
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not delete promo code.');
+    }
+  };
+
+  const deleteAnnouncement = async item => {
+    if (!window.confirm(`Delete the announcement "${item.title}"? This cannot be undone.`)) return;
+
+    setError('');
+    setMessage('');
+    try {
+      await api.announcements.delete(item.id);
+      setMessage('Announcement deleted.');
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not delete announcement.');
     }
   };
 
@@ -131,7 +226,7 @@ export default function CampaignsView() {
       {message && <p className="form-status success" role="status">{message}</p>}
       <div className="data-card">
         <div className="data-card-header">
-          <h3><TicketPercent size={20} /> Promo codes</h3>
+          <h3>Promo codes</h3>
           <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}><RefreshCw size={17} /> Refresh</button>
         </div>
         <form className="departure-create-form" onSubmit={createPromo}>
@@ -148,13 +243,20 @@ export default function CampaignsView() {
           <label>Valid until<input type="datetime-local" value={promoForm.ends_at} onChange={event => setPromoForm(prev => ({ ...prev, ends_at: event.target.value }))} /></label>
           <label>Maximum uses<input type="number" min="1" step="1" value={promoForm.max_uses} onChange={event => setPromoForm(prev => ({ ...prev, max_uses: event.target.value }))} placeholder="Unlimited" /></label>
           <label>Minimum travelers<input type="number" min="1" step="1" required value={promoForm.min_participants} onChange={event => setPromoForm(prev => ({ ...prev, min_participants: event.target.value }))} /></label>
-          <button type="submit" className="btn-primary"><Plus size={18} /> Add promo</button>
+          <div className="campaign-actions">
+            <button type="submit" className="btn-primary">{editingPromoId !== null ? 'Save changes' : <><Plus size={18} /> Add promo</>}</button>
+            {editingPromoId !== null && <button type="button" className="btn-secondary" onClick={cancelPromoEdit}>Cancel</button>}
+          </div>
         </form>
         <div className="campaign-list">
           {promos.map(promo => (
             <article key={promo.id} className="campaign-row">
               <div><strong>{promo.code}</strong><p>{promo.discount_type === 'percent' ? `${promo.value}% off` : `${formatKes(promo.value)} off`} · {promo.uses_count}{promo.max_uses ? `/${promo.max_uses}` : ''} uses</p></div>
-              <button type="button" className={`status-badge ${promo.active ? 'active' : 'archived'}`} onClick={() => togglePromo(promo)}>{promo.active ? 'Active' : 'Inactive'}</button>
+              <div className="campaign-actions">
+                <button type="button" className={`status-badge ${promo.active ? 'active' : 'archived'}`} onClick={() => togglePromo(promo)}>{promo.active ? 'Active' : 'Inactive'}</button>
+                <button type="button" className="btn-secondary" onClick={() => editPromo(promo)}>Edit</button>
+                <button type="button" className="btn-danger" onClick={() => deletePromo(promo)}>Delete</button>
+              </div>
             </article>
           ))}
           {!loading && promos.length === 0 && <p>No promo codes created yet.</p>}
@@ -162,7 +264,7 @@ export default function CampaignsView() {
       </div>
 
       <div className="data-card">
-        <div className="data-card-header"><h3><Megaphone size={20} /> Seasonal announcements</h3></div>
+        <div className="data-card-header"><h3>Seasonal announcements</h3></div>
         <form className="departure-create-form" onSubmit={createAnnouncement}>
           <label>Headline<input required maxLength="180" value={announcementForm.title} onChange={event => setAnnouncementForm(prev => ({ ...prev, title: event.target.value }))} /></label>
           <label>Image URL<input type="url" value={announcementForm.image} onChange={event => setAnnouncementForm(prev => ({ ...prev, image: event.target.value }))} /></label>
@@ -170,13 +272,20 @@ export default function CampaignsView() {
           <label>Show from<input type="datetime-local" value={announcementForm.starts_at} onChange={event => setAnnouncementForm(prev => ({ ...prev, starts_at: event.target.value }))} /></label>
           <label>Show until<input type="datetime-local" value={announcementForm.ends_at} onChange={event => setAnnouncementForm(prev => ({ ...prev, ends_at: event.target.value }))} /></label>
           <label className="departure-pickups">Message<textarea required rows="3" value={announcementForm.message} onChange={event => setAnnouncementForm(prev => ({ ...prev, message: event.target.value }))} /></label>
-          <button type="submit" className="btn-primary"><Plus size={18} /> Publish announcement</button>
+          <div className="campaign-actions">
+            <button type="submit" className="btn-primary">{editingAnnouncementId !== null ? 'Save changes' : <><Plus size={18} /> Publish announcement</>}</button>
+            {editingAnnouncementId !== null && <button type="button" className="btn-secondary" onClick={cancelAnnouncementEdit}>Cancel</button>}
+          </div>
         </form>
         <div className="campaign-list">
           {announcements.map(item => (
             <article key={item.id} className="campaign-row">
               <div><strong>{item.title}</strong><p>{item.message}</p></div>
-              <button type="button" className="btn-secondary" onClick={() => toggleAnnouncement(item)}>{item.active ? 'Hide' : 'Publish'}</button>
+              <div className="campaign-actions">
+                <button type="button" className="btn-secondary" onClick={() => toggleAnnouncement(item)}>{item.active ? 'Hide' : 'Publish'}</button>
+                <button type="button" className="btn-secondary" onClick={() => editAnnouncement(item)}>Edit</button>
+                <button type="button" className="btn-danger" onClick={() => deleteAnnouncement(item)}>Delete</button>
+              </div>
             </article>
           ))}
           {!loading && announcements.length === 0 && <p>No announcements created yet.</p>}

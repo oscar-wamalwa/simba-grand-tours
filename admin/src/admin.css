@@ -527,6 +527,7 @@
 .departure-create-form input, .departure-create-form select, .departure-create-form textarea, .booking-filter select { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--gray-medium); border-radius: 7px; font: inherit; }
 .departure-pickups { grid-column: span 2; }
 .departure-create-form > button { align-self: end; justify-content: center; min-height: 42px; }
+.departure-create-form > .campaign-actions { grid-column: 1 / -1; }
 .departure-list { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
 .departure-admin-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--gray-medium); border-radius: 10px; }
 .departure-admin-card h4 { margin-bottom: 6px; }

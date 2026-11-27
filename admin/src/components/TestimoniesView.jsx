@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle } from 'lucide-react';
 
+const MAX_FEATURED_TESTIMONIALS = 6;
+
 export default function TestimoniesView() {
   const [testimonials, setTestimonials] = useState([]);
   const [featuredTestimonials, setFeaturedTestimonials] = useState([]);
@@ -34,8 +36,8 @@ export default function TestimoniesView() {
     if (isFeatured) {
       newFeatured = featuredTestimonials.filter(id => id !== testimonialId);
     } else {
-      if (featuredTestimonials.length >= 3) {
-        alert('You can only feature up to 3 testimonials. Please unselect one first.');
+      if (featuredTestimonials.length >= MAX_FEATURED_TESTIMONIALS) {
+        alert(`You can only feature up to ${MAX_FEATURED_TESTIMONIALS} testimonials. Please unselect one first.`);
         return;
       }
       newFeatured = [...featuredTestimonials, testimonialId];
@@ -51,13 +53,16 @@ export default function TestimoniesView() {
     }
   };
 
-  const verifyTestimonial = async (testimonialId) => {
+  const toggleVerification = async (testimonial) => {
+    const verified = Boolean(testimonial.is_verified);
     try {
-      await api.testimonials.partialUpdate(testimonialId, { is_verified: true });
+      await api.testimonials.partialUpdate(testimonial.id, verified
+        ? { is_verified: false, is_featured: false }
+        : { is_verified: true });
       await fetchTestimonials();
     } catch (error) {
-      console.error('Error verifying testimonial:', error);
-      alert(error.message || 'Could not verify testimonial. Please try again.');
+      console.error('Error updating traveller verification:', error);
+      alert(error.message || 'Could not update traveller verification. Please try again.');
     }
   };
 
@@ -111,8 +116,8 @@ export default function TestimoniesView() {
       <div className="data-card-header">
         <h3>
           Testimonials Management{' '}
-          <span style={{ background: featuredTestimonials.length >= 3 ? 'var(--gold-majesty)' : 'var(--gray-light)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.85rem', marginLeft: '10px' }}>
-            {featuredTestimonials.length}/3 Selected
+          <span style={{ background: featuredTestimonials.length >= MAX_FEATURED_TESTIMONIALS ? 'var(--gold-majesty)' : 'var(--gray-light)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.85rem', marginLeft: '10px' }}>
+            {featuredTestimonials.length}/{MAX_FEATURED_TESTIMONIALS} Selected
           </span>
         </h3>
         <div className="data-actions">
@@ -123,7 +128,7 @@ export default function TestimoniesView() {
       </div>
 
       <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '20px', padding: '0 20px' }}>
-        Verify submissions before featuring them. Select up to 3 verified testimonials to display on the homepage.
+        Verify travellers before featuring their reviews. Select up to 6 verified testimonials to display on the homepage.
       </p>
 
       {testimonials.length === 0 ? (
@@ -172,16 +177,15 @@ export default function TestimoniesView() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {!t.is_verified && (
-                  <button
-                    className="action-btn"
-                    onClick={(e) => { e.stopPropagation(); verifyTestimonial(t.id); }}
-                    title="Mark testimonial as verified"
-                    aria-label={`Verify testimonial from ${t.fullName || t.full_name || 'Anonymous'}`}
-                  >
-                    <CheckCircle size={16} />
-                  </button>
-                )}
+                <button
+                  className="action-btn"
+                  onClick={(e) => { e.stopPropagation(); toggleVerification(t); }}
+                  title={t.is_verified ? 'Mark traveller as unverified' : 'Verify traveller'}
+                  aria-label={`${t.is_verified ? 'Unverify' : 'Verify'} traveller ${t.fullName || t.full_name || 'Anonymous'}`}
+                  style={{ color: t.is_verified ? 'var(--success)' : 'var(--gray-dark)' }}
+                >
+                  <CheckCircle size={16} />
+                </button>
                 <button
                   className="action-btn"
                   onClick={(e) => { e.stopPropagation(); toggleFeatured(t.id); }}
