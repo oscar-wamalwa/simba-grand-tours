@@ -35,7 +35,10 @@ def send_subscriber_sms(recipients, message):
         batch = recipients[offset:offset + 50]
         payload = {
             'username': username,
-            'to': ','.join(f'+{subscriber.phone}' for subscriber in batch),
+            'to': ','.join(
+                subscriber.phone if subscriber.phone.startswith('+') else f'+{subscriber.phone}'
+                for subscriber in batch
+            ),
             'message': message,
         }
         if sender_id:

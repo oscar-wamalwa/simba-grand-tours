@@ -276,7 +276,7 @@ class SubscriberSerializer(serializers.ModelSerializer):
         sms_opt_in = attrs.get('sms_opt_in', getattr(self.instance, 'sms_opt_in', False))
         if phone:
             try:
-                attrs['phone'] = normalize_phone_number(phone)
+                attrs['phone'] = f'+{normalize_phone_number(phone)}'
             except ValueError as error:
                 raise serializers.ValidationError({'phone': str(error)}) from error
         if sms_opt_in and not phone:

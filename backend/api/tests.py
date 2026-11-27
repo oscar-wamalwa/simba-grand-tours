@@ -129,14 +129,14 @@ class PublicContentAccessTests(APITestCase):
             '/api/subscribers/',
             {
                 'email': 'sms@example.com',
-                'phone': '+254 712 345 678',
+                'phone': '0712 345 678',
                 'sms_opt_in': True,
             },
             format='json',
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['phone'], '254712345678')
+        self.assertEqual(response.data['phone'], '+254712345678')
         self.assertTrue(response.data['sms_opt_in'])
         self.assertIsNotNone(response.data['sms_opt_in_at'])
 
@@ -292,7 +292,7 @@ class SubscriberCampaignTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['phone'], '254712345678')
+        self.assertEqual(response.data['phone'], '+254712345678')
         self.assertTrue(response.data['sms_opt_in'])
         self.assertIsNotNone(response.data['sms_opt_in_at'])
 
@@ -317,7 +317,7 @@ class AfricaTalkingSmsTests(SimpleTestCase):
         }).encode()
         urlopen.return_value.__enter__.return_value = response_context
         recipients = [
-            Subscriber(phone='254712345678'),
+            Subscriber(phone='+254712345678'),
             Subscriber(phone='254711222333'),
         ]
 
