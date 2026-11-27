@@ -69,6 +69,7 @@ export default function App() {
   const [settings, setSettings] = useState(defaultSettings);
   const [testimonials, setTestimonials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [dismissedAnnouncementId, setDismissedAnnouncementId] = useState(null);
   const [selectedSafari, setSelectedSafari] = useState(null);
   const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -256,8 +257,16 @@ export default function App() {
         </div>
       </nav>
 
-      {announcements[0] && (
+      {announcements[0] && announcements[0].id !== dismissedAnnouncementId && (
         <aside className="seasonal-announcement" aria-label="Seasonal announcement">
+          <button
+            type="button"
+            className="seasonal-announcement-close"
+            aria-label="Dismiss announcement"
+            onClick={() => setDismissedAnnouncementId(announcements[0].id)}
+          >
+            <X size={18} />
+          </button>
           {announcements[0].image && <img src={announcements[0].image} alt="" />}
           <div>
             <strong>{announcements[0].title}</strong>

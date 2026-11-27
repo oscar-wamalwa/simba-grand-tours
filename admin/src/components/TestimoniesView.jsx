@@ -5,6 +5,7 @@ import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle } from 'l
 export default function TestimoniesView() {
   const [testimonials, setTestimonials] = useState([]);
   const [featuredTestimonials, setFeaturedTestimonials] = useState([]);
+  const [selectedTestimonial, setSelectedTestimonial] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null); // Stores testimonial to delete
 
   useEffect(() => { fetchTestimonials(); }, []);
@@ -133,7 +134,12 @@ export default function TestimoniesView() {
       ) : (
         <div className="message-list">
           {testimonials.map(t => (
-            <div key={t.id} className={`message-item ${featuredTestimonials.includes(t.id) ? 'featured' : ''}`}>
+            <div
+              key={t.id}
+              className={`message-item ${featuredTestimonials.includes(t.id) ? 'featured' : ''}`}
+              onClick={() => setSelectedTestimonial(t)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="message-avatar">{t.fullName ? t.fullName.charAt(0).toUpperCase() : '?'}</div>
               <div className="message-content">
                 <div className="message-header">
@@ -196,6 +202,34 @@ export default function TestimoniesView() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedTestimonial && (
+        <div className="modal-overlay show" onClick={() => setSelectedTestimonial(null)}>
+          <div className="modal" onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Testimonial Details</h3>
+              <button className="modal-close" onClick={() => setSelectedTestimonial(null)} aria-label="Close testimonial details">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <h4>{selectedTestimonial.fullName || selectedTestimonial.full_name || 'Anonymous'}</h4>
+              <p>
+                Submitted {selectedTestimonial.created_at ? new Date(selectedTestimonial.created_at).toLocaleString() : 'date unavailable'}
+                {' | '}
+                {selectedTestimonial.is_verified ? 'Verified' : 'Unverified'}
+              </p>
+              {selectedTestimonial.email && <p>Email: {selectedTestimonial.email}</p>}
+              {selectedTestimonial.location && <p>Location: {selectedTestimonial.location}</p>}
+              {selectedTestimonial.safari && <p>Safari: {selectedTestimonial.safari}</p>}
+              <p>Rating: {selectedTestimonial.rating || 5}/5</p>
+              <div className="testimonial-detail-message">
+                {selectedTestimonial.message || 'No message provided.'}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
