@@ -48,7 +48,9 @@ async function apiRequest(endpoint, options = {}) {
       const message = errorData?.detail
         || errorData?.message
         || formatApiErrors(errorData);
-      throw new Error(message || `HTTP error! status: ${response.status}`);
+      const error = new Error(message || `HTTP error! status: ${response.status}`);
+      error.code = errorData?.code;
+      throw error;
     }
     
     const contentType = response.headers.get('content-type');
@@ -115,7 +117,7 @@ export const departuresApi = {
   create: (data) => apiRequest('/departures/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PUT', body: data }),
   partialUpdate: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PATCH', body: data }),
-  delete: (id) => apiRequest(`/departures/${id}/`, { method: 'DELETE' }),
+  delete: (id, deleteBookings = false) => apiRequest(`/departures/${id}/${deleteBookings ? '?delete_bookings=true' : ''}`, { method: 'DELETE' }),
 };
 
 export const bookingsApi = {

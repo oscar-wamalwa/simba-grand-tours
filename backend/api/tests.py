@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.mail.backends.smtp import EmailBackend
+from django.db.models.deletion import ProtectedError
 from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
@@ -1515,7 +1516,7 @@ class AdminBookingEditingTests(APITestCase):
         self.client.force_authenticate(user=self.staff)
         protected = self.client.delete(booking_url)
         self.assertEqual(protected.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn('Archive', protected.data['detail'])
+        self.assertEqual(protected.data['code'], 'departure_has_bookings')
         self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
         waitlist = WaitlistEntry.objects.create(
             departure=self.other, full_name='Waiting', email='waiting@example.com', phone='0712345678',
@@ -1524,6 +1525,51 @@ class AdminBookingEditingTests(APITestCase):
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(TripDeparture.objects.filter(pk=self.other.pk).exists())
         self.assertFalse(WaitlistEntry.objects.filter(pk=waitlist.pk).exists())
+
+    def test_staff_can_explicitly_delete_departure_and_associated_bookings(self):
+        url = f'/api/departures/{self.departure.pk}/?delete_bookings=true'
+        waitlist = WaitlistEntry.objects.create(
+            departure=self.departure, full_name='Waiting', email='waiting@example.com', phone='0712345678',
+        )
+        review = Testimonial.objects.create(message='Review', booking=self.booking)
+        self.client.force_authenticate(user=None)
+        denied = self.client.delete(url)
+        self.assertIn(denied.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
+
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TripDeparture.objects.filter(pk=self.departure.pk).exists())
+        self.assertFalse(Booking.objects.filter(pk=self.booking.pk).exists())
+        self.assertFalse(Passenger.objects.filter(pk__in=[p.pk for p in self.passengers]).exists())
+        self.assertFalse(WaitlistEntry.objects.filter(pk=waitlist.pk).exists())
+        review.refresh_from_db()
+        self.assertIsNone(review.booking_id)
+
+    def test_forced_departure_deletion_rolls_back_if_still_protected(self):
+        url = f'/api/departures/{self.departure.pk}/?delete_bookings=true'
+        with patch.object(TripDeparture, 'delete', side_effect=ProtectedError('protected', [])):
+            response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(TripDeparture.objects.filter(pk=self.departure.pk).exists())
+        self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
+        self.assertEqual(Passenger.objects.filter(booking=self.booking).count(), 2)
+
+    def test_safari_deletion_requires_booked_departures_to_be_deleted_separately(self):
+        url = f'/api/safaris/{self.safari.pk}/'
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('departures with bookings', response.data['detail'])
+        self.assertTrue(Safari.objects.filter(pk=self.safari.pk).exists())
+        self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
+
+        self.assertEqual(
+            self.client.delete(f'/api/departures/{self.departure.pk}/?delete_bookings=true').status_code,
+            status.HTTP_204_NO_CONTENT,
+        )
+        self.assertEqual(self.client.delete(url).status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TripDeparture.objects.filter(pk=self.other.pk).exists())
 
 
 class ManualBookingTests(APITestCase):

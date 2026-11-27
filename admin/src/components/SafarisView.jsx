@@ -138,15 +138,15 @@ export default function SafarisView({ onRefresh }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('Delete this safari?')) {
+  const handleDelete = async (safari) => {
+    if (confirm(`Permanently delete ${safari.title}? Its departures without bookings and their waitlist entries will also be deleted. Departures with bookings must be deleted separately first. This cannot be undone.`)) {
       try {
-        await api.safaris.delete(id);
+        await api.safaris.delete(safari.id);
         fetchSafaris();
         onRefresh && onRefresh();
       } catch (error) {
         console.error('Error deleting safari:', error);
-        alert('Error deleting safari. Please try again.');
+        alert(error.message || 'Error deleting safari. Please try again.');
       }
     }
   };
@@ -266,7 +266,7 @@ export default function SafarisView({ onRefresh }) {
                       <Star size={16} fill={safari.isSignature ? 'currentColor' : 'none'} />
                     </button>
                     <button className="action-btn" onClick={() => editSafari(safari)}><Edit2 size={16} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(safari.id)}><Trash2 size={16} /></button>
+                    <button className="action-btn delete" aria-label={`Delete ${safari.title}`} onClick={() => handleDelete(safari)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>

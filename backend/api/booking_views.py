@@ -99,11 +99,17 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         departure = self.get_object()
+        if request.query_params.get('delete_bookings') == 'true':
+            departure.bookings.all().delete()
         try:
             departure.delete()
         except ProtectedError:
+            transaction.set_rollback(True)
             return Response(
-                {'detail': 'This departure has booking records and cannot be deleted. Archive it instead to preserve bookings and receipts.'},
+                {
+                    'detail': 'This departure has booking records. Archive it to preserve them, or choose Delete with bookings to permanently remove them.',
+                    'code': 'departure_has_bookings',
+                },
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)

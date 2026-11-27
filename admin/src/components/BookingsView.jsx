@@ -39,6 +39,7 @@ export default function BookingsView({ formatPrice }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [departureActionError, setDepartureActionError] = useState(null);
   const [editingDeparture, setEditingDeparture] = useState(null);
   const [departureEditForm, setDepartureEditForm] = useState(null);
   const [editingBooking, setEditingBooking] = useState(null);
@@ -57,6 +58,7 @@ export default function BookingsView({ formatPrice }) {
   const refresh = async () => {
     setLoading(true);
     setError('');
+    setDepartureActionError(null);
     try {
       const [safariData, departureData, bookingData] = await Promise.all([
         api.safaris.getAll(),
@@ -225,29 +227,38 @@ export default function BookingsView({ formatPrice }) {
     if (!window.confirm(warning)) return;
     setError('');
     setMessage('');
+    setDepartureActionError(null);
     setLoading(true);
     try {
       await api.departures.partialUpdate(departure.id, { is_archived: !restoring });
       setMessage(restoring ? 'Departure restored.' : 'Departure archived. Booking records were kept.');
       await refresh();
     } catch (requestError) {
-      setError(requestError.message || 'Could not update departure.');
+      setDepartureActionError({ id: departure.id, message: requestError.message || 'Could not update departure.' });
       setLoading(false);
     }
   };
 
-  const deleteDeparture = async departure => {
-    if (!window.confirm(`Permanently delete the departure for ${departure.safari_title} on ${departure.start_date}? This also deletes its waitlist entries. Departures with bookings cannot be deleted; archive them instead.`)) return;
+  const deleteDeparture = async (departure, deleteBookings = false) => {
+    const warning = deleteBookings
+      ? `Permanently delete the departure for ${departure.safari_title} on ${departure.start_date} AND all its bookings, traveler and passenger details, M-Pesa references and waitlist entries?\n\nThis cannot be undone and does not issue refunds. Pending payments may still complete, but their callbacks cannot be matched. Archive instead to keep these records.`
+      : `Permanently delete the departure for ${departure.safari_title} on ${departure.start_date}? This also deletes its waitlist entries. If it has bookings, you will have another choice to archive or delete them.`;
+    if (!window.confirm(warning)) return;
     setError('');
     setMessage('');
+    setDepartureActionError(null);
     setLoading(true);
     try {
-      await api.departures.delete(departure.id);
+      await api.departures.delete(departure.id, deleteBookings);
       if (selectedDeparture === String(departure.id)) setSelectedDeparture('');
       setMessage('Departure deleted.');
       await refresh();
     } catch (requestError) {
-      setError(requestError.message || 'Could not delete departure.');
+      setDepartureActionError({
+        id: departure.id,
+        message: requestError.message || 'Could not delete departure.',
+        canDeleteBookings: requestError.code === 'departure_has_bookings',
+      });
       setLoading(false);
     }
   };
@@ -378,13 +389,23 @@ export default function BookingsView({ formatPrice }) {
                 <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatPrice(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatPrice(departure.booking_fee_kes) : 'not set'} per reservation</p>
                 <p>Pickup: {departure.pickup_time || 'not set'} · {departure.is_archived ? 'Archived' : departure.is_open ? 'Open' : 'Closed'}</p>
               </div>
-              <div className="campaign-actions">
-                <button type="button" className="btn-secondary" onClick={() => openDepartureEditor(departure)}><Edit2 size={17} /> Edit</button>
-                <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
-                  <Download size={17} /> Passenger manifest
-                </button>
-                <button type="button" className="btn-secondary" disabled={loading} onClick={() => toggleDepartureArchive(departure)}>{departure.is_archived ? 'Restore' : 'Archive'}</button>
-                <button type="button" className="btn-danger" disabled={loading} onClick={() => deleteDeparture(departure)}><Trash2 size={15} /> Delete</button>
+              <div className="departure-actions">
+                <div className="campaign-actions">
+                  <button type="button" className="btn-secondary" onClick={() => openDepartureEditor(departure)}><Edit2 size={17} /> Edit</button>
+                  <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
+                    <Download size={17} /> Passenger manifest
+                  </button>
+                  <button type="button" className="btn-secondary" disabled={loading} onClick={() => toggleDepartureArchive(departure)}>{departure.is_archived ? 'Restore' : 'Archive'}</button>
+                  <button type="button" className="btn-danger" disabled={loading} onClick={() => deleteDeparture(departure)}><Trash2 size={15} /> Delete</button>
+                </div>
+                {departureActionError?.id === departure.id && (
+                  <>
+                    <p className="form-status error" role="alert">{departureActionError.message}</p>
+                    {departureActionError.canDeleteBookings && (
+                      <button type="button" className="btn-danger departure-delete-bookings" disabled={loading} onClick={() => deleteDeparture(departure, true)}>Delete with bookings</button>
+                    )}
+                  </>
+                )}
               </div>
             </article>
           ))}

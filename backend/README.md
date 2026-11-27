@@ -27,7 +27,9 @@ Admins can set a flat reservation booking fee and terms on each safari. The book
 
 Staff can edit departure dates, available seats, pickup details, pricing and booking availability, and edit booking contacts, travelers and departure. Setting seats left adjusts total capacity around existing reservations and payment holds. Moving a booking or changing its traveler count keeps its recorded prices and payment unchanged; staff must arrange any adjustment and notify travelers separately. Trip and traveler-count edits are blocked while a payment callback may still complete. New departure prices do not change existing bookings.
 
-Staff can archive departures to hide them from public booking while retaining bookings, payment records and waitlists; archived departures can be restored. Pending payments can still complete. Departures without bookings may instead be permanently deleted, which also deletes their waitlist entries. Departures with any booking records must be archived rather than deleted.
+Staff can archive departures to hide them from public booking while retaining bookings, payment records and waitlists; archived departures can be restored. Pending payments can still complete. Deleting a departure removes its waitlist entries. If bookings exist, staff can explicitly confirm deletion of the departure and its bookings, passenger details and payment references. This cannot be undone, does not issue refunds, and prevents matching any later payment callbacks. Associated testimonials remain but lose their booking link. Archive instead to preserve records.
+
+Deleting a safari also deletes its departures without bookings and their waitlists. Departures with bookings must first be deleted separately, or staff can hide the safari to preserve their records.
 
 Visitors can submit stories from The Simba Pulse. Public submissions are rate-limited and always enter pending review; staff must approve and publish them before they appear publicly.
 

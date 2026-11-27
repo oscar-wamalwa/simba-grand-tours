@@ -7,6 +7,7 @@ import smtplib
 
 from django.conf import settings
 from django.core.mail import get_connection, send_mail
+from django.db.models.deletion import ProtectedError
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -107,6 +108,15 @@ class SafariViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_at=timezone.now())
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'detail': 'This safari has departures with bookings. Delete those departures separately first, or hide the safari to preserve the records.'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
     def create(self, request, *args, **kwargs):
         """Handle safari creation by converting camelCase to snake_case."""

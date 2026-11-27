@@ -553,6 +553,8 @@
 .departure-admin-card h4 { margin-bottom: 6px; }
 .departure-admin-card p { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--gray-dark); font-size: 0.85rem; }
 .departure-admin-card .btn-secondary { flex-shrink: 0; display: flex; align-items: center; gap: 7px; }
+.departure-admin-card .form-status.error { color: #b42318; margin-top: 10px; }
+.departure-delete-bookings { margin-top: 10px; }
 .booking-filter { min-width: 230px; }
 .booking-table { min-width: 1200px; }
 .analytics-view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
