@@ -313,6 +313,11 @@ function SafarisPage({
           <button className="btn-outline-full safari-back" onClick={() => onSelect('safaris')}>
             <ArrowLeft size={18} /> Back to all safaris
           </button>
+          {bookingsEnabled && !departuresError && departures.length > 0 && (
+            <div className={`trip-status-float ${departures.some(item => item.is_open) ? 'open' : 'closed'}`} role="status">
+              {departures.some(item => item.is_open) ? 'Bookings open' : 'Bookings closed'}
+            </div>
+          )}
           <article className="safari-detail">
             <div className="safari-detail-image">
               <img src={safariImage} alt={selectedSafari.title} />
@@ -404,7 +409,9 @@ function SafarisPage({
                   <div key={departure.id}>
                     <article className="departure-option">
                       <div>
-                        <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</strong>
+                        <strong>{new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}
+                          <span className={`trip-status ${departure.is_open ? 'open' : 'closed'}`}>{departure.is_open ? 'Open' : 'Closed'}</span>
+                        </strong>
                         <span>Full amount: {formatPrice(departure.price_kes)} per person</span>
                         {onlinePaymentsEnabled && <span>{departure.booking_fee_kes
                           ? `Booking fee: ${formatPrice(departure.booking_fee_kes)} per reservation`
@@ -413,7 +420,9 @@ function SafarisPage({
                         <span><Users size={15} /> {departure.seats_available} spots left</span>
                         {departure.pickup_time && <span><Clock size={15} /> Pickup: {departure.pickup_time}</span>}
                       </div>
-                      {departure.seats_available > 0 ? (
+                      {!departure.is_open ? (
+                        <button type="button" className="btn-outline-full" disabled>Closed</button>
+                      ) : departure.seats_available > 0 ? (
                         <button
                           type="button"
                           className="btn-gold-sm"
@@ -605,6 +614,7 @@ function SafarisPage({
             <div className="upcoming-trips-grid">
               {upcomingDepartures.map(departure => (
                 <article className="upcoming-trip-card" key={departure.id}>
+                  <span className="trip-status open">Open</span>
                   <h3>{departure.safari_title}</h3>
                   <p><CalendarDays size={16} aria-hidden="true" /> {new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</p>
                   <p><Users size={16} aria-hidden="true" /> {departure.seats_available} {departure.seats_available === 1 ? 'seat' : 'seats'} left</p>

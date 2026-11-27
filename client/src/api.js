@@ -79,7 +79,7 @@ async function getDeparturePages(params, include, limit = Infinity) {
 
 export const departuresApi = {
   getForSafari: (safariId) => getDeparturePages({ safari: safariId }, () => true),
-  getUpcoming: () => getDeparturePages({}, departure => departure.seats_available > 0, 4),
+  getUpcoming: () => getDeparturePages({}, departure => departure.is_open && departure.seats_available > 0, 4),
 };
 
 export const bookingsApi = {
