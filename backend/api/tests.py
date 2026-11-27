@@ -1450,6 +1450,69 @@ class AdminBookingEditingTests(APITestCase):
         response = self.client.patch(url, {'phone': '0700000001'}, format='json')
         self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
+    def test_staff_can_archive_and_restore_without_losing_booking_records(self):
+        waitlist = WaitlistEntry.objects.create(
+            departure=self.departure, full_name='Waiting', email='waiting@example.com',
+            phone='0712345678',
+        )
+        url = f'/api/departures/{self.departure.pk}/'
+        response = self.client.patch(url, {'is_archived': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertTrue(response.data['is_archived'])
+        self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
+        self.assertTrue(WaitlistEntry.objects.filter(pk=waitlist.pk).exists())
+        public = APIClient()
+        self.assertEqual(public.get(url).status_code, status.HTTP_404_NOT_FOUND)
+        ids = [item['id'] for item in public.get('/api/departures/').data['results']]
+        self.assertNotIn(self.departure.pk, ids)
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
+
+        with patch('api.booking_views.notify_waitlist_for_departure') as notify:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.patch(url, {'is_archived': False}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(public.get(url).status_code, status.HTTP_200_OK)
+        notify.assert_called_once_with(self.departure.pk)
+
+    def test_archived_departures_reject_new_bookings_waitlist_and_booking_moves(self):
+        self.other.is_archived = True
+        self.other.save()
+        response = self.client.patch(f'/api/bookings/{self.booking.pk}/edit-details/', {
+            'departure': self.other.pk,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        public = APIClient()
+        booking = public.post('/api/bookings/create/', {
+            'departure': self.other.pk, 'full_name': 'Guest', 'email': 'guest@example.com',
+            'phone': '0712345678', 'payment_phone': '0712345678', 'participant_count': 1,
+            'passengers': [{'full_name': 'Guest'}],
+        }, format='json')
+        self.assertEqual(booking.status_code, status.HTTP_400_BAD_REQUEST)
+        waitlist = public.post('/api/waitlist/', {
+            'departure': self.other.pk, 'full_name': 'Waiting', 'email': 'waiting@example.com',
+            'phone': '0712345678', 'participant_count': 1,
+        }, format='json')
+        self.assertEqual(waitlist.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_departure_deletion_protects_bookings_and_requires_staff(self):
+        booking_url = f'/api/departures/{self.departure.pk}/'
+        empty_url = f'/api/departures/{self.other.pk}/'
+        self.client.force_authenticate(user=None)
+        denied = self.client.delete(empty_url)
+        self.assertIn(denied.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.client.force_authenticate(user=self.staff)
+        protected = self.client.delete(booking_url)
+        self.assertEqual(protected.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('Archive', protected.data['detail'])
+        self.assertTrue(Booking.objects.filter(pk=self.booking.pk).exists())
+        waitlist = WaitlistEntry.objects.create(
+            departure=self.other, full_name='Waiting', email='waiting@example.com', phone='0712345678',
+        )
+        deleted = self.client.delete(empty_url)
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TripDeparture.objects.filter(pk=self.other.pk).exists())
+        self.assertFalse(WaitlistEntry.objects.filter(pk=waitlist.pk).exists())
+
 
 class PromoCodeTests(APITestCase):
     def test_promo_code_limits_discount_to_valid_percentage(self):

@@ -39,11 +39,13 @@ export default function BookingsView({ formatPrice }) {
   const [editingBooking, setEditingBooking] = useState(null);
   const [bookingEditForm, setBookingEditForm] = useState(null);
   const [editError, setEditError] = useState('');
+  const [showArchivedDepartures, setShowArchivedDepartures] = useState(false);
 
   const filteredBookings = useMemo(
     () => bookings.filter(booking => !selectedDeparture || String(booking.departure) === selectedDeparture),
     [bookings, selectedDeparture],
   );
+  const visibleDepartures = departures.filter(departure => Boolean(departure.is_archived) === showArchivedDepartures);
 
   const refresh = async () => {
     setLoading(true);
@@ -170,6 +172,41 @@ export default function BookingsView({ formatPrice }) {
 
   const bookingTripLocked = editingBooking && ['pending_payment', 'payment_failed'].includes(editingBooking.status);
 
+  const toggleDepartureArchive = async departure => {
+    const restoring = departure.is_archived;
+    const warning = restoring
+      ? 'Restore this departure? If it is open and upcoming, travelers will be able to book it again.'
+      : 'Archive this departure? It will disappear from the public site, but bookings, receipts and waitlist entries will be kept. Pending payments may still complete.';
+    if (!window.confirm(warning)) return;
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      await api.departures.partialUpdate(departure.id, { is_archived: !restoring });
+      setMessage(restoring ? 'Departure restored.' : 'Departure archived. Booking records were kept.');
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not update departure.');
+      setLoading(false);
+    }
+  };
+
+  const deleteDeparture = async departure => {
+    if (!window.confirm(`Permanently delete the departure for ${departure.safari_title} on ${departure.start_date}? This also deletes its waitlist entries. Departures with bookings cannot be deleted; archive them instead.`)) return;
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      await api.departures.delete(departure.id);
+      if (selectedDeparture === String(departure.id)) setSelectedDeparture('');
+      setMessage('Departure deleted.');
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not delete departure.');
+      setLoading(false);
+    }
+  };
+
   const cancelBooking = async (booking) => {
     if (!window.confirm(`Cancel pending booking ${booking.reference}?`)) return;
     setError('');
@@ -246,7 +283,7 @@ export default function BookingsView({ formatPrice }) {
         <div className="data-card-header">
           <div>
             <h3>Trip departures and seat availability</h3>
-            <p>Create or edit departures, available seats, pickup details and KES pricing.</p>
+            <p>Create, edit, archive or delete departures. Archived departures retain their booking records.</p>
           </div>
           <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}>
             <RefreshCw size={17} className={loading ? 'refresh-spin' : undefined} /> {loading ? 'Refreshing...' : 'Refresh'}
@@ -285,23 +322,28 @@ export default function BookingsView({ formatPrice }) {
         </form>
 
         <div className="departure-list">
-          {departures.map(departure => (
+          <button type="button" className="btn-secondary" onClick={() => setShowArchivedDepartures(value => !value)} aria-pressed={showArchivedDepartures}>
+            {showArchivedDepartures ? 'Show current departures' : 'Show archived departures'}
+          </button>
+          {visibleDepartures.map(departure => (
             <article className="departure-admin-card" key={departure.id}>
               <div>
                 <h4>{departure.safari_title}</h4>
                 <p><CalendarDays size={15} /> {departure.start_date}{departure.end_date ? ` to ${departure.end_date}` : ''}</p>
                 <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatPrice(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatPrice(departure.booking_fee_kes) : 'not set'} per reservation</p>
-                <p>Pickup: {departure.pickup_time || 'not set'} · {departure.is_open ? 'Open' : 'Closed'}</p>
+                <p>Pickup: {departure.pickup_time || 'not set'} · {departure.is_archived ? 'Archived' : departure.is_open ? 'Open' : 'Closed'}</p>
               </div>
               <div className="campaign-actions">
                 <button type="button" className="btn-secondary" onClick={() => openDepartureEditor(departure)}><Edit2 size={17} /> Edit</button>
                 <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
                   <Download size={17} /> Passenger manifest
                 </button>
+                <button type="button" className="btn-secondary" disabled={loading} onClick={() => toggleDepartureArchive(departure)}>{departure.is_archived ? 'Restore' : 'Archive'}</button>
+                <button type="button" className="btn-danger" disabled={loading} onClick={() => deleteDeparture(departure)}><Trash2 size={15} /> Delete</button>
               </div>
             </article>
           ))}
-          {!loading && departures.length === 0 && <p>No departures have been scheduled.</p>}
+          {!loading && visibleDepartures.length === 0 && <p>{showArchivedDepartures ? 'No archived departures.' : 'No current departures.'}</p>}
         </div>
       </section>
 
@@ -387,7 +429,7 @@ export default function BookingsView({ formatPrice }) {
               <div className="modal-body">
                 {editError && <p className="form-status error" role="alert">{editError}</p>}
                 <p>Recorded prices and payments do not change. Arrange any adjustment separately and notify travelers of changes yourself.</p>
-                <div className="form-group"><label htmlFor="edit-booking-departure">Departure</label><select id="edit-booking-departure" disabled={bookingTripLocked} value={bookingEditForm.departure} onChange={event => setBookingEditForm(prev => ({ ...prev, departure: event.target.value }))}><option value={editingBooking.departure}>{editingBooking.safari_title} · {editingBooking.departure_date}</option>{departures.filter(item => item.id !== editingBooking.departure && item.is_open).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}</select></div>
+                <div className="form-group"><label htmlFor="edit-booking-departure">Departure</label><select id="edit-booking-departure" disabled={bookingTripLocked} value={bookingEditForm.departure} onChange={event => setBookingEditForm(prev => ({ ...prev, departure: event.target.value }))}><option value={editingBooking.departure}>{editingBooking.safari_title} · {editingBooking.departure_date}</option>{departures.filter(item => item.id !== editingBooking.departure && item.is_open && !item.is_archived).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}</select></div>
                 <div className="form-row">
                   <div className="form-group"><label htmlFor="edit-booking-name">Booking contact name</label><input id="edit-booking-name" required maxLength="255" value={bookingEditForm.full_name} onChange={event => setBookingEditForm(prev => ({ ...prev, full_name: event.target.value }))} /></div>
                   <div className="form-group"><label htmlFor="edit-booking-email">Email</label><input id="edit-booking-email" type="email" required value={bookingEditForm.email} onChange={event => setBookingEditForm(prev => ({ ...prev, email: event.target.value }))} /></div>

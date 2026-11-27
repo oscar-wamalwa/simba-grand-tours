@@ -82,9 +82,18 @@ export const destinationsApi = {
 
 export const departuresApi = {
   getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const response = await apiRequest(`/departures/${queryString ? `?${queryString}` : ''}`);
-    return response.results || response;
+    let queryString = new URLSearchParams(params).toString();
+    const seen = new Set();
+    const departures = [];
+    do {
+      if (seen.has(queryString)) throw new Error('Departure pagination returned a repeated page.');
+      seen.add(queryString);
+      const response = await apiRequest(`/departures/${queryString ? `?${queryString}` : ''}`);
+      if (Array.isArray(response)) return [...departures, ...response];
+      departures.push(...response.results);
+      queryString = response.next ? new URL(response.next, API_BASE_URL + '/').search.slice(1) : '';
+    } while (queryString);
+    return departures;
   },
   create: (data) => apiRequest('/departures/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PUT', body: data }),

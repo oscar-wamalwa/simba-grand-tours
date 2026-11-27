@@ -101,6 +101,7 @@ class TripDeparture(models.Model):
     pickup_points = models.JSONField(default=list, blank=True)
     pickup_time = models.CharField(max_length=100, blank=True)
     is_open = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

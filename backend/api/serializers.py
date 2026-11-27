@@ -131,7 +131,7 @@ class TripDepartureSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'safari', 'safari_title', 'start_date', 'end_date',
             'seats_total', 'seats_available', 'price_kes', 'booking_fee_kes',
-            'booking_terms', 'pickup_points', 'pickup_time', 'is_open',
+            'booking_terms', 'pickup_points', 'pickup_time', 'is_open', 'is_archived',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

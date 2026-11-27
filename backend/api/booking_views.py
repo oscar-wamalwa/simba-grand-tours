@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
+from django.db.models.deletion import ProtectedError
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -64,7 +65,7 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = TripDeparture.objects.select_related('safari')
-        if self.request.method in ('PUT', 'PATCH'):
+        if self.request.method in ('PUT', 'PATCH', 'DELETE'):
             queryset = queryset.select_for_update()
         safari_id = self.request.query_params.get('safari')
         if safari_id:
@@ -72,6 +73,7 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
         if not (self.request.user and self.request.user.is_staff):
             queryset = queryset.filter(
                 is_open=True,
+                is_archived=False,
                 safari__visible=True,
                 start_date__gte=timezone.localdate(),
             )
@@ -82,14 +84,27 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
         departure = self.get_object()
         previous_available = departure.seats_available
         was_open = departure.is_open
+        was_archived = departure.is_archived
         serializer = self.get_serializer(departure, data=request.data, partial=kwargs.pop('partial', False))
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        if departure.is_open and departure.seats_available > 0 and (
-            departure.seats_available > previous_available or not was_open
+        if departure.is_open and not departure.is_archived and departure.start_date >= timezone.localdate() and departure.seats_available > 0 and (
+            departure.seats_available > previous_available or not was_open or was_archived
         ):
             transaction.on_commit(lambda: notify_waitlist_for_departure(departure.pk))
         return Response(serializer.data)
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        departure = self.get_object()
+        try:
+            departure.delete()
+        except ProtectedError:
+            return Response(
+                {'detail': 'This departure has booking records and cannot be deleted. Archive it instead to preserve bookings and receipts.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -138,7 +153,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         if target is None:
             raise ValidationError({'departure': 'This departure no longer exists.'})
         if changes_trip and target_id != current.pk:
-            if not target.is_open or not target.safari.visible or target.start_date < timezone.localdate():
+            if target.is_archived or not target.is_open or not target.safari.visible or target.start_date < timezone.localdate():
                 raise ValidationError({'departure': 'Choose an open, upcoming departure of a visible safari.'})
         if changes_trip and booking.status == Booking.Status.CONFIRMED:
             taken = target.seats_taken - (booking.participant_count if target_id == current.pk else 0)
@@ -300,6 +315,7 @@ class BookingCreateView(APIView):
                 departure = TripDeparture.objects.select_for_update().select_related('safari').get(
                     pk=data['departure'].pk,
                     is_open=True,
+                    is_archived=False,
                     safari__visible=True,
                     start_date__gte=timezone.localdate(),
                 )
@@ -498,9 +514,14 @@ class WaitlistViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         with transaction.atomic():
-            departure = TripDeparture.objects.select_for_update().get(
-                pk=serializer.validated_data['departure'].pk
-            )
+            try:
+                departure = TripDeparture.objects.select_for_update().get(
+                    pk=serializer.validated_data['departure'].pk
+                )
+            except TripDeparture.DoesNotExist as error:
+                raise ValidationError({'departure': 'This departure no longer exists.'}) from error
+            if departure.is_archived:
+                raise ValidationError({'departure': 'This departure is no longer available.'})
             if not departure.is_open or departure.seats_available:
                 raise ValidationError({'departure': 'This departure still has spots; book directly instead.'})
             duplicate = WaitlistEntry.objects.filter(
@@ -624,6 +645,8 @@ def notify_waitlist_for_departure(departure_id):
             departure = TripDeparture.objects.select_for_update().select_related('safari').get(pk=departure_id)
         except TripDeparture.DoesNotExist:
             logger.warning('Cannot notify waitlist; departure %s no longer exists.', departure_id)
+            return
+        if departure.is_archived:
             return
         available = departure.seats_available
         entries = []
