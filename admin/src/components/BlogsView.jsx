@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../api';
 import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Calendar, Upload, X, BookOpen, CheckCircle } from 'lucide-react';
 
@@ -56,12 +57,16 @@ const HideIcon = ({ size = 16, style = {} }) => (
 
 export default function BlogsView({ onRefresh }) {
   const [blogs, setBlogs] = useState([]);
+  const [blogsLoading, setBlogsLoading] = useState(true);
+  const [blogsError, setBlogsError] = useState('');
   const [comments, setComments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selectedBlog, setSelectedBlog] = useState(null);
   const [commentError, setCommentError] = useState('');
+  const [commentFilter, setCommentFilter] = useState('all');
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   const categories = ['Safari Story', 'Travel Tips', 'Wildlife Update', 'Conservation', 'Guest Post'];
 
@@ -71,11 +76,16 @@ export default function BlogsView({ onRefresh }) {
   }, []);
 
   const fetchBlogs = async () => {
+    setBlogsLoading(true);
+    setBlogsError('');
     try {
       const data = await api.blogs.getAll();
       setBlogs(data.map(d => ({ id: d.id, ...d })));
     } catch (e) {
       console.error('Error fetching blogs:', e);
+      setBlogsError('Could not load blog posts. Please try again.');
+    } finally {
+      setBlogsLoading(false);
     }
   };
 
@@ -126,6 +136,23 @@ export default function BlogsView({ onRefresh }) {
     }
   };
 
+  const deleteComment = async (comment) => {
+    if (!window.confirm('Permanently delete this reply? It will be removed from the public blog and cannot be restored.')) {
+      return;
+    }
+
+    setDeletingCommentId(comment.id);
+    try {
+      await api.blogComments.delete(comment.id);
+      await fetchComments();
+    } catch (error) {
+      console.error('Error deleting blog reply:', error);
+      alert(error.message || 'Could not delete the reply. Please try again.');
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   const editBlog = (blog) => {
     setEditing(blog);
     setShowEditor(true);
@@ -141,7 +168,13 @@ export default function BlogsView({ onRefresh }) {
     b.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.author?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  const pendingComments = comments.filter(comment => comment.status === 'pending_review');
+  const filteredComments = comments.filter(comment => (
+    commentFilter === 'all' || comment.status === commentFilter
+  ));
+  const commentCounts = comments.reduce((counts, comment) => {
+    counts[comment.status] = (counts[comment.status] || 0) + 1;
+    return counts;
+  }, {});
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -199,9 +232,20 @@ export default function BlogsView({ onRefresh }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {blogsError ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-dark)' }}>
+                  <td colSpan="6" className="blog-table-message error" role="alert">
+                    <p>{blogsError}</p>
+                    <button className="btn-secondary" type="button" onClick={fetchBlogs}>Retry</button>
+                  </td>
+                </tr>
+              ) : blogsLoading ? (
+                <tr>
+                  <td colSpan="6" className="blog-table-message">Loading blog posts...</td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="blog-table-message">
                     <FileText size={48} style={{ marginBottom: '15px', opacity: 0.5 }} />
                     <p>No blog posts found. Create your first blog post!</p>
                   </td>
@@ -210,9 +254,14 @@ export default function BlogsView({ onRefresh }) {
                 filtered.map(blog => (
                   <tr key={blog.id}>
                     <td>
-                      <p className="safari-title" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <button
+                        className="blog-title-link"
+                        type="button"
+                        onClick={() => setSelectedBlog(blog)}
+                        aria-label={`Read blog post: ${blog.title}`}
+                      >
                         {blog.title}
-                      </p>
+                      </button>
                     </td>
                     <td><span className="blog-category-badge">{blog.category || 'Uncategorized'}</span></td>
                     <td><p className="safari-location">{blog.author || 'Anonymous'}</p></td>
@@ -226,8 +275,14 @@ export default function BlogsView({ onRefresh }) {
                     </td>
                     <td>
                       <div className="table-actions">
-                        <button className="action-btn" onClick={() => setSelectedBlog(blog)} title="Read blog post" aria-label={`Read blog post: ${blog.title}`}>
+                        <button
+                          className="action-btn blog-read-btn"
+                          type="button"
+                          onClick={() => setSelectedBlog(blog)}
+                          aria-label={`Read blog post: ${blog.title}`}
+                        >
                           <BookOpen size={16} />
+                          <span>Read</span>
                         </button>
                         <button className="action-btn" onClick={() => toggleStatus(blog)} title={
                           blog.status === 'published'
@@ -249,15 +304,27 @@ export default function BlogsView({ onRefresh }) {
       </div>
 
       <div className="data-card blog-comments-moderation">
-        <div className="data-card-header">
-          <h3>Reader Replies Pending Approval</h3>
+        <div className="data-card-header blog-comments-header">
+          <div>
+            <h3>Reader Replies</h3>
+            <p>Review, hide, or permanently delete replies.</p>
+          </div>
+          <label className="blog-comment-filter">
+            Show
+            <select value={commentFilter} onChange={event => setCommentFilter(event.target.value)}>
+              <option value="all">All replies ({comments.length})</option>
+              <option value="pending_review">Pending ({commentCounts.pending_review || 0})</option>
+              <option value="approved">Published ({commentCounts.approved || 0})</option>
+              <option value="rejected">Hidden ({commentCounts.rejected || 0})</option>
+            </select>
+          </label>
         </div>
         {commentError && <p className="contact-reply-feedback error" role="alert">{commentError}</p>}
-        {!commentError && pendingComments.length === 0 ? (
-          <p className="blog-comments-empty">No reader replies are waiting for approval.</p>
+        {!commentError && filteredComments.length === 0 ? (
+          <p className="blog-comments-empty">No replies match this filter.</p>
         ) : (
           <div className="blog-comments-list">
-            {pendingComments.map(comment => {
+            {filteredComments.map(comment => {
               const blog = blogs.find(item => String(item.id) === String(comment.blog));
               return (
                 <article className="blog-comment-review" key={comment.id}>
@@ -265,16 +332,41 @@ export default function BlogsView({ onRefresh }) {
                     <strong>{comment.name}</strong>
                     <span> on </span>
                     <strong>{blog?.title || 'Blog post'}</strong>
+                    <span className={`status-badge blog-comment-status ${comment.status}`}>
+                      {comment.status === 'pending_review'
+                        ? 'Pending'
+                        : comment.status === 'approved' ? 'Published' : 'Hidden'}
+                    </span>
                     <small>{formatDate(comment.created_at)}</small>
                   </div>
                   <p>{comment.content}</p>
                   {comment.email && <small>Contact: {comment.email}</small>}
                   <div className="blog-comment-review-actions">
-                    <button className="btn-primary" onClick={() => moderateComment(comment, 'approved')}>
-                      <CheckCircle size={16} /> Approve
-                    </button>
-                    <button className="btn-secondary" onClick={() => moderateComment(comment, 'rejected')}>
-                      <X size={16} /> Reject
+                    {comment.status === 'pending_review' ? (
+                      <>
+                        <button className="btn-primary" type="button" onClick={() => moderateComment(comment, 'approved')}>
+                          <CheckCircle size={16} /> Approve
+                        </button>
+                        <button className="btn-secondary" type="button" onClick={() => moderateComment(comment, 'rejected')}>
+                          <X size={16} /> Reject
+                        </button>
+                      </>
+                    ) : comment.status === 'approved' ? (
+                      <button className="btn-secondary" type="button" onClick={() => moderateComment(comment, 'rejected')}>
+                        <X size={16} /> Hide
+                      </button>
+                    ) : (
+                      <button className="btn-primary" type="button" onClick={() => moderateComment(comment, 'approved')}>
+                        <CheckCircle size={16} /> Restore
+                      </button>
+                    )}
+                    <button
+                      className="btn-danger"
+                      type="button"
+                      disabled={deletingCommentId === comment.id}
+                      onClick={() => deleteComment(comment)}
+                    >
+                      <Trash2 size={16} /> {deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </article>
@@ -284,7 +376,7 @@ export default function BlogsView({ onRefresh }) {
         )}
       </div>
 
-      {selectedBlog && (
+      {selectedBlog && createPortal(
         <div className="modal-overlay show" onClick={() => setSelectedBlog(null)}>
           <div className="modal blog-reading-modal" onClick={event => event.stopPropagation()}>
             <div className="modal-header">
@@ -327,7 +419,8 @@ export default function BlogsView({ onRefresh }) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showEditor && (

@@ -242,14 +242,27 @@
 .blog-reading-image { display: block; width: 100%; max-height: 420px; margin: 0 0 20px; border-radius: 10px; object-fit: contain; background: var(--gray-light); }
 .blog-reading-content { color: var(--gray-dark); font-size: 1rem; line-height: 1.75; overflow-wrap: anywhere; }
 .blog-reading-content p { margin: 0 0 1em; white-space: pre-wrap; }
+.blog-table-message { text-align: center !important; padding: 40px 20px !important; color: var(--gray-dark); }
+.blog-table-message.error { color: #b42318; }
+.blog-table-message p { margin-bottom: 12px; }
+.blog-title-link { display: block; max-width: 200px; overflow: hidden; padding: 0; border: 0; background: none; color: var(--savanna-black); font: inherit; font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.blog-title-link:hover { color: var(--deep-bronze); text-decoration: underline; }
+.blog-read-btn { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .blog-review-note { margin: 0 0 14px; padding: 12px 14px; border-left: 4px solid var(--gold-majesty); border-radius: 6px; background: var(--gray-light); color: var(--gray-dark); }
 .blog-comments-moderation { margin-top: 24px; }
+.blog-comments-header { gap: 16px; flex-wrap: wrap; }
+.blog-comment-filter { display: flex; align-items: center; gap: 8px; color: var(--gray-dark); font-size: 0.9rem; }
+.blog-comment-filter select { max-width: 220px; padding: 8px 10px; border: 1px solid var(--gray-medium); border-radius: 8px; color: var(--savanna-black); background: var(--white); }
 .blog-comments-empty { padding: 24px 30px; color: var(--gray-dark); }
 .blog-comments-list { padding: 0 30px 20px; }
 .blog-comment-review { padding: 18px 0; border-top: 1px solid var(--gray-light); }
 .blog-comment-review p { margin: 10px 0; color: var(--gray-dark); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .blog-comment-review small { display: block; margin-top: 5px; color: var(--gray-dark); }
 .blog-comment-review-actions { display: flex; gap: 10px; margin-top: 12px; }
+.blog-comment-status { margin-left: 8px; }
+.blog-comment-status.pending_review { background: rgba(225, 173, 61, 0.15); color: var(--deep-bronze); }
+.blog-comment-status.approved { background: rgba(39, 174, 96, 0.1); color: #27ae60; }
+.blog-comment-status.rejected { background: rgba(149, 165, 166, 0.1); color: #657071; }
 
 /* ==========================================
    SAFARI IMAGE UPLOAD STYLES

@@ -317,6 +317,16 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual([comment['content'] for comment in public_comments], ['A helpful reply.'])
         self.assertNotIn('email', public_comments[0])
 
+        self.client.force_authenticate(user=staff_user)
+        deletion = self.client.delete(f"/api/blog-comments/{response.data['id']}/")
+        self.assertEqual(deletion.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.client.force_authenticate(user=None)
+        self.assertEqual(
+            self.client.get('/api/blog-comments/', {'blog': blog.id}).data['results'],
+            [],
+        )
+
     def test_public_cannot_reply_to_unpublished_blog(self):
         draft = Blog.objects.get(title='Draft story')
         response = self.client.post(
