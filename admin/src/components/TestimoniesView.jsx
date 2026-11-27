@@ -133,7 +133,7 @@ export default function TestimoniesView() {
       ) : (
         <div className="message-list">
           {testimonials.map(t => (
-            <div key={t.id} className={`message-item ${featuredTestimonials.includes(t.id) ? 'featured' : ''}`} style={{ cursor: 'pointer' }}>
+            <div key={t.id} className={`message-item ${featuredTestimonials.includes(t.id) ? 'featured' : ''}`}>
               <div className="message-avatar">{t.fullName ? t.fullName.charAt(0).toUpperCase() : '?'}</div>
               <div className="message-content">
                 <div className="message-header">
@@ -150,7 +150,9 @@ export default function TestimoniesView() {
                     <span className="status-badge archived" style={{ marginLeft: '8px' }}>Unverified</span>
                   )}
                 </div>
-                <p className="message-preview">{t.message?.substring(0, 80)}...</p>
+                <p className="message-preview" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                  {t.message || 'No message provided.'}
+                </p>
                 <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                   {[1, 2, 3, 4, 5].map(star => (
                     <Star
