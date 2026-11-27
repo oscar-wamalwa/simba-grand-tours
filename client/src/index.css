@@ -626,8 +626,13 @@ a { text-decoration: none; color: inherit; }
 .contact-info-card h3 { font-size: 1rem; color: var(--savanna-black); margin-bottom: 15px; font-family: 'Playfair Display', serif; }
 .contact-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; color: var(--text-light); font-size: 0.9rem; }
 .contact-item svg { flex-shrink: 0; color: var(--gold-majesty); margin-top: 2px; }
-.contact-action { text-decoration: none; }
-.contact-action:hover { color: var(--deep-bronze); text-decoration: underline; }
+.contact-direct-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 28px; }
+.contact-channel { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--gray-medium); border-radius: 10px; background: var(--white); color: var(--savanna-black); text-decoration: none; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; }
+.contact-channel svg { flex-shrink: 0; color: var(--deep-bronze); }
+.contact-channel span { display: grid; gap: 4px; min-width: 0; }
+.contact-channel small { color: var(--text-light); overflow-wrap: anywhere; }
+.contact-channel:hover { transform: translateY(-2px); border-color: var(--gold-majesty); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); }
+.contact-subintro { margin-bottom: 18px; color: var(--text-light); }
 
 .contact-main { background: var(--white); border-radius: 16px; padding: 40px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); }
 .contact-form-container h2 { font-size: 1.8rem; color: var(--savanna-black); margin-bottom: 10px; }
@@ -1344,6 +1349,7 @@ a { text-decoration: none; color: inherit; }
   .service-detail-dialog { padding: 28px 20px; }
   .service-detail-actions { flex-direction: column; }
   .service-detail-actions > button { width: 100%; }
+  .contact-direct-options { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 700px) {

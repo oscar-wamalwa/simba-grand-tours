@@ -68,37 +68,40 @@ function ContactPage({ settings = {} }) {
               </div>
             </div>
             <div className="contact-info-card">
-              <h3>Call Us</h3>
-              <a className="contact-item contact-action" href={`tel:${phoneHref}`}>
-                <Phone size={20} />
-                <span>{phone}</span>
-              </a>
-            </div>
-            <div className="contact-info-card">
               <h3>Email Us</h3>
               <a className="contact-item contact-action" href={`mailto:${email}`}>
                 <Mail size={20} />
                 <span>{email}</span>
               </a>
             </div>
-            <div className="contact-info-card">
-              <h3>WhatsApp</h3>
-              <a
-                className="contact-item contact-action"
-                href={`https://wa.me/${whatsappNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle size={20} />
-                <span>Message us on WhatsApp</span>
-              </a>
-            </div>
           </aside>
 
           <main className="contact-main">
             <div className="contact-form-container">
-              <h2>Connect With Us</h2>
-              <p className="contact-intro">Send Us a Message</p>
+              <h2>Contact Us</h2>
+              <p className="contact-subintro">Choose a direct contact option, or send us a message using the form.</p>
+              <div className="contact-direct-options" aria-label="Direct contact options">
+                <a className="contact-channel" href={`tel:${phoneHref}`}>
+                  <Phone size={22} aria-hidden="true" />
+                  <span>
+                    <strong>Phone call</strong>
+                    <small>{phone}</small>
+                  </span>
+                </a>
+                <a
+                  className="contact-channel"
+                  href={`https://wa.me/${whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle size={22} aria-hidden="true" />
+                  <span>
+                    <strong>WhatsApp</strong>
+                    <small>Message us on WhatsApp</small>
+                  </span>
+                </a>
+              </div>
+              <p className="contact-intro">Or send us a message</p>
               <form onSubmit={handleSubmit} className="contact-form">
                 <div className="form-row">
                   <div className="form-group">
