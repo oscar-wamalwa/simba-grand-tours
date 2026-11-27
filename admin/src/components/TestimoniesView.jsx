@@ -50,15 +50,14 @@ export default function TestimoniesView() {
       await fetchTestimonials();
     } catch (e) {
       console.error('Error updating featured testimonial:', e);
+      alert(e.message || 'Could not update featured testimonial. Please try again.');
     }
   };
 
   const toggleVerification = async (testimonial) => {
     const verified = Boolean(testimonial.is_verified);
     try {
-      await api.testimonials.partialUpdate(testimonial.id, verified
-        ? { is_verified: false, is_featured: false }
-        : { is_verified: true });
+      await api.testimonials.partialUpdate(testimonial.id, { is_verified: !verified });
       await fetchTestimonials();
     } catch (error) {
       console.error('Error updating traveller verification:', error);
@@ -128,7 +127,7 @@ export default function TestimoniesView() {
       </div>
 
       <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '20px', padding: '0 20px' }}>
-        Verify travellers before featuring their reviews. Select up to 6 verified testimonials to display on the homepage.
+        Select up to 6 testimonials to display on the homepage. Verification is optional and can be changed independently.
       </p>
 
       {testimonials.length === 0 ? (
@@ -155,10 +154,8 @@ export default function TestimoniesView() {
                       <Star size={12} /> Featured
                     </span>
                   )}
-                  {t.is_verified ? (
+                  {t.is_verified && (
                     <span className="status-badge active" style={{ marginLeft: '8px' }}>Verified</span>
-                  ) : (
-                    <span className="status-badge archived" style={{ marginLeft: '8px' }}>Unverified</span>
                   )}
                 </div>
                 <p className="message-preview" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
@@ -189,9 +186,9 @@ export default function TestimoniesView() {
                 <button
                   className="action-btn"
                   onClick={(e) => { e.stopPropagation(); toggleFeatured(t.id); }}
-                  disabled={!t.is_verified}
                   style={{ color: featuredTestimonials.includes(t.id) ? 'var(--gold-majesty)' : 'var(--gray-dark)' }}
-                  title={!t.is_verified ? 'Verify before featuring' : featuredTestimonials.includes(t.id) ? 'Remove from featured' : 'Mark as featured'}
+                  title={featuredTestimonials.includes(t.id) ? 'Remove from featured' : 'Mark as featured'}
+                  aria-label={`${featuredTestimonials.includes(t.id) ? 'Remove from featured' : 'Feature'} testimonial by ${t.fullName || t.full_name || 'Anonymous'}`}
                 >
                   <Star size={16} fill={featuredTestimonials.includes(t.id) ? 'currentColor' : 'none'} />
                 </button>

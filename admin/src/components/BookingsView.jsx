@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Download, Plus, RefreshCw, TicketCheck, Trash2 } from 'lucide-react';
+import { CalendarDays, Download, Edit2, Plus, RefreshCw, TicketCheck, Trash2, X } from 'lucide-react';
 import api from '../api';
 
 const initialDeparture = {
@@ -34,6 +34,11 @@ export default function BookingsView({ formatPrice }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [editingDeparture, setEditingDeparture] = useState(null);
+  const [departureEditForm, setDepartureEditForm] = useState(null);
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [bookingEditForm, setBookingEditForm] = useState(null);
+  const [editError, setEditError] = useState('');
 
   const filteredBookings = useMemo(
     () => bookings.filter(booking => !selectedDeparture || String(booking.departure) === selectedDeparture),
@@ -85,6 +90,85 @@ export default function BookingsView({ formatPrice }) {
       setSaving(false);
     }
   };
+
+  const openDepartureEditor = departure => {
+    setEditingDeparture(departure);
+    setDepartureEditForm({
+      start_date: departure.start_date,
+      end_date: departure.end_date || '',
+      seats_available: String(departure.seats_available),
+      price_kes: String(departure.price_kes),
+      pickup_time: departure.pickup_time || '',
+      pickup_points: (departure.pickup_points || []).join('\n'),
+      is_open: departure.is_open,
+    });
+    setEditError('');
+  };
+
+  const saveDeparture = async event => {
+    event.preventDefault();
+    setSaving(true);
+    setEditError('');
+    const data = {};
+    for (const key of ['start_date', 'end_date', 'pickup_time', 'is_open']) {
+      const oldValue = editingDeparture[key] ?? (key === 'end_date' ? '' : editingDeparture[key]);
+      if (departureEditForm[key] !== oldValue) data[key] = departureEditForm[key] || (key === 'end_date' ? null : departureEditForm[key]);
+    }
+    for (const key of ['seats_available', 'price_kes']) {
+      if (Number(departureEditForm[key]) !== editingDeparture[key]) data[key] = Number(departureEditForm[key]);
+    }
+    const points = departureEditForm.pickup_points.split('\n').map(item => item.trim()).filter(Boolean);
+    if (JSON.stringify(points) !== JSON.stringify(editingDeparture.pickup_points || [])) data.pickup_points = points;
+    try {
+      if (Object.keys(data).length) await api.departures.partialUpdate(editingDeparture.id, data);
+      setEditingDeparture(null);
+      setMessage('Departure updated.');
+      await refresh();
+    } catch (requestError) {
+      setEditError(requestError.message || 'Could not update departure.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openBookingEditor = booking => {
+    setEditingBooking(booking);
+    setBookingEditForm({
+      departure: String(booking.departure),
+      full_name: booking.full_name,
+      email: booking.email,
+      phone: booking.phone,
+      passengers: Array.from({ length: booking.participant_count }, (_, index) => (
+        booking.passengers?.[index] || { full_name: '', phone: '', emergency_contact: '' }
+      )),
+    });
+    setEditError('');
+  };
+
+  const saveBooking = async event => {
+    event.preventDefault();
+    const tripChanged = Number(bookingEditForm.departure) !== editingBooking.departure
+      || bookingEditForm.passengers.length !== editingBooking.participant_count;
+    if (tripChanged && !window.confirm('The recorded price and payment will not change. Arrange any price adjustment separately. Travelers are not automatically notified. Continue?')) return;
+    setSaving(true);
+    setEditError('');
+    try {
+      await api.bookings.editDetails(editingBooking.id, {
+        ...bookingEditForm,
+        departure: Number(bookingEditForm.departure),
+        participant_count: bookingEditForm.passengers.length,
+      });
+      setEditingBooking(null);
+      setMessage('Booking updated. Recorded prices and payments were not changed.');
+      await refresh();
+    } catch (requestError) {
+      setEditError(requestError.message || 'Could not update booking.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const bookingTripLocked = editingBooking && ['pending_payment', 'payment_failed'].includes(editingBooking.status);
 
   const cancelBooking = async (booking) => {
     if (!window.confirm(`Cancel pending booking ${booking.reference}?`)) return;
@@ -162,7 +246,7 @@ export default function BookingsView({ formatPrice }) {
         <div className="data-card-header">
           <div>
             <h3>Trip departures and seat availability</h3>
-            <p>Create dated departures with KES pricing and seat capacity.</p>
+            <p>Create or edit departures, available seats, pickup details and KES pricing.</p>
           </div>
           <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}>
             <RefreshCw size={17} className={loading ? 'refresh-spin' : undefined} /> {loading ? 'Refreshing...' : 'Refresh'}
@@ -207,10 +291,14 @@ export default function BookingsView({ formatPrice }) {
                 <h4>{departure.safari_title}</h4>
                 <p><CalendarDays size={15} /> {departure.start_date}{departure.end_date ? ` to ${departure.end_date}` : ''}</p>
                 <p>{departure.seats_available} of {departure.seats_total} spots available · Full amount {formatPrice(departure.price_kes)} per person · Booking fee {departure.booking_fee_kes ? formatPrice(departure.booking_fee_kes) : 'not set'} per reservation</p>
+                <p>Pickup: {departure.pickup_time || 'not set'} · {departure.is_open ? 'Open' : 'Closed'}</p>
               </div>
-              <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
-                <Download size={17} /> Passenger manifest
-              </button>
+              <div className="campaign-actions">
+                <button type="button" className="btn-secondary" onClick={() => openDepartureEditor(departure)}><Edit2 size={17} /> Edit</button>
+                <button type="button" className="btn-secondary" onClick={() => exportManifest(departure)}>
+                  <Download size={17} /> Passenger manifest
+                </button>
+              </div>
             </article>
           ))}
           {!loading && departures.length === 0 && <p>No departures have been scheduled.</p>}
@@ -244,6 +332,7 @@ export default function BookingsView({ formatPrice }) {
                   <td>{booking.mpesa_receipt || '—'}</td>
                   <td>
                     <div className="table-actions">
+                      <button type="button" className="btn-secondary" onClick={() => openBookingEditor(booking)}><Edit2 size={15} /> Edit</button>
                       {booking.status === 'pending_payment' && <button type="button" className="btn-danger" onClick={() => cancelBooking(booking)}>Cancel</button>}
                       <button type="button" className="btn-danger" onClick={() => deleteBooking(booking)} title="Permanently delete booking and receipt">
                         <Trash2 size={15} /> Delete
@@ -259,6 +348,68 @@ export default function BookingsView({ formatPrice }) {
           </table>
         </div>
       </section>
+
+      {editingDeparture && (
+        <div className="modal-overlay show">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-departure-title">
+            <div className="modal-header">
+              <h3 id="edit-departure-title">Edit departure: {editingDeparture.safari_title}</h3>
+              <button type="button" className="modal-close" aria-label="Close departure editor" disabled={saving} onClick={() => setEditingDeparture(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={saveDeparture}>
+              <div className="modal-body">
+                {editError && <p className="form-status error" role="alert">{editError}</p>}
+                <p>Available seats are added to existing confirmed bookings and active payment holds to calculate capacity. Existing booking prices do not change; travelers are not notified automatically.</p>
+                <div className="form-row">
+                  <div className="form-group"><label htmlFor="edit-start-date">Start date</label><input id="edit-start-date" type="date" required value={departureEditForm.start_date} onChange={event => setDepartureEditForm(prev => ({ ...prev, start_date: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-end-date">End date</label><input id="edit-end-date" type="date" value={departureEditForm.end_date} onChange={event => setDepartureEditForm(prev => ({ ...prev, end_date: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-seats-left">Seats left</label><input id="edit-seats-left" type="number" min="0" step="1" required value={departureEditForm.seats_available} onChange={event => setDepartureEditForm(prev => ({ ...prev, seats_available: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-departure-price">Price per person (KES)</label><input id="edit-departure-price" type="number" min="1" step="1" required value={departureEditForm.price_kes} onChange={event => setDepartureEditForm(prev => ({ ...prev, price_kes: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-pickup-time">Pickup time</label><input id="edit-pickup-time" value={departureEditForm.pickup_time} onChange={event => setDepartureEditForm(prev => ({ ...prev, pickup_time: event.target.value }))} /></div>
+                </div>
+                <div className="form-group"><label htmlFor="edit-pickup-points">Pickup points (one per line)</label><textarea id="edit-pickup-points" rows="3" value={departureEditForm.pickup_points} onChange={event => setDepartureEditForm(prev => ({ ...prev, pickup_points: event.target.value }))} /></div>
+                <label><input type="checkbox" checked={departureEditForm.is_open} onChange={event => setDepartureEditForm(prev => ({ ...prev, is_open: event.target.checked }))} /> Open for bookings</label>
+              </div>
+              <div className="modal-footer"><button type="button" className="btn-secondary" disabled={saving} onClick={() => setEditingDeparture(null)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingBooking && (
+        <div className="modal-overlay show">
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-booking-title">
+            <div className="modal-header">
+              <h3 id="edit-booking-title">Edit booking {editingBooking.reference}</h3>
+              <button type="button" className="modal-close" aria-label="Close booking editor" disabled={saving} onClick={() => setEditingBooking(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={saveBooking}>
+              <div className="modal-body">
+                {editError && <p className="form-status error" role="alert">{editError}</p>}
+                <p>Recorded prices and payments do not change. Arrange any adjustment separately and notify travelers of changes yourself.</p>
+                <div className="form-group"><label htmlFor="edit-booking-departure">Departure</label><select id="edit-booking-departure" disabled={bookingTripLocked} value={bookingEditForm.departure} onChange={event => setBookingEditForm(prev => ({ ...prev, departure: event.target.value }))}><option value={editingBooking.departure}>{editingBooking.safari_title} · {editingBooking.departure_date}</option>{departures.filter(item => item.id !== editingBooking.departure && item.is_open).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}</select></div>
+                <div className="form-row">
+                  <div className="form-group"><label htmlFor="edit-booking-name">Booking contact name</label><input id="edit-booking-name" required maxLength="255" value={bookingEditForm.full_name} onChange={event => setBookingEditForm(prev => ({ ...prev, full_name: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-booking-email">Email</label><input id="edit-booking-email" type="email" required value={bookingEditForm.email} onChange={event => setBookingEditForm(prev => ({ ...prev, email: event.target.value }))} /></div>
+                  <div className="form-group"><label htmlFor="edit-booking-phone">Phone</label><input id="edit-booking-phone" required maxLength="30" value={bookingEditForm.phone} onChange={event => setBookingEditForm(prev => ({ ...prev, phone: event.target.value }))} /></div>
+                </div>
+                <h4>Travelers ({bookingEditForm.passengers.length})</h4>
+                {bookingEditForm.passengers.map((passenger, index) => (
+                  <div key={passenger.id || `new-${index}`} className="form-row">
+                    {['full_name', 'phone', 'emergency_contact'].map(field => (
+                      <div className="form-group" key={field}><label htmlFor={`traveler-${index}-${field}`}>{field === 'full_name' ? `Traveler ${index + 1} name` : field === 'phone' ? 'Phone' : 'Emergency contact'}</label><input id={`traveler-${index}-${field}`} required={field === 'full_name'} maxLength={field === 'phone' ? 30 : 255} value={passenger[field] || ''} onChange={event => setBookingEditForm(prev => ({ ...prev, passengers: prev.passengers.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: event.target.value } : item) }))} /></div>
+                    ))}
+                    <button type="button" className="btn-danger" disabled={bookingTripLocked || bookingEditForm.passengers.length === 1} onClick={() => setBookingEditForm(prev => ({ ...prev, passengers: prev.passengers.filter((_, itemIndex) => itemIndex !== index) }))}>Remove traveler</button>
+                  </div>
+                ))}
+                <button type="button" className="btn-secondary" disabled={bookingTripLocked || bookingEditForm.passengers.length >= 20} onClick={() => setBookingEditForm(prev => ({ ...prev, passengers: [...prev.passengers, { full_name: '', phone: '', emergency_contact: '' }] }))}>Add traveler</button>
+                {bookingTripLocked && <p>Departure and traveler count cannot be changed while payment may still complete.</p>}
+              </div>
+              <div className="modal-footer"><button type="button" className="btn-secondary" disabled={saving} onClick={() => setEditingBooking(null)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

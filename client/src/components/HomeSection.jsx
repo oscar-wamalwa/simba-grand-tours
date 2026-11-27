@@ -82,7 +82,7 @@ function TestimonialsSection({ testimonials, onShowReviewForm }) {
                     <h4>{t?.full_name || t?.fullName || 'Satisfied Traveler'}</h4>
                     <p>{t?.location || 'Kenya'}</p>
                     {t?.safari && <span className="testimonial-safari">{t.safari}</span>}
-                    {t?.is_verified && <span className="verified-traveler"><CheckCircle size={14} /> Verified traveler</span>}
+                    {t?.is_verified && <span className="verified-traveler"><CheckCircle size={14} /> Verified</span>}
                   </div>
                 </div>
               </div>

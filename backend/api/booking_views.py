@@ -1,5 +1,6 @@
 import json
 import logging
+from collections.abc import Mapping
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -36,6 +37,7 @@ from .mpesa import (
 )
 from .serializers import (
     BookingCreateSerializer,
+    BookingDetailsEditSerializer,
     BookingSerializer,
     PromoCodeSerializer,
     TripAnnouncementSerializer,
@@ -62,6 +64,8 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = TripDeparture.objects.select_related('safari')
+        if self.request.method in ('PUT', 'PATCH'):
+            queryset = queryset.select_for_update()
         safari_id = self.request.query_params.get('safari')
         if safari_id:
             queryset = queryset.filter(safari_id=safari_id)
@@ -72,6 +76,20 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
                 start_date__gte=timezone.localdate(),
             )
         return queryset.order_by('start_date')
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        departure = self.get_object()
+        previous_available = departure.seats_available
+        was_open = departure.is_open
+        serializer = self.get_serializer(departure, data=request.data, partial=kwargs.pop('partial', False))
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        if departure.is_open and departure.seats_available > 0 and (
+            departure.seats_available > previous_available or not was_open
+        ):
+            transaction.on_commit(lambda: notify_waitlist_for_departure(departure.pk))
+        return Response(serializer.data)
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -88,6 +106,68 @@ class BookingViewSet(viewsets.ModelViewSet):
         if booking_status:
             queryset = queryset.filter(status=booking_status)
         return queryset
+
+    @action(detail=True, methods=['patch'], url_path='edit-details')
+    @transaction.atomic
+    def edit_details(self, request, pk=None):
+        booking_id = self.get_object().pk
+        booking = Booking.objects.select_for_update().get(pk=booking_id)
+        allowed_fields = {'departure', 'full_name', 'email', 'phone', 'participant_count', 'passengers'}
+        if not isinstance(request.data, Mapping) or set(request.data) - allowed_fields:
+            raise ValidationError({'detail': 'Only booking contact, departure, traveler count and passenger details can be edited.'})
+        serializer = BookingDetailsEditSerializer(booking, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target_id = data.get('departure', booking.departure).pk
+        old_count = booking.participant_count
+        new_count = data.get('participant_count', old_count)
+        changes_trip = target_id != booking.departure_id or new_count != old_count
+        if changes_trip and (
+            booking.status == Booking.Status.PENDING_PAYMENT
+            or (booking.status == Booking.Status.PAYMENT_FAILED and booking.checkout_request_id)
+        ):
+            raise ValidationError({'detail': 'Trip and traveler count cannot be changed while payment may still complete.'})
+
+        departure_ids = sorted({booking.departure_id, target_id})
+        locked = {
+            departure.pk: departure for departure in TripDeparture.objects.select_for_update()
+            .filter(pk__in=departure_ids).order_by('pk')
+        }
+        current = locked[booking.departure_id]
+        target = locked.get(target_id)
+        if target is None:
+            raise ValidationError({'departure': 'This departure no longer exists.'})
+        if changes_trip and target_id != current.pk:
+            if not target.is_open or not target.safari.visible or target.start_date < timezone.localdate():
+                raise ValidationError({'departure': 'Choose an open, upcoming departure of a visible safari.'})
+        if changes_trip and booking.status == Booking.Status.CONFIRMED:
+            taken = target.seats_taken - (booking.participant_count if target_id == current.pk else 0)
+            if taken + new_count > target.seats_total:
+                raise ValidationError({'participant_count': f'Only {max(0, target.seats_total - taken)} spots are available for this booking.'})
+
+        passengers = data.pop('passengers', None)
+        for field, value in data.items():
+            setattr(booking, field, value)
+        booking.save()
+        if passengers is not None:
+            existing = {passenger.pk: passenger for passenger in booking.passengers.all()}
+            retained = []
+            for item in passengers:
+                passenger_id = item.pop('id', None)
+                if passenger_id is None:
+                    passenger = Passenger.objects.create(booking=booking, **item)
+                else:
+                    passenger = existing[passenger_id]
+                    for field, value in item.items():
+                        setattr(passenger, field, value)
+                    passenger.save()
+                retained.append(passenger.pk)
+            booking.passengers.exclude(pk__in=retained).delete()
+        if changes_trip and booking.status == Booking.Status.CONFIRMED and (
+            target_id != current.pk or new_count < old_count
+        ):
+            transaction.on_commit(lambda: notify_waitlist_for_departure(current.pk))
+        return Response(self.get_serializer(booking).data)
 
     @action(detail=False, methods=['get'])
     def report(self, request):

@@ -854,6 +854,36 @@ class AdminContentAccessTests(APITestCase):
         public_featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in public_featured], ['Unverified guest'])
 
+    def test_staff_can_feature_unverified_and_change_verification_without_unfeaturing(self):
+        testimonial = Testimonial.objects.create(
+            full_name='Guest', email='private@example.com', message='Great trip.', is_verified=False,
+        )
+        self.client.force_authenticate(user=self.staff_user)
+        url = f'/api/testimonials/{testimonial.id}/'
+
+        featured = self.client.patch(url, {'is_featured': True}, format='json')
+        self.assertEqual(featured.status_code, status.HTTP_200_OK)
+        for endpoint in ('/api/testimonials/', '/api/testimonials/featured/'):
+            response = APIClient().get(endpoint)
+            items = response.data['results'] if isinstance(response.data, dict) else response.data
+            self.assertEqual(len(items), 1)
+            self.assertFalse(items[0]['is_verified'])
+            self.assertNotIn('email', items[0])
+            self.assertNotIn('booking', items[0])
+
+        for verified in (True, False):
+            response = self.client.patch(url, {'is_verified': verified}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.data['is_featured'])
+            self.assertEqual(APIClient().get('/api/testimonials/featured/').data[0]['is_verified'], verified)
+
+        self.client.force_authenticate(user=self.regular_user)
+        denied = self.client.patch(url, {'is_featured': False}, format='json')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.force_authenticate(user=self.staff_user)
+        self.client.patch(url, {'is_featured': False}, format='json')
+        self.assertEqual(APIClient().get('/api/testimonials/featured/').data, [])
+
     def test_settings_accept_domains_without_a_scheme(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.patch(
@@ -1294,6 +1324,131 @@ class BookingFlowTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Booking.objects.filter(pk=booking.pk).exists())
         self.assertFalse(Passenger.objects.filter(pk=passenger.pk).exists())
+
+
+class AdminBookingEditingTests(APITestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(username='editor', is_staff=True)
+        self.safari = Safari.objects.create(
+            title='Safari', description='Trip', location='Kenya', price='20000.00', visible=True,
+        )
+        self.departure = TripDeparture.objects.create(
+            safari=self.safari, start_date=timezone.localdate() + timedelta(days=10),
+            seats_total=5, price_kes=20000,
+        )
+        self.other = TripDeparture.objects.create(
+            safari=self.safari, start_date=timezone.localdate() + timedelta(days=20),
+            seats_total=3, price_kes=25000,
+        )
+        self.booking = Booking.objects.create(
+            departure=self.departure, full_name='Guest', email='guest@example.com',
+            phone='0712345678', payment_phone='254712345678', participant_count=2,
+            amount_kes=5000, booking_fee_kes=5000, full_amount_kes=40000,
+            balance_due_kes=35000, status=Booking.Status.CONFIRMED, mpesa_receipt='RECEIPT1',
+        )
+        self.passengers = [
+            Passenger.objects.create(booking=self.booking, full_name='Guest'),
+            Passenger.objects.create(booking=self.booking, full_name='Companion'),
+        ]
+        self.client.force_authenticate(user=self.staff)
+
+    def test_staff_sets_available_seats_and_pickup_without_losing_reservations(self):
+        response = self.client.patch(f'/api/departures/{self.departure.pk}/', {
+            'seats_available': 0, 'pickup_time': '6:30 AM', 'pickup_points': ['Nairobi'],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.departure.refresh_from_db()
+        self.assertEqual((self.departure.seats_total, self.departure.seats_available), (2, 0))
+        self.assertEqual(self.departure.pickup_time, '6:30 AM')
+        self.assertEqual(self.departure.pickup_points, ['Nairobi'])
+
+        response = self.client.patch(f'/api/departures/{self.other.pk}/', {'seats_available': 0}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.other.refresh_from_db()
+        self.assertEqual((self.other.seats_total, self.other.seats_available), (0, 0))
+
+    def test_departure_edits_enforce_staff_and_capacity(self):
+        self.client.force_authenticate(user=None)
+        response = self.client.patch(f'/api/departures/{self.departure.pk}/', {'seats_available': 4}, format='json')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.patch(f'/api/departures/{self.departure.pk}/', {'seats_total': 1}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.departure.refresh_from_db()
+        self.assertEqual(self.departure.seats_total, 5)
+
+    def test_available_seats_include_active_payment_holds(self):
+        Booking.objects.create(
+            departure=self.departure, full_name='Pending', email='pending@example.com',
+            phone='0712345678', payment_phone='254712345678', participant_count=1,
+            amount_kes=5000, status=Booking.Status.PENDING_PAYMENT,
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        response = self.client.patch(f'/api/departures/{self.departure.pk}/', {'seats_available': 4}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.departure.refresh_from_db()
+        self.assertEqual((self.departure.seats_total, self.departure.seats_available), (7, 4))
+
+    def test_booking_move_and_traveler_edit_preserves_payment(self):
+        response = self.client.patch(f'/api/bookings/{self.booking.pk}/edit-details/', {
+            'departure': self.other.pk, 'participant_count': 3, 'full_name': 'Updated Guest',
+            'passengers': [
+                {'id': self.passengers[0].pk, 'full_name': 'Updated Guest', 'phone': '0700000000'},
+                {'id': self.passengers[1].pk, 'full_name': 'Companion'},
+                {'full_name': 'Third guest', 'emergency_contact': 'Family'},
+            ],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.booking.refresh_from_db()
+        self.assertEqual((self.booking.departure_id, self.booking.participant_count), (self.other.pk, 3))
+        self.assertEqual((self.booking.amount_kes, self.booking.full_amount_kes, self.booking.balance_due_kes, self.booking.mpesa_receipt), (5000, 40000, 35000, 'RECEIPT1'))
+        self.assertEqual(self.booking.passengers.count(), 3)
+        self.departure.refresh_from_db()
+        self.other.refresh_from_db()
+        self.assertEqual((self.departure.seats_available, self.other.seats_available), (5, 0))
+
+    def test_booking_edits_reject_overbooking_invalid_passengers_and_financial_fields(self):
+        self.other.seats_total = 1
+        self.other.save()
+        url = f'/api/bookings/{self.booking.pk}/edit-details/'
+        response = self.client.patch(url, {'departure': self.other.pk}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.patch(url, {'passengers': [
+            {'id': self.passengers[0].pk, 'full_name': 'One'},
+            {'id': self.passengers[0].pk, 'full_name': 'Two'},
+        ]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.patch(url, {'amount_kes': 1}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.booking.refresh_from_db()
+        self.assertEqual((self.booking.departure_id, self.booking.amount_kes), (self.departure.pk, 5000))
+
+    def test_removing_traveler_releases_seat_and_notifies_waitlist(self):
+        with patch('api.booking_views.notify_waitlist_for_departure') as notify:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.patch(f'/api/bookings/{self.booking.pk}/edit-details/', {
+                    'participant_count': 1,
+                    'passengers': [{'id': self.passengers[0].pk, 'full_name': 'Guest'}],
+                }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(self.booking.passengers.count(), 1)
+        self.departure.refresh_from_db()
+        self.assertEqual(self.departure.seats_available, 4)
+        notify.assert_called_once_with(self.departure.pk)
+
+    def test_pending_or_late_payment_blocks_trip_changes_but_allows_contact_edits(self):
+        url = f'/api/bookings/{self.booking.pk}/edit-details/'
+        for booking_status in (Booking.Status.PENDING_PAYMENT, Booking.Status.PAYMENT_FAILED):
+            self.booking.status = booking_status
+            self.booking.checkout_request_id = 'checkout-id'
+            self.booking.save()
+            response = self.client.patch(url, {'departure': self.other.pk}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            response = self.client.patch(url, {'phone': '0700000000'}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.client.force_authenticate(user=None)
+        response = self.client.patch(url, {'phone': '0700000001'}, format='json')
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
 
 class PromoCodeTests(APITestCase):

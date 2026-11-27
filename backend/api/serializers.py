@@ -117,7 +117,7 @@ class DestinationSerializer(serializers.ModelSerializer):
 
 
 class TripDepartureSerializer(serializers.ModelSerializer):
-    seats_available = serializers.IntegerField(read_only=True)
+    seats_available = serializers.IntegerField(min_value=0, max_value=2147483647, required=False)
     safari_title = serializers.CharField(source='safari.title', read_only=True)
     booking_fee_kes = serializers.IntegerField(
         source='safari.booking_fee_kes',
@@ -149,6 +149,16 @@ class TripDepartureSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        if 'seats_available' in attrs:
+            if not self.instance:
+                raise serializers.ValidationError({'seats_available': 'Set total capacity when creating a departure.'})
+            if 'seats_total' in attrs:
+                raise serializers.ValidationError({'seats_available': 'Provide either available seats or total capacity, not both.'})
+            attrs['seats_total'] = self.instance.seats_taken + attrs.pop('seats_available')
+            if attrs['seats_total'] > 2147483647:
+                raise serializers.ValidationError({'seats_available': 'Total capacity is too large.'})
+        if self.instance and 'safari' in attrs and attrs['safari'].pk != self.instance.safari_id and self.instance.bookings.exists():
+            raise serializers.ValidationError({'safari': 'A departure with bookings cannot be moved to another safari.'})
         start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
         end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
         if start_date and end_date and end_date < start_date:
@@ -201,6 +211,37 @@ class PassengerSerializer(serializers.ModelSerializer):
         model = Passenger
         fields = ['id', 'full_name', 'phone', 'emergency_contact']
         read_only_fields = fields
+
+
+class BookingPassengerEditSerializer(serializers.Serializer):
+    id = serializers.IntegerField(required=False)
+    full_name = serializers.CharField(max_length=255)
+    phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    emergency_contact = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class BookingDetailsEditSerializer(serializers.Serializer):
+    departure = serializers.PrimaryKeyRelatedField(queryset=TripDeparture.objects.all(), required=False)
+    full_name = serializers.CharField(max_length=255, required=False)
+    email = serializers.EmailField(required=False)
+    phone = serializers.CharField(max_length=30, required=False)
+    participant_count = serializers.IntegerField(min_value=1, max_value=20, required=False)
+    passengers = BookingPassengerEditSerializer(many=True, required=False, allow_empty=False, max_length=20)
+
+    def validate(self, attrs):
+        booking = self.instance
+        count = attrs.get('participant_count', booking.participant_count)
+        passengers = attrs.get('passengers')
+        if count != booking.participant_count and passengers is None:
+            raise serializers.ValidationError({'passengers': 'Provide one passenger record per traveler.'})
+        if passengers is not None:
+            if len(passengers) != count:
+                raise serializers.ValidationError({'passengers': 'Provide one passenger record per traveler.'})
+            ids = [passenger['id'] for passenger in passengers if 'id' in passenger]
+            existing_ids = set(booking.passengers.values_list('id', flat=True))
+            if len(ids) != len(set(ids)) or not set(ids).issubset(existing_ids):
+                raise serializers.ValidationError({'passengers': 'Passenger IDs must be unique and belong to this booking.'})
+        return attrs
 
 
 class BookingSerializer(serializers.ModelSerializer):

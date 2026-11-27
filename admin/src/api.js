@@ -88,6 +88,7 @@ export const departuresApi = {
   },
   create: (data) => apiRequest('/departures/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PUT', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/departures/${id}/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/departures/${id}/`, { method: 'DELETE' }),
 };
 
@@ -102,6 +103,7 @@ export const bookingsApi = {
     return apiRequest(`/bookings/report/${queryString ? `?${queryString}` : ''}`);
   },
   cancel: (id) => apiRequest(`/bookings/${id}/`, { method: 'PATCH', body: { status: 'cancelled' } }),
+  editDetails: (id, data) => apiRequest(`/bookings/${id}/edit-details/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/bookings/${id}/`, { method: 'DELETE' }),
 };
 

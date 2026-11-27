@@ -108,7 +108,7 @@ class TripDeparture(models.Model):
         ordering = ['start_date']
         constraints = [
             models.UniqueConstraint(fields=['safari', 'start_date'], name='unique_safari_departure_date'),
-            models.CheckConstraint(check=Q(seats_total__gt=0), name='departure_seats_positive'),
+            models.CheckConstraint(check=Q(seats_total__gte=0), name='departure_seats_nonnegative'),
             models.CheckConstraint(check=Q(price_kes__gt=0), name='departure_price_positive'),
         ]
 

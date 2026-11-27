@@ -17,11 +17,15 @@ The admin Sales Reports page uses the staff-only `GET /api/bookings/report/` end
 
 Admins can set a flat reservation booking fee and terms on each safari. The booking fee is charged once per reservation; the departure's per-person price remains the full trip amount. Promo discounts apply to the full amount, and the M-Pesa prompt charges only the configured fee. A successful fee payment reserves the seats and leaves the discounted balance due for collection separately.
 
+Staff can edit departure dates, available seats, pickup details, pricing and booking availability, and edit booking contacts, travelers and departure. Setting seats left adjusts total capacity around existing reservations and payment holds. Moving a booking or changing its traveler count keeps its recorded prices and payment unchanged; staff must arrange any adjustment and notify travelers separately. Trip and traveler-count edits are blocked while a payment callback may still complete. New departure prices do not change existing bookings.
+
 Visitors can submit stories from The Simba Pulse. Public submissions are rate-limited and always enter pending review; staff must approve and publish them before they appear publicly.
 
 Newsletter signups can optionally provide a Kenyan mobile number and explicitly opt in to SMS updates. Staff can send subscriber updates by email, SMS, or both from the Subscribers page. Email delivery uses the configured SMTP settings, with a 15-second default connection timeout (`EMAIL_TIMEOUT`); SMS delivery uses Africa's Talking. Configure `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_ENVIRONMENT` (`sandbox` or `production`), and the optional `AFRICASTALKING_SENDER_ID` in the backend environment. Keep the API key private. SMS campaigns only target subscribers with recorded SMS consent and a valid phone number; provider charges may apply.
 
 The public Destinations page is managed from the admin Destinations section. Admins can update each card's copy, photos, optional starting price, home-page featuring, visibility, and linked safari packages. The initial destination catalog is created by the database migrations.
+
+Staff can feature up to six testimonials on the homepage, whether or not the traveler is verified. Verification is independent of featuring; only verified testimonials show a Verified badge. Public submissions remain hidden until staff feature them.
 
 The Railway Procfile applies pending migrations at startup. If you deploy with a different start command, run `python manage.py migrate` before serving traffic. Configure a daily Railway cron job to run:
 

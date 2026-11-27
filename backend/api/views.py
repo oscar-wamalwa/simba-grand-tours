@@ -499,7 +499,7 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         """Get all testimonials ordered by creation date."""
         queryset = Testimonial.objects.all()
         if not (self.request.user and self.request.user.is_staff):
-            queryset = queryset.filter(is_featured=True, is_verified=True)
+            queryset = queryset.filter(is_featured=True)
         return queryset.order_by('-created_at')
 
     def perform_update(self, serializer):
@@ -584,7 +584,7 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"[TESTIMONIAL] Fetching featured testimonials")
-        featured = Testimonial.objects.filter(is_featured=True, is_verified=True)
+        featured = Testimonial.objects.filter(is_featured=True)
         serializer = self.get_serializer(featured, many=True)
         logger.info(f"[TESTIMONIAL] Found {len(serializer.data)} featured testimonials")
         return Response(serializer.data)
