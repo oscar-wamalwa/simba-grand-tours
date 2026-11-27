@@ -201,13 +201,34 @@ a { text-decoration: none; color: inherit; }
 
 .btn-outline-full:hover { background: var(--gold-majesty); color: var(--savanna-black); }
 
-.btn-clear {
-  border-color: var(--gray-medium);
-  color: var(--text-light);
+.filter-reset-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
   margin-top: 8px;
+  padding: 12px 18px;
+  border: 1px solid rgba(173, 125, 35, 0.28);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fffdf8, #f8f2e5);
+  color: var(--savanna-black);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.btn-clear:hover { background: var(--gray-light); color: var(--text-dark); }
+.filter-reset-button svg { color: var(--deep-bronze); transition: transform 0.25s ease; }
+.filter-reset-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--gold-majesty);
+  background: linear-gradient(135deg, #f8edcf, #f2dfad);
+  box-shadow: 0 5px 14px rgba(173, 125, 35, 0.16);
+}
+.filter-reset-button:hover svg { transform: rotate(-35deg); }
+.filter-reset-button:focus-visible { outline: 3px solid var(--deep-bronze); outline-offset: 3px; }
 
 /* Hero Sections */
 .hero {

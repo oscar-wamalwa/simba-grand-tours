@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw } from 'lucide-react';
 import api from '../api';
 import { formatKes } from '../currency';
 
@@ -533,7 +533,10 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
             />
             <div className="range-labels"><span>{formatKes(0)}</span><span>{formatKes(maxPrice)}</span></div>
           </div>
-          <button className="btn-outline-full btn-clear" onClick={clearFilters}>Clear Filters</button>
+          <button type="button" className="filter-reset-button" onClick={clearFilters}>
+            <RotateCcw size={16} aria-hidden="true" />
+            Clear filters
+          </button>
         </aside>
 
         <main className="listing-grid-main">
