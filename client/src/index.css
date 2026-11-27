@@ -1426,9 +1426,9 @@ a { text-decoration: none; color: inherit; }
   .footer-cta h2, .footer-cta > p { width: 100%; }
   .newsletter-box { width: 100%; max-width: 400px; margin-inline: auto; justify-content: center; }
   .newsletter-subscribe-form { width: 100%; max-width: 100%; }
-  .newsletter-sms-consent { display: block; width: 100%; min-width: 0; text-align: center; }
-  .newsletter-sms-consent input { display: inline-block; vertical-align: top; margin: 2px 8px 0 0; }
-  .newsletter-sms-consent span { display: inline; min-width: 0; overflow-wrap: anywhere; }
+  .newsletter-sms-consent { display: flex; width: 100%; min-width: 0; text-align: left; }
+  .newsletter-box .newsletter-sms-consent input { flex: 0 0 16px; width: 16px; height: 16px; margin: 2px 0 0; padding: 0; }
+  .newsletter-sms-consent span { min-width: 0; overflow-wrap: anywhere; }
   .footer-links { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .footer-column { width: 100%; min-width: 0; align-items: center; text-align: center; }
   .footer-contact-link { width: auto; margin-inline: auto; }
