@@ -6,6 +6,7 @@ from urllib.parse import parse_qs
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.mail.backends.smtp import EmailBackend
 from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
@@ -281,6 +282,30 @@ class SubscriberCampaignTests(APITestCase):
         )
         self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
+    @override_settings(DEFAULT_FROM_EMAIL='updates@example.com')
+    @patch('api.views.send_mail', side_effect=TimeoutError)
+    def test_email_campaign_reports_smtp_timeout(self, send_mail):
+        self.client.force_authenticate(user=self.staff_user)
+
+        response = self.client.post(
+            '/api/subscribers/send_update/',
+            {
+                'channel': 'email',
+                'subject': 'Safari updates',
+                'message': 'New trips are now available.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results']['email']['attempted'], 2)
+        self.assertEqual(response.data['results']['email']['failed'], 2)
+        self.assertEqual(
+            response.data['results']['email']['errors'],
+            ['Email provider failed to accept one or more messages.'],
+        )
+        self.assertEqual(send_mail.call_count, 2)
+
     def test_staff_can_add_phone_and_sms_consent_to_existing_subscriber(self):
         subscriber = Subscriber.objects.create(email='existing@example.com')
         self.client.force_authenticate(user=self.staff_user)
@@ -295,6 +320,23 @@ class SubscriberCampaignTests(APITestCase):
         self.assertEqual(response.data['phone'], '+254712345678')
         self.assertTrue(response.data['sms_opt_in'])
         self.assertIsNotNone(response.data['sms_opt_in_at'])
+
+
+class SmtpTimeoutTests(SimpleTestCase):
+    @override_settings(
+        EMAIL_HOST='smtp.example.com',
+        EMAIL_PORT=587,
+        EMAIL_USE_TLS=False,
+        EMAIL_TIMEOUT=15,
+    )
+    @patch('django.core.mail.backends.smtp.smtplib.SMTP')
+    def test_smtp_backend_uses_configured_connection_timeout(self, smtp):
+        backend = EmailBackend()
+        backend.open()
+
+        self.assertEqual(smtp.call_args.kwargs['timeout'], 15)
+
+        backend.close()
 
 
 class AfricaTalkingSmsTests(SimpleTestCase):
