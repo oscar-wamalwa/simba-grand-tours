@@ -1361,3 +1361,98 @@ a { text-decoration: none; color: inherit; }
   .custom-trip-fields { grid-template-columns: minmax(0, 1fr); }
 }
 
+@media (max-width: 768px) {
+  html, body, #root, .site-wrapper { width: 100%; max-width: 100%; min-width: 0; }
+  .container { width: 100%; max-width: 100%; min-width: 0; padding-inline: clamp(16px, 4.5vw, 24px); }
+  .section-padding { padding-block: clamp(44px, 7vw, 60px); }
+  .navbar, .nav-container, .nav-actions, .nav-logo { min-width: 0; }
+  .nav-actions .btn-gold { max-width: 140px; }
+
+  .hero { height: auto; min-height: clamp(340px, 56svh, 460px); max-height: none; padding: 56px 0; }
+  .hero-content { width: 100%; max-width: 760px; padding-inline: clamp(16px, 5vw, 24px); }
+  .hero-content h1 { font-size: clamp(2rem, 7.5vw, 2.8rem); line-height: 1.12; overflow-wrap: anywhere; text-wrap: balance; }
+  .hero-content p { max-width: 52ch; margin-inline: auto; font-size: clamp(1rem, 3.8vw, 1.1rem); line-height: 1.65; }
+
+  .listing-layout, .contact-layout { grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 22px; }
+  .listing-grid-main, .sidebar, .contact-sidebar, .contact-main { width: 100%; min-width: 0; }
+  .grid, .destination-grid, .destination-grid-home, .signature-grid, .testimonials-grid, .philosophy-grid, .features-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .service-card { min-width: 0; height: 100%; overflow-wrap: anywhere; }
+  .card, .destination-card, .sig-card, .testimonial-card, .feature-card { min-width: 0; }
+
+  .safari-detail { grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 0; }
+  .safari-detail-image img { width: 100%; min-height: 0; height: clamp(220px, 58vw, 360px); }
+  .safari-detail-body { min-width: 0; padding: clamp(20px, 5vw, 32px); }
+  .safari-detail-body h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); overflow-wrap: anywhere; }
+  .safari-photo-gallery > div, .safari-video-gallery > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .safari-photo-gallery img, .safari-video-gallery video { min-width: 0; }
+
+  .form-row.two-col, .story-submission-form .form-row { grid-template-columns: minmax(0, 1fr); }
+  .form-group, .form-group input, .form-group textarea, .booking-form, .booking-form label,
+  .booking-form input, .booking-form select, .booking-form textarea { width: 100%; min-width: 0; max-width: 100%; }
+  .booking-form, .custom-trip-fields { grid-template-columns: minmax(0, 1fr); }
+  .booking-summary > div { flex-wrap: wrap; }
+  .booking-summary > div > * { min-width: 0; overflow-wrap: anywhere; }
+  .departure-option { align-items: flex-start; flex-wrap: wrap; }
+  .custom-trip-inquiry { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: clamp(18px, 5vw, 28px); }
+
+  .contact-main, .contact-info-card, .service-detail-dialog, .departure-booking { min-width: 0; max-width: 100%; }
+  .contact-main { padding: clamp(20px, 5vw, 30px); }
+  .contact-direct-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contact-channel { min-width: 0; overflow-wrap: anywhere; }
+  .modal-overlay { padding: 14px; }
+  .modal-content { width: 100%; max-width: 550px; max-height: calc(100dvh - 28px); padding: 30px 22px; }
+  .seasonal-announcement { max-width: calc(100vw - 24px); }
+  .footer-column, .footer-bottom, .footer-legal-links { min-width: 0; overflow-wrap: anywhere; }
+  .footer, .footer > .container, .footer-cta, .footer-links, .footer-bottom { width: 100%; min-width: 0; }
+  .footer > .container { padding-inline: 16px; }
+  .footer-cta, .footer-links, .footer-bottom { text-align: center; }
+  .footer-cta { display: flex; flex-direction: column; align-items: center; }
+  .footer-cta h2, .footer-cta > p { width: 100%; }
+  .newsletter-box { width: 100%; max-width: 400px; margin-inline: auto; justify-content: center; }
+  .newsletter-subscribe-form { width: 100%; max-width: 100%; }
+  .newsletter-sms-consent { display: block; width: 100%; min-width: 0; text-align: center; }
+  .newsletter-sms-consent input { display: inline-block; vertical-align: top; margin: 2px 8px 0 0; }
+  .newsletter-sms-consent span { display: inline; min-width: 0; overflow-wrap: anywhere; }
+  .footer-links { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .footer-column { width: 100%; min-width: 0; align-items: center; text-align: center; }
+  .footer-contact-link { width: auto; margin-inline: auto; }
+  .social-icons, .footer-legal-links { justify-content: center; }
+  .footer-link { text-align: center; }
+  .footer-bottom { align-items: center; }
+}
+
+@media (max-width: 480px) {
+  .container { padding-inline: 16px; }
+  .section-padding { padding-block: 42px; }
+  .hero { min-height: 330px; padding-block: 48px; }
+  .hero-content h1 { font-size: clamp(1.8rem, 8vw, 2.2rem); }
+  .section-title, .contact-form-container h2 { font-size: 1.5rem; }
+  .services-grid { gap: 12px; }
+  .service-card { padding: 22px 14px; }
+  .service-title { font-size: 1rem; }
+  .service-description { font-size: 0.84rem; }
+  .contact-direct-options { grid-template-columns: minmax(0, 1fr); }
+  .contact-channel { padding: 14px; }
+  .modal-overlay { padding: 10px; }
+  .modal-content { max-height: calc(100dvh - 20px); padding: 28px 18px; }
+  .modal-close { top: 10px; right: 12px; }
+  .service-detail-overlay { padding: 12px; }
+  .service-detail-dialog { max-height: calc(100dvh - 24px); padding: 28px 20px; }
+  .departure-booking { margin: 24px 0; padding: 16px; }
+  .booking-summary { padding: 12px; }
+  .booking-summary > div { align-items: flex-start; }
+}
+
+@media (max-width: 360px) {
+  .nav-container { padding-inline: 10px; }
+  .nav-logo img { width: 50px !important; height: 50px !important; }
+  .nav-actions { gap: 6px; }
+  .nav-actions .btn-gold { padding: 8px; font-size: 0.7rem; }
+  .mobile-menu-btn { min-width: 36px; min-height: 36px; }
+  .services-grid { grid-template-columns: minmax(0, 1fr); }
+  .service-card { padding: 22px 18px; }
+}
+
