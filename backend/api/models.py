@@ -274,7 +274,7 @@ class Blog(models.Model):
     read_time = models.CharField(max_length=50, default='5 min read')
     publish_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    image = models.URLField(blank=True, null=True)
+    image = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -284,6 +284,34 @@ class Blog(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class BlogComment(models.Model):
+    """Reader response to a blog post, held for staff review before publication."""
+
+    STATUS_CHOICES = [
+        ('pending_review', 'Pending review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    blog = models.ForeignKey(Blog, related_name='comments', on_delete=models.CASCADE)
+    name = models.CharField(max_length=120)
+    email = models.EmailField(blank=True, default='')
+    content = models.TextField(max_length=5000)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending_review',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        db_table = 'blog_comments'
+
+    def __str__(self):
+        return f"Reply by {self.name} to {self.blog.title}"
 
 
 class Subscriber(models.Model):

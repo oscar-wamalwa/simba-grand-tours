@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.mail import get_connection, send_mail
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import AnonRateThrottle
 try:
     from rest_framework.response import Response
@@ -22,9 +23,19 @@ except Exception:
             # DRF's Response uses `safe=False` for non-dict JSON; keep that behaviour.
             super().__init__(data, status=status, safe=False, *args, **kwargs)
 from django.utils import timezone
-from .models import Booking, Destination, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
+from .models import (
+    Blog,
+    BlogComment,
+    Booking,
+    ContactMessage,
+    Destination,
+    Safari,
+    Settings,
+    Subscriber,
+    Testimonial,
+)
 from .serializers import (
-    DestinationSerializer, SafariSerializer, BlogSerializer, SubscriberSerializer,
+    BlogCommentSerializer, BlogSerializer, DestinationSerializer, SafariSerializer, SubscriberSerializer,
     ContactMessageSerializer, ContactMessageReplySerializer, SettingsSerializer,
     SubscriberUpdateSerializer, TestimonialSerializer
 )
@@ -34,10 +45,17 @@ logger = logging.getLogger(__name__)
 
 
 class PublicBlogSubmissionThrottle(AnonRateThrottle):
+    scope = 'public_blog_submission'
     rate = '5/hour'
 
 
+class PublicBlogCommentThrottle(AnonRateThrottle):
+    scope = 'public_blog_comment'
+    rate = '10/hour'
+
+
 class PublicSubscriberThrottle(AnonRateThrottle):
+    scope = 'public_subscriber'
     rate = '5/hour'
 
 
@@ -182,6 +200,36 @@ class BlogViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_at=timezone.now())
+
+
+class BlogCommentViewSet(viewsets.ModelViewSet):
+    """Moderate reader replies before they are shown with a published post."""
+
+    queryset = BlogComment.objects.select_related('blog').all()
+    serializer_class = BlogCommentSerializer
+    permission_classes = [StaffWritePermission]
+    public_read = True
+    public_create = True
+
+    def get_throttles(self):
+        if self.action == 'create' and not (self.request.user and self.request.user.is_staff):
+            return [PublicBlogCommentThrottle()]
+        return super().get_throttles()
+
+    def get_queryset(self):
+        queryset = BlogComment.objects.select_related('blog')
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(status='approved', blog__status='published')
+        blog_id = self.request.query_params.get('blog')
+        if blog_id:
+            queryset = queryset.filter(blog_id=blog_id)
+        return queryset.order_by('created_at')
+
+    def perform_create(self, serializer):
+        blog = serializer.validated_data['blog']
+        if blog.status != 'published':
+            raise ValidationError({'blog': 'Replies can only be added to published blog posts.'})
+        serializer.save(status='pending_review')
 
 
 class SubscriberViewSet(viewsets.ModelViewSet):

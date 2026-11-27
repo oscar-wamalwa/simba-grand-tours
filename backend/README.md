@@ -23,7 +23,7 @@ Newsletter signups can optionally provide a Kenyan mobile number and explicitly 
 
 The public Destinations page is managed from the admin Destinations section. Admins can update each card's copy, photos, optional starting price, home-page featuring, visibility, and linked safari packages. The initial destination catalog is created by the database migrations.
 
-Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
+The Railway Procfile applies pending migrations at startup. If you deploy with a different start command, run `python manage.py migrate` before serving traffic. Configure a daily Railway cron job to run:
 
 ```sh
 python manage.py send_trip_reminders

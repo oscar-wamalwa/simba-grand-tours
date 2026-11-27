@@ -14,6 +14,7 @@ from rest_framework.test import APITestCase, APIClient
 
 from .models import (
     Blog,
+    BlogComment,
     Booking,
     ContactMessage,
     Destination,
@@ -239,6 +240,97 @@ class PublicContentAccessTests(APITestCase):
         self.client.force_authenticate(user=None)
         published_titles = [blog['title'] for blog in self.client.get('/api/blogs/').data['results']]
         self.assertIn('A guest safari story', published_titles)
+
+    def test_blog_image_is_optional_and_accepts_valid_image_data(self):
+        image = (
+            'data:image/png;base64,'
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a0y8AAAAASUVORK5CYII='
+        )
+        without_image = self.client.post(
+            '/api/blogs/',
+            {
+                'title': 'A story without an image',
+                'author': 'Guest',
+                'content': 'This story does not need a picture.',
+            },
+            format='json',
+        )
+        self.assertEqual(without_image.status_code, status.HTTP_201_CREATED)
+        self.assertIn(without_image.data['image'], (None, ''))
+
+        response = self.client.post(
+            '/api/blogs/',
+            {
+                'title': 'A story with an optional image',
+                'author': 'Guest',
+                'content': 'Paragraph one.\n\nParagraph two.',
+                'image': image,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['image'], image)
+        self.assertEqual(response.data['status'], 'pending_review')
+
+    def test_public_blog_replies_require_staff_approval(self):
+        blog = Blog.objects.get(title='Published story')
+        response = self.client.post(
+            '/api/blog-comments/',
+            {
+                'blog': blog.id,
+                'name': 'Reader',
+                'email': 'reader@example.com',
+                'content': 'A helpful reply.',
+                'status': 'approved',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], 'pending_review')
+        self.assertNotIn('email', response.data)
+        self.assertEqual(
+            self.client.get('/api/blog-comments/', {'blog': blog.id}).data['results'],
+            [],
+        )
+
+        staff_user = get_user_model().objects.create_user(
+            username='reply-approver',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_user)
+        staff_comments = self.client.get('/api/blog-comments/').data['results']
+        self.assertEqual(len(staff_comments), 1)
+        self.assertEqual(staff_comments[0]['email'], 'reader@example.com')
+
+        approval = self.client.patch(
+            f"/api/blog-comments/{response.data['id']}/",
+            {'status': 'approved'},
+            format='json',
+        )
+        self.assertEqual(approval.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=None)
+        public_comments = self.client.get('/api/blog-comments/', {'blog': blog.id}).data['results']
+        self.assertEqual([comment['content'] for comment in public_comments], ['A helpful reply.'])
+        self.assertNotIn('email', public_comments[0])
+
+    def test_public_cannot_reply_to_unpublished_blog(self):
+        draft = Blog.objects.get(title='Draft story')
+        response = self.client.post(
+            '/api/blog-comments/',
+            {
+                'blog': draft.id,
+                'name': 'Reader',
+                'content': 'A reply to a draft.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(BlogComment.objects.exists())
 
     def test_public_reviews_require_a_confirmed_booking_and_matching_email(self):
         safari = Safari.objects.create(

@@ -147,6 +147,16 @@ export const blogsApi = {
   delete: (id) => apiRequest(`/blogs/${id}/`, { method: 'DELETE' }),
 };
 
+export const blogCommentsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/blog-comments/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  partialUpdate: (id, data) => apiRequest(`/blog-comments/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/blog-comments/${id}/`, { method: 'DELETE' }),
+};
+
 // Subscriber API
 export const subscribersApi = {
   getAll: async (params = {}) => {
@@ -220,6 +230,7 @@ export default {
   announcements: announcementsApi,
   waitlist: waitlistApi,
   blogs: blogsApi,
+  blogComments: blogCommentsApi,
   subscribers: subscribersApi,
   messages: messagesApi,
   testimonials: testimonialsApi,

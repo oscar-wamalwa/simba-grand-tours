@@ -2,6 +2,10 @@
 Django REST Framework serializers for Simba Grand Tours API.
 """
 
+import base64
+import binascii
+import re
+
 try:
     from rest_framework import serializers
 except Exception:  # pragma: no cover - fallback for environments without DRF
@@ -13,11 +17,14 @@ except Exception:  # pragma: no cover - fallback for environments without DRF
 
 from urllib.parse import urlparse
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import URLValidator
 from django.utils import timezone
 
 from .models import (
     Booking,
     Blog,
+    BlogComment,
     ContactMessage,
     Destination,
     Passenger,
@@ -271,6 +278,13 @@ class PromoCodeSerializer(serializers.ModelSerializer):
 
 class BlogSerializer(serializers.ModelSerializer):
     """Serializer for Blog model."""
+
+    image = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=2_000_000,
+    )
     
     class Meta:
         model = Blog
@@ -280,6 +294,63 @@ class BlogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate_image(self, value):
+        if not value:
+            return value
+
+        if value.startswith('data:'):
+            match = re.fullmatch(
+                r'data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})',
+                value,
+            )
+            if not match:
+                raise serializers.ValidationError(
+                    'Use a JPEG, PNG, or WebP image file.'
+                )
+            try:
+                image_data = base64.b64decode(match.group(2), validate=True)
+            except (binascii.Error, ValueError) as error:
+                raise serializers.ValidationError('The image data is invalid.') from error
+
+            if len(image_data) > 1_500_000:
+                raise serializers.ValidationError('The image must be under 1.5 MB.')
+
+            image_type = match.group(1)
+            valid_signature = {
+                'jpeg': image_data.startswith(b'\xff\xd8\xff'),
+                'png': image_data.startswith(b'\x89PNG\r\n\x1a\n'),
+                'webp': image_data.startswith(b'RIFF') and image_data[8:12] == b'WEBP',
+            }[image_type]
+            if not valid_signature:
+                raise serializers.ValidationError('The image content does not match its file type.')
+            return value
+
+        if value.startswith('/') and not value.startswith('//'):
+            return value
+        try:
+            URLValidator(schemes=['http', 'https'])(value)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError('Enter an HTTP or HTTPS image URL.') from error
+        return value
+
+
+class BlogCommentSerializer(serializers.ModelSerializer):
+    """Serializer for reader replies to blog posts."""
+
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    class Meta:
+        model = BlogComment
+        fields = ['id', 'blog', 'name', 'email', 'content', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get('request')
+        if request and not (request.user and request.user.is_staff):
+            fields['email'].write_only = True
+            fields['status'].read_only = True
+        return fields
 
 class SubscriberSerializer(serializers.ModelSerializer):
     """Serializer for Subscriber model."""

@@ -1,11 +1,60 @@
 import { useEffect, useState } from 'react';
-import { MapPin, PenLine, Send } from 'lucide-react';
+import { MapPin, PenLine, Send, X } from 'lucide-react';
 import api from '../api';
+
+const MAX_BLOG_IMAGE_DATA_LENGTH = 2_000_000;
+
+const getBlogParagraphs = (content) => String(content || '')
+  .trim()
+  .split(/\r?\n\s*\r?\n/)
+  .filter(paragraph => paragraph.trim());
+
+const prepareBlogImage = async (file) => {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('Choose a JPEG, PNG, or WebP image.');
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('Choose an image smaller than 10 MB.');
+  }
+
+  const source = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.readAsDataURL(file);
+  });
+  const image = new Image();
+  image.src = source;
+  await image.decode();
+
+  const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not prepare the selected image.');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  if (dataUrl.length > MAX_BLOG_IMAGE_DATA_LENGTH) {
+    throw new Error('The image is too large after compression. Choose a smaller image.');
+  }
+  return dataUrl;
+};
 
 const PulsePage = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedBlog, setExpandedBlog] = useState(null);
+  const [commentsOpenBlog, setCommentsOpenBlog] = useState(null);
+  const [commentsByBlog, setCommentsByBlog] = useState({});
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentForm, setCommentForm] = useState({ name: '', email: '', content: '' });
+  const [commentError, setCommentError] = useState('');
+  const [commentSuccess, setCommentSuccess] = useState('');
   const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const [submission, setSubmission] = useState({
     title: '',
@@ -13,10 +62,73 @@ const PulsePage = () => {
     location: '',
     category: 'Safari Story',
     content: '',
+    image: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState('');
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setSubmissionError('');
+    try {
+      const image = await prepareBlogImage(file);
+      setSubmission(prev => ({ ...prev, image }));
+    } catch (error) {
+      setSubmissionError(error.message || 'Could not prepare the selected image.');
+    }
+  };
+
+  const loadComments = async (blogId) => {
+    setCommentsLoading(true);
+    setCommentError('');
+    try {
+      const comments = await api.blogComments.getAll({ blog: blogId });
+      setCommentsByBlog(prev => ({ ...prev, [blogId]: comments }));
+    } catch (error) {
+      setCommentError(error.message || 'Could not load replies. Please try again.');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const toggleComments = (blogId) => {
+    if (commentsOpenBlog === blogId) {
+      setCommentsOpenBlog(null);
+      setCommentError('');
+      setCommentSuccess('');
+      return;
+    }
+    setCommentsOpenBlog(blogId);
+    setCommentForm({ name: '', email: '', content: '' });
+    setCommentError('');
+    setCommentSuccess('');
+    loadComments(blogId);
+  };
+
+  const submitComment = async (event, blogId) => {
+    event.preventDefault();
+    setCommentSubmitting(true);
+    setCommentError('');
+    setCommentSuccess('');
+    try {
+      await api.blogComments.create({
+        blog: blogId,
+        name: commentForm.name.trim(),
+        email: commentForm.email.trim(),
+        content: commentForm.content.trim(),
+      });
+      setCommentForm({ name: '', email: '', content: '' });
+      setCommentSuccess('Your reply was sent for review and will appear after approval.');
+    } catch (error) {
+      setCommentError(error.message || 'Could not submit your reply. Please try again.');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -83,6 +195,7 @@ const PulsePage = () => {
         location: '',
         category: 'Safari Story',
         content: '',
+        image: '',
       });
       setShowSubmissionForm(false);
       setSubmissionSuccess('Thank you! Your story has been submitted for review before publication.');
@@ -194,9 +307,33 @@ const PulsePage = () => {
                   onChange={event => setSubmission(prev => ({ ...prev, content: event.target.value }))}
                   rows={8}
                   maxLength={20000}
+                  placeholder="Write your story. Leave a blank line between paragraphs."
                   required
                 />
               </label>
+              <div className="story-image-field">
+                <label htmlFor="story-image-upload">Optional story image</label>
+                <input
+                  id="story-image-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                />
+                <small>Your image will be reviewed by our team before the story is published.</small>
+                {submission.image && (
+                  <div className="story-image-preview">
+                    <img src={submission.image} alt="Selected story preview" />
+                    <button
+                      type="button"
+                      className="story-image-remove"
+                      onClick={() => setSubmission(prev => ({ ...prev, image: '' }))}
+                      aria-label="Remove selected story image"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
               {submissionError && <p className="story-submission-feedback error" role="alert">{submissionError}</p>}
               <button type="submit" className="story-action-btn story-action-btn-submit" disabled={submitting}>
                 <Send size={17} />
@@ -214,30 +351,99 @@ const PulsePage = () => {
           ) : (
             blogs.map(blog => (
               <div key={blog.id} className="blog-card">
-                <div className="blog-card-image">
-                  <img 
-                    src={blog.image || '/images/simbagrandtours.jpg'} 
-                    alt={blog.title}
-                    loading="lazy"
-                    width="400"
-                    height="200"
-                  />
-                  <span className="blog-category">{blog.category || 'Safari Story'}</span>
-                </div>
+                {blog.image && (
+                  <div className="blog-card-image">
+                    <img
+                      src={blog.image}
+                      alt={blog.title}
+                      loading="lazy"
+                      width="400"
+                      height="200"
+                    />
+                    <span className="blog-category">{blog.category || 'Safari Story'}</span>
+                  </div>
+                )}
                 <div className="blog-card-body">
+                  {!blog.image && <span className="blog-category blog-category-inline">{blog.category || 'Safari Story'}</span>}
                   <div className="blog-meta">
                     <span className="blog-author">{blog.author}</span>
                     <span className="blog-location"><MapPin size={14} aria-hidden="true" /> {blog.location}</span>
                   </div>
-                  <div className="blog-date" style={{ marginBottom: '10px' }}>{formatDate(blog.createdAt)}</div>
+                  <div className="blog-date" style={{ marginBottom: '10px' }}>{formatDate(blog)}</div>
                   <h3 className="blog-title">{blog.title}</h3>
-                  <p className="blog-excerpt">
-                    {expandedBlog === blog.id ? blog.content : `${blog.content?.substring(0, 150)}...`}
-                  </p>
+                  {expandedBlog === blog.id ? (
+                    <div className="blog-excerpt blog-paragraphs">
+                      {getBlogParagraphs(blog.content).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+                    </div>
+                  ) : (
+                    <p className="blog-excerpt" style={{ whiteSpace: 'pre-wrap' }}>
+                      {`${blog.content?.substring(0, 150)}...`}
+                    </p>
+                  )}
                   {blog.content?.length > 150 && (
                     <button className="btn-outline-full" onClick={() => setExpandedBlog(expandedBlog === blog.id ? null : blog.id)}>
                       {expandedBlog === blog.id ? 'Show Less' : 'Read More'}
                     </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-outline-full blog-replies-toggle"
+                    onClick={() => toggleComments(blog.id)}
+                  >
+                    {commentsOpenBlog === blog.id ? 'Close replies' : 'Read replies or reply'}
+                  </button>
+                  {commentsOpenBlog === blog.id && (
+                    <section className="blog-replies" aria-label={`Replies to ${blog.title}`}>
+                      {commentsLoading ? (
+                        <p>Loading approved replies...</p>
+                      ) : commentsByBlog[blog.id]?.length ? (
+                        commentsByBlog[blog.id].map(comment => (
+                          <article className="blog-reply" key={comment.id}>
+                            <strong>{comment.name}</strong>
+                            <p>{comment.content}</p>
+                            <small>{formatDate(comment.created_at)}</small>
+                          </article>
+                        ))
+                      ) : (
+                        <p>No approved replies yet.</p>
+                      )}
+                      <form onSubmit={event => submitComment(event, blog.id)} className="blog-reply-form">
+                        <h4>Leave a reply</h4>
+                        <label>
+                          Your name
+                          <input
+                            value={commentForm.name}
+                            onChange={event => setCommentForm(prev => ({ ...prev, name: event.target.value }))}
+                            maxLength={120}
+                            required
+                          />
+                        </label>
+                        <label>
+                          Email (optional, not shown publicly)
+                          <input
+                            type="email"
+                            value={commentForm.email}
+                            onChange={event => setCommentForm(prev => ({ ...prev, email: event.target.value }))}
+                          />
+                        </label>
+                        <label>
+                          Your reply
+                          <textarea
+                            value={commentForm.content}
+                            onChange={event => setCommentForm(prev => ({ ...prev, content: event.target.value }))}
+                            maxLength={5000}
+                            rows={4}
+                            required
+                          />
+                        </label>
+                        {commentError && <p className="story-submission-feedback error" role="alert">{commentError}</p>}
+                        {commentSuccess && <p className="story-submission-feedback success" role="status">{commentSuccess}</p>}
+                        <button className="story-action-btn story-action-btn-submit" type="submit" disabled={commentSubmitting}>
+                          <Send size={17} />
+                          {commentSubmitting ? 'Submitting...' : 'Submit reply for review'}
+                        </button>
+                      </form>
+                    </section>
                   )}
                 </div>
               </div>

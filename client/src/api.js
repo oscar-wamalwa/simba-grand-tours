@@ -92,6 +92,15 @@ export const blogsApi = {
   create: (data) => apiRequest('/blogs/', { method: 'POST', body: data }),
 };
 
+export const blogCommentsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/blog-comments/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/blog-comments/', { method: 'POST', body: data }),
+};
+
 // Subscriber API
 export const subscribersApi = {
   create: (data) => apiRequest('/subscribers/', { method: 'POST', body: data }),
@@ -131,6 +140,7 @@ export default {
   waitlist: waitlistApi,
   announcements: announcementsApi,
   blogs: blogsApi,
+  blogComments: blogCommentsApi,
   subscribers: subscribersApi,
   messages: messagesApi,
   testimonials: testimonialsApi,

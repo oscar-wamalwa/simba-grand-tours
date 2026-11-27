@@ -11,7 +11,16 @@ except ImportError as e:
 	) from e
 
 from django.urls import path
-from .views import DestinationViewSet, SafariViewSet, BlogViewSet, SubscriberViewSet, ContactMessageViewSet, SettingsViewSet, TestimonialViewSet
+from .views import (
+    BlogCommentViewSet,
+    BlogViewSet,
+    ContactMessageViewSet,
+    DestinationViewSet,
+    SafariViewSet,
+    SettingsViewSet,
+    SubscriberViewSet,
+    TestimonialViewSet,
+)
 from .booking_views import (
     BookingCreateView,
     BookingStatusView,
@@ -32,6 +41,7 @@ router.register(r'announcements', TripAnnouncementViewSet, basename='announcemen
 router.register(r'destinations', DestinationViewSet, basename='destination')
 router.register(r'safaris', SafariViewSet, basename='safari')
 router.register(r'blogs', BlogViewSet, basename='blog')
+router.register(r'blog-comments', BlogCommentViewSet, basename='blog-comment')
 router.register(r'subscribers', SubscriberViewSet, basename='subscriber')
 router.register(r'contact-messages', ContactMessageViewSet, basename='contact-message')
 router.register(r'testimonials', TestimonialViewSet, basename='testimonial')

@@ -1,6 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Calendar, Upload, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Calendar, Upload, X, BookOpen, CheckCircle } from 'lucide-react';
+
+const MAX_BLOG_IMAGE_DATA_LENGTH = 2_000_000;
+
+const prepareBlogImage = async (file) => {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('Choose a JPEG, PNG, or WebP image.');
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('Choose an image smaller than 10 MB.');
+  }
+
+  const source = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.readAsDataURL(file);
+  });
+  const image = new Image();
+  image.src = source;
+  await image.decode();
+
+  const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(image.naturalWidth * scale);
+  canvas.height = Math.round(image.naturalHeight * scale);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not prepare the selected image.');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  if (dataUrl.length > MAX_BLOG_IMAGE_DATA_LENGTH) {
+    throw new Error('The image is too large after compression. Choose a smaller image.');
+  }
+  return dataUrl;
+};
+
+const renderParagraphs = (content) => {
+  const paragraphs = String(content || '').trim().split(/\r?\n\s*\r?\n/).filter(paragraph => paragraph.trim());
+  return paragraphs.length
+    ? paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
+    : <p>No content provided.</p>;
+};
 
 // Hide icon component
 const HideIcon = ({ size = 16, style = {} }) => (
@@ -12,13 +56,19 @@ const HideIcon = ({ size = 16, style = {} }) => (
 
 export default function BlogsView({ onRefresh }) {
   const [blogs, setBlogs] = useState([]);
+  const [comments, setComments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [selectedBlog, setSelectedBlog] = useState(null);
+  const [commentError, setCommentError] = useState('');
 
   const categories = ['Safari Story', 'Travel Tips', 'Wildlife Update', 'Conservation', 'Guest Post'];
 
-  useEffect(() => { fetchBlogs(); }, []);
+  useEffect(() => {
+    fetchBlogs();
+    fetchComments();
+  }, []);
 
   const fetchBlogs = async () => {
     try {
@@ -26,6 +76,17 @@ export default function BlogsView({ onRefresh }) {
       setBlogs(data.map(d => ({ id: d.id, ...d })));
     } catch (e) {
       console.error('Error fetching blogs:', e);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const data = await api.blogComments.getAll();
+      setComments(data);
+      setCommentError('');
+    } catch (error) {
+      console.error('Error fetching blog replies:', error);
+      setCommentError('Could not load reader replies. Please refresh and try again.');
     }
   };
 
@@ -47,9 +108,21 @@ export default function BlogsView({ onRefresh }) {
       const newStatus = blog.status === 'published' ? 'draft' : 'published';
       await api.blogs.partialUpdate(blog.id, { status: newStatus });
       fetchBlogs();
+      setSelectedBlog(current => current?.id === blog.id ? { ...current, status: newStatus } : current);
       onRefresh && onRefresh();
     } catch (e) {
       console.error('Error updating blog status:', e);
+      alert(e.message || 'Could not update the blog status. Please try again.');
+    }
+  };
+
+  const moderateComment = async (comment, status) => {
+    try {
+      await api.blogComments.partialUpdate(comment.id, { status });
+      await fetchComments();
+    } catch (error) {
+      console.error('Error moderating blog reply:', error);
+      alert(error.message || 'Could not update the reply. Please try again.');
     }
   };
 
@@ -68,6 +141,7 @@ export default function BlogsView({ onRefresh }) {
     b.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.author?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const pendingComments = comments.filter(comment => comment.status === 'pending_review');
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -152,6 +226,9 @@ export default function BlogsView({ onRefresh }) {
                     </td>
                     <td>
                       <div className="table-actions">
+                        <button className="action-btn" onClick={() => setSelectedBlog(blog)} title="Read blog post" aria-label={`Read blog post: ${blog.title}`}>
+                          <BookOpen size={16} />
+                        </button>
                         <button className="action-btn" onClick={() => toggleStatus(blog)} title={
                           blog.status === 'published'
                             ? 'Unpublish'
@@ -170,6 +247,88 @@ export default function BlogsView({ onRefresh }) {
           </table>
         </div>
       </div>
+
+      <div className="data-card blog-comments-moderation">
+        <div className="data-card-header">
+          <h3>Reader Replies Pending Approval</h3>
+        </div>
+        {commentError && <p className="contact-reply-feedback error" role="alert">{commentError}</p>}
+        {!commentError && pendingComments.length === 0 ? (
+          <p className="blog-comments-empty">No reader replies are waiting for approval.</p>
+        ) : (
+          <div className="blog-comments-list">
+            {pendingComments.map(comment => {
+              const blog = blogs.find(item => String(item.id) === String(comment.blog));
+              return (
+                <article className="blog-comment-review" key={comment.id}>
+                  <div>
+                    <strong>{comment.name}</strong>
+                    <span> on </span>
+                    <strong>{blog?.title || 'Blog post'}</strong>
+                    <small>{formatDate(comment.created_at)}</small>
+                  </div>
+                  <p>{comment.content}</p>
+                  {comment.email && <small>Contact: {comment.email}</small>}
+                  <div className="blog-comment-review-actions">
+                    <button className="btn-primary" onClick={() => moderateComment(comment, 'approved')}>
+                      <CheckCircle size={16} /> Approve
+                    </button>
+                    <button className="btn-secondary" onClick={() => moderateComment(comment, 'rejected')}>
+                      <X size={16} /> Reject
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedBlog && (
+        <div className="modal-overlay show" onClick={() => setSelectedBlog(null)}>
+          <div className="modal blog-reading-modal" onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Read Blog Post</h3>
+              <button className="modal-close" onClick={() => setSelectedBlog(null)} aria-label="Close blog post">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <h2>{selectedBlog.title}</h2>
+              <p className="blog-reading-meta">
+                {selectedBlog.author || 'Anonymous'} · {selectedBlog.category || 'Uncategorized'} · {formatDate(selectedBlog.created_at)}
+              </p>
+              {selectedBlog.image && (
+                <img className="blog-reading-image" src={selectedBlog.image} alt={`Featured image for ${selectedBlog.title}`} />
+              )}
+              {selectedBlog.status === 'pending_review' && (
+                <p className="blog-review-note">
+                  Review the post and any submitted image. You can replace or remove the image before publishing.
+                </p>
+              )}
+              <div className="blog-reading-content">{renderParagraphs(selectedBlog.content)}</div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setSelectedBlog(null)}>Close</button>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setEditing(selectedBlog);
+                  setSelectedBlog(null);
+                  setShowEditor(true);
+                }}
+              >
+                <Edit2 size={16} /> Edit
+              </button>
+              {selectedBlog.status === 'pending_review' && (
+                <button className="btn-primary" onClick={() => toggleStatus(selectedBlog)}>
+                  <CheckCircle size={16} /> Approve and publish
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEditor && (
         <BlogEditorModal
@@ -217,25 +376,18 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
   }, [blog]);
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     try {
       setUploading(true);
-      
-      // Convert file to base64 for API upload
-      const reader = new FileReader();
-      const base64Data = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      
-      setForm(prev => ({ ...prev, image: base64Data }));
-      setPreviewImage(base64Data);
+      const image = await prepareBlogImage(file);
+      setForm(prev => ({ ...prev, image }));
+      setPreviewImage(image);
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Error uploading image. Please try again.');
+      alert(error.message || 'Error preparing the image. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -316,7 +468,10 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
           <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {/* Featured Image Upload */}
             <div className="form-group">
-              <label>Featured Image</label>
+              <label>Featured Image (optional)</label>
+              {blog?.status === 'pending_review' && (
+                <p className="blog-review-note">Review this client-submitted image before publishing. You can replace or remove it.</p>
+              )}
               <div className="image-upload-area">
                 {previewImage ? (
                   <div className="image-preview-container">
@@ -334,7 +489,7 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
                 )}
                 <input 
                   type="file" 
-                  accept="image/*" 
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleImageUpload} 
                   className="file-input" 
                   disabled={uploading}
@@ -420,14 +575,15 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
                   <button type="button" onClick={() => insertFormatting('<i>', '</i>')} title="Italic"><i>I</i></button>
                   <button type="button" onClick={() => insertFormatting('<h3>', '</h3>')} title="Heading"><b>H</b></button>
                   <button type="button" onClick={() => insertFormatting('<li>', '</li>')} title="List">•</button>
+                  <button type="button" onClick={() => insertFormatting('\n\n')} title="Start a new paragraph">Paragraph</button>
                   <span className="toolbar-divider"></span>
-                  <span className="toolbar-hint">Use {'<b>'} for bold, {'<h3>'} for headings, {'<li>'} for lists</span>
+                  <span className="toolbar-hint">Leave a blank line between paragraphs for clear spacing.</span>
                 </div>
                 <textarea
                   id="blog-content"
                   value={form.content}
                   onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder={"Write your blog content here... Use formatting tags like <b> for bold, <h3> for headings, and <li> for lists."}
+                  placeholder="Write your blog content here. Leave a blank line between paragraphs."
                   rows={15}
                   required
                 />
