@@ -50,6 +50,11 @@ function SafarisPage({
   });
   const [departures, setDepartures] = useState([]);
   const [departuresError, setDeparturesError] = useState('');
+  const [upcomingDepartures, setUpcomingDepartures] = useState([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(true);
+  const [upcomingError, setUpcomingError] = useState('');
+  const [upcomingActionError, setUpcomingActionError] = useState('');
+  const [openingDeparture, setOpeningDeparture] = useState(null);
   const [selectedDepartureId, setSelectedDepartureId] = useState('');
   const [bookingForm, setBookingForm] = useState({
     full_name: '',
@@ -105,6 +110,32 @@ function SafarisPage({
   }, [customTripService]);
 
   useEffect(() => {
+    if (selectedSafariId || !bookingsEnabled) return undefined;
+    let active = true;
+    const refreshUpcoming = () => api.departures.getUpcoming()
+      .then(data => {
+        if (active) {
+          setUpcomingDepartures(data);
+          setUpcomingError('');
+          setUpcomingLoading(false);
+        }
+      })
+      .catch(error => {
+        if (active) {
+          console.error('Could not load upcoming trips:', error);
+          setUpcomingError('Upcoming trips are temporarily unavailable. Please try again later.');
+          setUpcomingLoading(false);
+        }
+      });
+    refreshUpcoming();
+    const timer = window.setInterval(refreshUpcoming, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [selectedSafariId]);
+
+  useEffect(() => {
     if (!selectedSafariId) return undefined;
     let active = true;
     setDepartures([]);
@@ -153,6 +184,20 @@ function SafarisPage({
 
   const handlePriceChange = (event) => {
     setFilters(prev => ({ ...prev, priceRange: Number(event.target.value) }));
+  };
+
+  const openUpcomingSafari = async departure => {
+    setOpeningDeparture(departure.id);
+    setUpcomingActionError('');
+    try {
+      const safari = await api.safaris.getById(departure.safari);
+      onSelect('details', safari);
+    } catch (error) {
+      console.error('Could not load safari details:', error);
+      setUpcomingActionError('Could not open this safari. Please try again.');
+    } finally {
+      setOpeningDeparture(null);
+    }
   };
 
   const clearFilters = () => setFilters({
@@ -545,6 +590,34 @@ function SafarisPage({
           <p>From the endless plains of the Serengeti to the waterways of the Okavango Delta, our carefully curated safari tours offer unforgettable wildlife encounters tailored to your dreams.</p>
         </div>
       </header>
+
+      {bookingsEnabled && (
+        <section className="container upcoming-trips" aria-labelledby="upcoming-trips-title">
+          <h2 id="upcoming-trips-title" className="section-title">Upcoming trips</h2>
+          <p>Our next departures with available seats.</p>
+          {upcomingLoading && <p role="status">Loading upcoming trips...</p>}
+          {upcomingError && <p className="form-status error" role="alert">{upcomingError}</p>}
+          {upcomingActionError && <p className="form-status error" role="alert">{upcomingActionError}</p>}
+          {!upcomingLoading && !upcomingError && upcomingDepartures.length === 0 && (
+            <p>No upcoming trips with available seats yet. Contact us for a custom trip.</p>
+          )}
+          {!upcomingError && (
+            <div className="upcoming-trips-grid">
+              {upcomingDepartures.map(departure => (
+                <article className="upcoming-trip-card" key={departure.id}>
+                  <h3>{departure.safari_title}</h3>
+                  <p><CalendarDays size={16} aria-hidden="true" /> {new Date(`${departure.start_date}T00:00:00`).toLocaleDateString('en-KE', { dateStyle: 'medium' })}</p>
+                  <p><Users size={16} aria-hidden="true" /> {departure.seats_available} {departure.seats_available === 1 ? 'seat' : 'seats'} left</p>
+                  <p>{formatPrice(departure.price_kes)} per person</p>
+                  <button type="button" className="btn-gold-sm" disabled={openingDeparture !== null} onClick={() => openUpcomingSafari(departure)}>
+                    {openingDeparture === departure.id ? 'Loading...' : 'View safari'}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="container listing-layout section-padding">
         <aside className="sidebar">

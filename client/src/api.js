@@ -59,11 +59,27 @@ export const destinationsApi = {
   },
 };
 
+async function getDeparturePages(params, include, limit = Infinity) {
+  let query = new URLSearchParams(params).toString();
+  const seen = new Set();
+  const departures = [];
+  do {
+    if (seen.has(query)) throw new Error('Departure pagination returned a repeated page.');
+    seen.add(query);
+    const response = await apiRequest(`/departures/${query ? `?${query}` : ''}`);
+    const results = Array.isArray(response) ? response : response.results;
+    if (!Array.isArray(results)) throw new Error('Invalid departure list response.');
+    departures.push(...results.filter(include));
+    query = departures.length >= limit || Array.isArray(response) || !response.next
+      ? null
+      : new URL(response.next, API_BASE_URL + '/').search.slice(1);
+  } while (query !== null);
+  return departures.slice(0, limit);
+}
+
 export const departuresApi = {
-  getForSafari: async (safariId) => {
-    const response = await apiRequest(`/departures/?safari=${encodeURIComponent(safariId)}`);
-    return response.results || response;
-  },
+  getForSafari: (safariId) => getDeparturePages({ safari: safariId }, () => true),
+  getUpcoming: () => getDeparturePages({}, departure => departure.seats_available > 0, 4),
 };
 
 export const bookingsApi = {
