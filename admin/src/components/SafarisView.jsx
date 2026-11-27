@@ -35,6 +35,7 @@ export default function SafarisView({ onRefresh }) {
     pickup_points: [],
     packing_checklist: [],
     visible: true, 
+    is_open: true,
     isSignature: false,
   });
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -129,7 +130,7 @@ export default function SafarisView({ onRefresh }) {
       
       setShowModal(false);
       setEditing(null);
-      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false });
+      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false });
       fetchSafaris();
       onRefresh && onRefresh();
     } catch (error) { 
@@ -162,6 +163,18 @@ export default function SafarisView({ onRefresh }) {
     } catch (error) {
       console.error('Error updating visibility:', error);
       setActionError('Could not update safari visibility. Please try again.');
+    }
+  };
+
+  const toggleOpen = async (safari) => {
+    setActionError('');
+    try {
+      const updated = await api.safaris.partialUpdate(safari.id, { is_open: safari.is_open === false });
+      setSafaris(current => current.map(item => item.id === safari.id ? normalizeSafari(updated) : item));
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating open status:', error);
+      setActionError('Could not update the open/closed status. Please try again.');
     }
   };
 
@@ -201,6 +214,7 @@ export default function SafarisView({ onRefresh }) {
       pickup_points: s.pickup_points || [],
       packing_checklist: s.packing_checklist || [],
       visible: s.visible, 
+      is_open: s.is_open !== false,
       isSignature: s.isSignature ?? s.is_signature ?? false,
     });
     setImagePreviews((s.images || []).map(url => ({ url, isNew: false })));
@@ -241,7 +255,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, isSignature: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -251,17 +265,19 @@ export default function SafarisView({ onRefresh }) {
 
       <div className="data-table-wrapper">
         <table className="data-table">
-          <thead><tr><th>Title</th><th>Location</th><th>Status</th><th>Signature</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Title</th><th>Location</th><th>Status</th><th>Bookings</th><th>Signature</th><th>Actions</th></tr></thead>
           <tbody>
             {filtered.map(safari => (
               <tr key={safari.id}>
                 <td><p className="safari-title">{safari.title}</p></td>
                 <td><p className="safari-location">{safari.location}</p></td>
                 <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
+                <td><span className={`status-badge ${safari.is_open === false ? 'archived' : 'active'}`}>{safari.is_open === false ? 'Closed' : 'Open'}</span></td>
                 <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
                 <td>
                   <div className="table-actions">
                     <button className="action-btn" onClick={() => toggleVisibility(safari)} title={safari.visible ? 'Hide' : 'Show'}>{safari.visible ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                    <button className="action-btn" onClick={() => toggleOpen(safari)}>{safari.is_open === false ? 'Open trip' : 'Close trip'}</button>
                     <button className="action-btn signature-btn" onClick={() => toggleSignature(safari)} style={{ color: safari.isSignature ? 'var(--gold-majesty)' : 'var(--gray-dark)' }}>
                       <Star size={16} fill={safari.isSignature ? 'currentColor' : 'none'} />
                     </button>
@@ -352,6 +368,12 @@ export default function SafarisView({ onRefresh }) {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input type="checkbox" checked={form.visible} onChange={e => setForm({ ...form, visible: e.target.checked })} style={{ width: 'auto' }} />
                     Visible on website
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input type="checkbox" checked={form.is_open !== false} onChange={e => setForm({ ...form, is_open: e.target.checked })} style={{ width: 'auto' }} />
+                    Open for bookings (untick to show "Closed" and disable the trip card)
                   </label>
                 </div>
                 {/* Image Upload Section */}

@@ -1482,3 +1482,10 @@ a { text-decoration: none; color: inherit; }
   .service-card { padding: 22px 18px; }
 }
 
+
+.card-body > .trip-status { display: inline-block; margin: 12px 12px 0 0; padding: 3px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; color: #fff; }
+.card-body > .trip-status.open { background: #1f8a4c; }
+.card-body > .trip-status.closed { background: #b3261e; }
+.card.card-closed { opacity: 0.5; filter: grayscale(0.8); cursor: not-allowed; }
+.card.card-closed * { pointer-events: none; }
+.card.card-closed .btn-gold-sm { cursor: not-allowed; }

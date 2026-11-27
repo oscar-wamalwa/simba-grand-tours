@@ -681,7 +681,12 @@ function SafarisPage({
           ) : (
             <div className="grid">
               {filteredSafaris.map(safari => (
-                <div key={safari.id} className="card" onClick={() => onSelect('details', safari)}>
+                <div
+                  key={safari.id}
+                  className={`card${safari.is_open === false ? ' card-closed' : ''}`}
+                  aria-disabled={safari.is_open === false}
+                  onClick={() => safari.is_open !== false && onSelect('details', safari)}
+                >
                   <div className="card-image">
                     <img 
                       src={safari.images?.[0] || safari.image || '/images/simbagrandtours.jpg'} 
@@ -704,8 +709,9 @@ function SafarisPage({
                     <p className="location"><MapPin size={15} aria-hidden="true" /> {safari.location || 'Africa'}</p>
                     <div className="card-footer">
                       <span className="price">{formatPrice(safari.price)}</span>
-                      <button className="btn-gold-sm">View Details</button>
                     </div>
+                    <span className={`trip-status ${safari.is_open === false ? 'closed' : 'open'}`}>{safari.is_open === false ? 'Closed' : 'Open'}</span>
+                    <button className="btn-gold-sm" disabled={safari.is_open === false}>View Details</button>
                   </div>
                 </div>
               ))}

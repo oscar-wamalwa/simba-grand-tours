@@ -951,6 +951,18 @@ class BookingFlowTests(APITestCase):
             ],
         }
 
+    def test_closed_safari_is_listed_but_cannot_be_booked(self):
+        self.safari.is_open = False
+        self.safari.save()
+
+        listing = self.client.get('/api/safaris/')
+        results = listing.data.get('results', listing.data)
+        self.assertFalse(next(item for item in results if item['id'] == self.safari.id)['is_open'])
+        departures = self.client.get('/api/departures/')
+        self.assertEqual(departures.data.get('results', departures.data), [])
+        response = self.client.post('/api/bookings/create/', self.booking_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     @override_settings(MPESA_CALLBACK_TOKEN='callback-secret')
     def test_booking_holds_seats_and_starts_kes_payment(self):
         with self.settings(MPESA_CALLBACK_TOKEN='callback-secret'):

@@ -58,7 +58,7 @@ class SafariSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'location', 'price', 'booking_fee_kes',
             'booking_terms', 'duration',
             'difficulty', 'images', 'videos', 'highlights', 'inclusions', 'exclusions',
-            'itinerary', 'visible', 'is_signature', 'trip_type', 'trip_mode',
+            'itinerary', 'visible', 'is_open', 'is_signature', 'trip_type', 'trip_mode',
             'county', 'pickup_points', 'packing_checklist', 'is_featured',
             'created_at', 'updated_at'
         ]
