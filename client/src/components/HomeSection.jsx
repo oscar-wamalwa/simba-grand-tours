@@ -1,13 +1,13 @@
-import { CheckCircle, Star } from 'lucide-react';
-import { formatKes } from '../currency';
+import { ArrowRight, CheckCircle, Star } from 'lucide-react';
+import DestinationCard from './DestinationCard';
 
 const homeBg = '/images/background.jpg';
 
-function HomeSection({ safaris, testimonials, onSelect, onShowReviewForm }) {
-  const signatureSafaris = safaris.filter(s => s.isSignature === true);
-  const displaySafaris = signatureSafaris.length > 0
-    ? signatureSafaris.slice(0, 3)
-    : safaris.slice(0, 3);
+function HomeSection({ destinations, testimonials, onSelect, onExploreDestination, onShowReviewForm }) {
+  const featuredDestinations = destinations.filter(destination => destination.featured_on_home);
+  const displayDestinations = featuredDestinations.length > 0
+    ? featuredDestinations
+    : destinations.slice(0, 3);
   const displayTestimonials = testimonials && testimonials.length > 0 ? testimonials : [];
 
   return (
@@ -25,37 +25,27 @@ function HomeSection({ safaris, testimonials, onSelect, onShowReviewForm }) {
         <h2 className="display-title">Your Journey into the Wild Begins Here</h2>
         <p className="intro-text">At Simba Grand Tours, we believe every safari should be a masterpiece. We craft bespoke adventures that immerse you in the beauty and rich cultures of Africa.</p>
         
-        <h3 className="section-subtitle">Our Signature Safari Experiences</h3>
+        <h3 className="section-subtitle">Our Grand Safaris</h3>
         
-        {displaySafaris.length === 0 ? (
+        {displayDestinations.length === 0 ? (
           <div className="no-results">
-            <p>No safari experiences available at the moment. Please check back soon!</p>
+            <p>Our destination experiences are being updated. Please check back soon.</p>
           </div>
         ) : (
-          <div className="signature-grid">
-            {displaySafaris.map(safari => (
-              <div key={safari.id} className="sig-card" onClick={() => onSelect('safaris', safari)}>
-                <div className="sig-card-image">
-                  <img 
-                    src={safari.images?.[0] || safari.image || '/images/simbagrandtours.jpg'} 
-                    alt={safari.title}
-                    loading="lazy"
-                    width="400"
-                    height="220"
-                  />
-                </div>
-                <div className="sig-body">
-                  <h3>{safari.title}</h3>
-                  <div className="sig-meta">
-                    <span className="gold-text">{formatKes(safari.price)}</span>
-                    <span className="duration">{safari.duration || '7 Days'}</span>
-                  </div>
-                  <button className="btn-outline-full">Learn More</button>
-                </div>
-              </div>
+          <div className="destination-grid destination-grid-home">
+            {displayDestinations.map(destination => (
+              <DestinationCard
+                key={destination.id}
+                destination={destination}
+                onExplore={onExploreDestination}
+                compact
+              />
             ))}
           </div>
         )}
+        <button className="btn-gold btn-large destinations-browse-button" onClick={() => onSelect('destinations')}>
+          Browse all destinations <ArrowRight size={18} />
+        </button>
       </section>
 
       <TestimonialsSection testimonials={displayTestimonials} onShowReviewForm={onShowReviewForm} />

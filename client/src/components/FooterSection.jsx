@@ -158,6 +158,7 @@ function FooterSection({ onNavigate, settings = {} }) {
             <h4>Quick Links</h4>
             <button className="footer-link" onClick={() => onNavigate('home')}>Home</button>
             <button className="footer-link" onClick={() => onNavigate('safaris')}>Safaris</button>
+            <button className="footer-link" onClick={() => onNavigate('destinations')}>Destinations</button>
             <button className="footer-link" onClick={() => onNavigate('pulse')}>The Simba Pulse</button>
             <button className="footer-link" onClick={() => onNavigate('services')}>Services</button>
             <button className="footer-link" onClick={() => onNavigate('about')}>About Us</button>

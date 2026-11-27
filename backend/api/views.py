@@ -22,9 +22,9 @@ except Exception:
             # DRF's Response uses `safe=False` for non-dict JSON; keep that behaviour.
             super().__init__(data, status=status, safe=False, *args, **kwargs)
 from django.utils import timezone
-from .models import Booking, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
+from .models import Booking, Destination, Safari, Blog, Subscriber, ContactMessage, Settings, Testimonial
 from .serializers import (
-    SafariSerializer, BlogSerializer, SubscriberSerializer,
+    DestinationSerializer, SafariSerializer, BlogSerializer, SubscriberSerializer,
     ContactMessageSerializer, ContactMessageReplySerializer, SettingsSerializer,
     SubscriberUpdateSerializer, TestimonialSerializer
 )
@@ -129,6 +129,19 @@ class SafariViewSet(viewsets.ModelViewSet):
         signature_safaris = Safari.objects.filter(is_signature=True, visible=True)[:3]
         serializer = self.get_serializer(signature_safaris, many=True)
         return Response(serializer.data)
+
+
+class DestinationViewSet(viewsets.ModelViewSet):
+    queryset = Destination.objects.all()
+    serializer_class = DestinationSerializer
+    permission_classes = [StaffWritePermission]
+    public_read = True
+
+    def get_queryset(self):
+        queryset = Destination.objects.all().prefetch_related('safaris')
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(visible=True)
+        return queryset.order_by('sort_order', 'name')
 
 
 class BlogViewSet(viewsets.ModelViewSet):

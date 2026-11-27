@@ -56,6 +56,38 @@ class Safari(models.Model):
         return self.title
 
 
+class Destination(models.Model):
+    CATEGORY_CHOICES = [
+        ('iconic_safaris', 'Iconic Safaris'),
+        ('beach_coastal_escapes', 'Beach & Coastal Escapes'),
+        ('rift_valley_weekenders', 'Rift Valley Weekenders'),
+        ('hidden_gems_road_trips', 'Hidden Gems & Road Trips'),
+    ]
+
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES)
+    badge = models.CharField(max_length=120, blank=True)
+    duration = models.CharField(max_length=100, blank=True)
+    hook = models.TextField()
+    highlights = models.JSONField(default=list, blank=True)
+    cta_label = models.CharField(max_length=120, blank=True)
+    starting_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    images = models.JSONField(default=list, blank=True)
+    safaris = models.ManyToManyField(Safari, related_name='destinations', blank=True)
+    visible = models.BooleanField(default=True)
+    featured_on_home = models.BooleanField(default=False)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class TripDeparture(models.Model):
     """A dated, capacity-limited departure of a safari package."""
 

@@ -5,6 +5,7 @@ import './admin.css';
 import {
   LayoutDashboard,
   Map,
+  MapPin,
   Users,
   MessageSquare,
   BarChart3,
@@ -22,6 +23,7 @@ import {
 import {
   DashboardView,
   SafarisView,
+  DestinationsView,
   SubscribersView,
   MessagesView,
   TestimoniesView,
@@ -35,6 +37,7 @@ import {
 const pageInfo = {
   dashboard: ['Dashboard', "Welcome back! Here's your website overview."],
   safaris: ['Safaris and Trips', 'Control which safari packages appear on the website.'],
+  destinations: ['Destinations', 'Manage destination cards, starting prices, photos, and linked safari packages.'],
   subscribers: ['Subscribers', 'View and manage newsletter subscribers.'],
   messages: ['Messages', 'View and respond to contact form submissions.'],
   testimonies: ['Testimonies', 'Choose reviews to feature on the website.'],
@@ -110,6 +113,7 @@ export default function AdminDashboard({ onLogout }) {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'safaris', icon: Map, label: 'Safaris and Trips' },
+    { id: 'destinations', icon: MapPin, label: 'Destinations' },
     { id: 'blogs', icon: FileText, label: 'The Simba Pulse' },
     { id: 'subscribers', icon: Users, label: 'Subscribers' },
     { id: 'messages', icon: MessageSquare, label: 'Messages' },
@@ -183,6 +187,7 @@ export default function AdminDashboard({ onLogout }) {
         <div className="admin-content">
           {currentPage === 'dashboard' && <DashboardView stats={stats} />}
           {currentPage === 'safaris' && <SafarisView onRefresh={fetchStats} />}
+          {currentPage === 'destinations' && <DestinationsView />}
           {currentPage === 'subscribers' && <SubscribersView />}
           {currentPage === 'messages' && <MessagesView />}
           {currentPage === 'testimonies' && <TestimoniesView />}

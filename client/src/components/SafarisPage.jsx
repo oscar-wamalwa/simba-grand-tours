@@ -6,7 +6,7 @@ import { formatKes } from '../currency';
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
 
-function SafarisPage({ safaris, onSelect, selectedSafari }) {
+function SafarisPage({ safaris, onSelect, selectedSafari, packageFilterIds = [] }) {
   const maxPrice = Math.max(800000, ...safaris.map(safari => Number(safari.price) || 0));
   const [filters, setFilters] = useState({
     destination: '',
@@ -466,13 +466,15 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
   });
 
   const filteredSafaris = sortedSafaris.filter(safari => {
+    const matchesDestinationPackages = packageFilterIds.length === 0
+      || packageFilterIds.includes(String(safari.id));
     const matchesDestination = !filters.destination
       || `${safari.location || ''} ${safari.county || ''}`.toLowerCase().includes(filters.destination.toLowerCase());
     const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
     const matchesDuration = !filters.duration || safari.duration === filters.duration;
     const matchesMode = !filters.tripMode || safari.trip_mode === filters.tripMode || safari.trip_mode === 'either';
     const matchesPrice = (safari.price || 0) <= filters.priceRange;
-    return matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
+    return matchesDestinationPackages && matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
   });
   const destinations = [...new Set(safaris.flatMap(safari => [safari.county, safari.location]).filter(Boolean))].sort();
   const tripTypes = [...new Set(safaris.map(safari => safari.trip_type).filter(Boolean))].sort();
@@ -541,7 +543,7 @@ function SafarisPage({ safaris, onSelect, selectedSafari }) {
 
         <main className="listing-grid-main">
           <div className="listings-header">
-            <h2 className="section-title">Our Premier Safari Tours</h2>
+            <h2 className="section-title">{packageFilterIds.length ? 'Packages for this Destination' : 'Our Premier Safari Tours'}</h2>
             <span className="results-count">{filteredSafaris.length} tours found</span>
           </div>
           

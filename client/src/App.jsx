@@ -6,6 +6,7 @@ import api from './api';
 // Lazy load page components - they only load when needed
 const HomeSection = lazy(() => import('./components/HomeSection'));
 const SafarisPage = lazy(() => import('./components/SafarisPage'));
+const DestinationsPage = lazy(() => import('./components/DestinationsPage'));
 const PulsePage = lazy(() => import('./components/PulsePage'));
 const ServicesPage = lazy(() => import('./components/ServicesPage'));
 const AboutPage = lazy(() => import('./components/AboutPage'));
@@ -28,7 +29,7 @@ const defaultSettings = {
 
 // Empty default safaris - data loaded from API only
 const defaultSafaris = [];
-const clientPages = new Set(['home', 'safaris', 'details', 'pulse', 'services', 'about', 'contact']);
+const clientPages = new Set(['home', 'safaris', 'details', 'destinations', 'pulse', 'services', 'about', 'contact']);
 
 // Loading fallback - instant render
 const LoadingFallback = () => (
@@ -62,6 +63,8 @@ export default function App() {
     return clientPages.has(savedPage) ? savedPage : 'home';
   });
   const [safaris, setSafaris] = useState(defaultSafaris);
+  const [destinations, setDestinations] = useState([]);
+  const [packageFilterIds, setPackageFilterIds] = useState([]);
   const [settings, setSettings] = useState(defaultSettings);
   const [testimonials, setTestimonials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -69,7 +72,7 @@ export default function App() {
   const [selectedSafariId, setSelectedSafariId] = useState(() => sessionStorage.getItem('clientSelectedSafariId'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const initialHistoryState = useRef({ page, safariId: selectedSafariId });
+  const initialHistoryState = useRef({ page, safariId: selectedSafariId, packageIds: [] });
 
   useEffect(() => {
     window.history.replaceState(
@@ -82,9 +85,11 @@ export default function App() {
       const state = event.state;
       const nextPage = state && clientPages.has(state.page) ? state.page : 'home';
       const nextSafariId = state?.safariId == null ? null : String(state.safariId);
+      const nextPackageIds = Array.isArray(state?.packageIds) ? state.packageIds.map(String) : [];
 
       setPage(nextPage);
       setSelectedSafariId(nextSafariId);
+      setPackageFilterIds(nextPackageIds);
       setSelectedSafari(current => (
         current && String(current.id) === nextSafariId ? current : null
       ));
@@ -135,6 +140,13 @@ export default function App() {
       }
 
       try {
+        const destinationsData = await api.destinations.getAll();
+        setDestinations(destinationsData);
+      } catch (err) {
+        console.error('Error fetching destinations:', err.message);
+      }
+
+      try {
         const settingsData = await api.settings.get();
         if (settingsData) {
           setSettings(prev => ({
@@ -173,18 +185,24 @@ export default function App() {
     };
   }, []);
 
-  const navigateTo = (pageName, safariData = null) => {
+  const navigateTo = (pageName, safariData = null, nextPackageIds = []) => {
     const safariId = safariData?.id == null ? null : String(safariData.id);
+    const packageIds = nextPackageIds.map(String);
     const currentState = window.history.state;
-    if (currentState?.page !== pageName || currentState?.safariId !== safariId) {
+    if (
+      currentState?.page !== pageName
+      || currentState?.safariId !== safariId
+      || JSON.stringify(currentState?.packageIds || []) !== JSON.stringify(packageIds)
+    ) {
       window.history.pushState(
-        { page: pageName, safariId },
+        { page: pageName, safariId, packageIds },
         '',
         window.location.href,
       );
     }
     setSelectedSafari(safariData);
     setSelectedSafariId(safariId);
+    setPackageFilterIds(packageIds);
     sessionStorage.setItem('clientCurrentPage', pageName);
     if (!safariId) {
       sessionStorage.removeItem('clientSelectedSafariId');
@@ -211,6 +229,7 @@ export default function App() {
           >
             <button className={`nav-link ${page === 'home' ? 'active' : ''}`} onClick={() => navigateTo('home')}>Home</button>
             <button className={`nav-link ${page === 'safaris' ? 'active' : ''}`} onClick={() => navigateTo('safaris')}>Safaris</button>
+            <button className={`nav-link ${page === 'destinations' ? 'active' : ''}`} onClick={() => navigateTo('destinations')}>Destinations</button>
             <button className={`nav-link ${page === 'pulse' ? 'active' : ''}`} onClick={() => navigateTo('pulse')}>The Simba Pulse</button>
             <button className={`nav-link ${page === 'services' ? 'active' : ''}`} onClick={() => navigateTo('services')}>Services</button>
             <button className={`nav-link ${page === 'about' ? 'active' : ''}`} onClick={() => navigateTo('about')}>About Us</button>
@@ -252,9 +271,10 @@ export default function App() {
       <Suspense fallback={<LoadingFallback />}>
         {page === 'home' && (
           <HomeSection 
-            safaris={safaris}
+            destinations={destinations}
             testimonials={testimonials}
             onSelect={navigateTo} 
+            onExploreDestination={destination => navigateTo('safaris', null, destination.package_ids || [])}
             onShowReviewForm={() => setShowReviewModal(true)} 
           />
         )}
@@ -263,6 +283,13 @@ export default function App() {
             safaris={safaris} 
             onSelect={navigateTo}
             selectedSafari={selectedSafari}
+            packageFilterIds={packageFilterIds}
+          />
+        )}
+        {page === 'destinations' && (
+          <DestinationsPage
+            destinations={destinations}
+            onExplore={destination => navigateTo('safaris', null, destination.package_ids || [])}
           />
         )}
         {page === 'details' && (

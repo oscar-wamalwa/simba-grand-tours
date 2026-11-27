@@ -21,6 +21,8 @@ Visitors can submit stories from The Simba Pulse. Public submissions are rate-li
 
 Newsletter signups can optionally provide a Kenyan mobile number and explicitly opt in to SMS updates. Staff can send subscriber updates by email, SMS, or both from the Subscribers page. Email delivery uses the configured SMTP settings, with a 15-second default connection timeout (`EMAIL_TIMEOUT`); SMS delivery uses Africa's Talking. Configure `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_ENVIRONMENT` (`sandbox` or `production`), and the optional `AFRICASTALKING_SENDER_ID` in the backend environment. Keep the API key private. SMS campaigns only target subscribers with recorded SMS consent and a valid phone number; provider charges may apply.
 
+The public Destinations page is managed from the admin Destinations section. Admins can update each card's copy, photos, optional starting price, home-page featuring, visibility, and linked safari packages. The initial destination catalog is created by the database migrations.
+
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
 
 ```sh

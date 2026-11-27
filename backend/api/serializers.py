@@ -19,6 +19,7 @@ from .models import (
     Booking,
     Blog,
     ContactMessage,
+    Destination,
     Passenger,
     PromoCode,
     Safari,
@@ -86,6 +87,26 @@ class SafariSerializer(serializers.ModelSerializer):
             if parsed_url.scheme not in ('http', 'https') or not parsed_url.netloc:
                 raise serializers.ValidationError('Each video must use a valid http or https URL.')
         return value
+
+
+class DestinationSerializer(serializers.ModelSerializer):
+    category_label = serializers.CharField(source='get_category_display', read_only=True)
+    package_ids = serializers.PrimaryKeyRelatedField(
+        source='safaris',
+        many=True,
+        queryset=Safari.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Destination
+        fields = [
+            'id', 'name', 'slug', 'category', 'category_label', 'badge', 'duration',
+            'hook', 'highlights', 'cta_label', 'starting_price', 'images',
+            'package_ids', 'visible', 'featured_on_home', 'sort_order',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class TripDepartureSerializer(serializers.ModelSerializer):

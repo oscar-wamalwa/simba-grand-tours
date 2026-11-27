@@ -1,5 +1,6 @@
 export { default as DashboardView } from './DashboardView';
 export { default as SafarisView } from './SafarisView';
+export { default as DestinationsView } from './DestinationsView';
 export { default as SubscribersView } from './SubscribersView';
 export { default as MessagesView } from './MessagesView';
 export { default as TestimoniesView } from './TestimoniesView';

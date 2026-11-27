@@ -125,6 +125,7 @@
 .data-card { background: var(--white); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); overflow: hidden; }
 .data-card-header { display: flex; justify-content: space-between; align-items: center; padding: 25px 30px; border-bottom: 1px solid var(--gray-light); }
 .data-card-header h3 { font-size: 1.2rem; color: var(--savanna-black); font-family: 'Playfair Display', serif; }
+.data-card-header p { color: var(--gray-dark); font-size: 0.88rem; margin-top: 5px; }
 .data-actions { display: flex; gap: 12px; }
 .search-box { position: relative; }
 .search-box input { padding: 10px 15px 10px 40px; border: 1px solid var(--gray-medium); border-radius: 8px; font-size: 0.9rem; width: 250px; }
@@ -167,6 +168,10 @@
 .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--gold-majesty); box-shadow: 0 0 0 3px rgba(225, 173, 61, 0.1); }
 .form-group textarea { resize: vertical; min-height: 100px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-group select[multiple] { min-height: 150px; }
+.form-group small { display: block; margin-top: 6px; color: var(--gray-dark); }
+.destination-checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; }
+.destination-checkbox input { width: auto; }
 
 .message-list { display: flex; flex-direction: column; }
 .message-item { display: flex; gap: 20px; padding: 25px 30px; border-bottom: 1px solid var(--gray-light); transition: background 0.3s ease; }

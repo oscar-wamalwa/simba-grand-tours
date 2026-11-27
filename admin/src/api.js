@@ -69,6 +69,17 @@ export const safarisApi = {
   getSignature: () => apiRequest('/safaris/signature/'),
 };
 
+export const destinationsApi = {
+  getAll: async () => {
+    const response = await apiRequest('/destinations/');
+    return response.results || response;
+  },
+  create: (data) => apiRequest('/destinations/', { method: 'POST', body: data }),
+  update: (id, data) => apiRequest(`/destinations/${id}/`, { method: 'PUT', body: data }),
+  partialUpdate: (id, data) => apiRequest(`/destinations/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/destinations/${id}/`, { method: 'DELETE' }),
+};
+
 export const departuresApi = {
   getAll: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
@@ -202,6 +213,7 @@ export const authApi = {
 
 export default {
   safaris: safarisApi,
+  destinations: destinationsApi,
   departures: departuresApi,
   bookings: bookingsApi,
   promoCodes: promoCodesApi,

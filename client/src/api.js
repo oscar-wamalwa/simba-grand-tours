@@ -51,6 +51,14 @@ export const safarisApi = {
   getSignature: () => apiRequest('/safaris/signature/'),
 };
 
+export const destinationsApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await apiRequest(`/destinations/${queryString ? `?${queryString}` : ''}`);
+    return response.results || response;
+  },
+};
+
 export const departuresApi = {
   getForSafari: async (safariId) => {
     const response = await apiRequest(`/departures/?safari=${encodeURIComponent(safariId)}`);
@@ -117,6 +125,7 @@ export const settingsApi = {
 
 export default {
   safaris: safarisApi,
+  destinations: destinationsApi,
   departures: departuresApi,
   bookings: bookingsApi,
   waitlist: waitlistApi,

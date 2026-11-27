@@ -16,6 +16,7 @@ from .models import (
     Blog,
     Booking,
     ContactMessage,
+    Destination,
     Passenger,
     PromoCode,
     Safari,
@@ -54,6 +55,13 @@ class PublicContentAccessTests(APITestCase):
             price='1500.00',
             visible=False,
         )
+        Destination.objects.create(
+            name='Hidden destination',
+            slug='hidden-destination',
+            category='iconic_safaris',
+            hook='Private draft.',
+            visible=False,
+        )
         Blog.objects.create(title='Published story', content='Story', status='published')
         Blog.objects.create(title='Draft story', content='Draft', status='draft')
         Testimonial.objects.create(
@@ -76,15 +84,46 @@ class PublicContentAccessTests(APITestCase):
 
     def test_public_reads_only_show_published_website_content(self):
         safaris = self.client.get('/api/safaris/').data['results']
+        destinations = self.client.get('/api/destinations/').data['results']
         blogs = self.client.get('/api/blogs/').data['results']
         testimonials = self.client.get('/api/testimonials/').data['results']
 
         self.assertEqual([item['id'] for item in safaris], [self.visible_safari.id])
+        self.assertNotIn('Hidden destination', [item['name'] for item in destinations])
+        mara = next(item for item in destinations if item['slug'] == 'maasai-mara-national-reserve')
+        self.assertEqual(mara['category_label'], 'Iconic Safaris')
         self.assertEqual([item['title'] for item in blogs], ['Published story'])
         self.assertEqual([item['full_name'] for item in testimonials], ['Featured guest'])
         featured = self.client.get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
         self.assertEqual(self.client.get('/api/settings/website_settings/').status_code, status.HTTP_200_OK)
+
+    def test_public_users_cannot_manage_destinations(self):
+        response = self.client.post(
+            '/api/destinations/',
+            {
+                'name': 'Private destination',
+                'slug': 'private-destination-test',
+                'category': 'iconic_safaris',
+                'hook': 'A private draft.',
+            },
+            format='json',
+        )
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+    def test_seeded_destination_catalog_includes_lake_nakuru_photo_and_copy(self):
+        response = self.client.get('/api/destinations/')
+        destinations = response.data['results']
+        lake_nakuru = next(item for item in destinations if item['slug'] == 'lake-nakuru-national-park')
+
+        self.assertEqual(len(destinations), 14)
+        self.assertEqual(lake_nakuru['images'], ['/images/lakenakuru.jpg'])
+        self.assertEqual(len(lake_nakuru['highlights']), 3)
+        self.assertIsNone(lake_nakuru['starting_price'])
+        mara = next(item for item in destinations if item['slug'] == 'maasai-mara-national-reserve')
+        migration = next(item for item in destinations if item['slug'] == 'serengeti-great-migration')
+        self.assertEqual(mara['images'], [])
+        self.assertEqual(migration['images'], [])
 
     def test_private_inbox_and_subscriber_records_are_not_public(self):
         for endpoint in ('/api/contact-messages/', '/api/subscribers/'):
@@ -230,6 +269,49 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual(duplicate.status_code, status.HTTP_409_CONFLICT)
         featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
+
+
+class DestinationManagementTests(APITestCase):
+    def setUp(self):
+        self.staff_user = get_user_model().objects.create_user(
+            username='destination-admin',
+            password='test-password',
+            is_staff=True,
+        )
+        self.safari = Safari.objects.create(
+            title='Mara weekend',
+            description='A short Mara trip.',
+            location='Maasai Mara',
+            price='32000.00',
+        )
+
+    def test_staff_can_create_destination_and_link_safari_packages(self):
+        self.client.force_authenticate(user=self.staff_user)
+        response = self.client.post(
+            '/api/destinations/',
+            {
+                'name': 'Staff-created destination',
+                'slug': 'staff-created-destination',
+                'category': 'iconic_safaris',
+                'badge': 'New',
+                'duration': '2 Days',
+                'hook': 'A memorable weekend in the wild.',
+                'highlights': ['Sunrise game drive', 'Expert guide', 'Lodge stay'],
+                'cta_label': 'Explore package',
+                'starting_price': '32000.00',
+                'images': ['/images/greatmigration.jpg'],
+                'package_ids': [self.safari.id],
+                'visible': True,
+                'featured_on_home': True,
+                'sort_order': 14,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['package_ids'], [self.safari.id])
+        self.assertEqual(response.data['starting_price'], '32000.00')
+        self.assertEqual(response.data['category_label'], 'Iconic Safaris')
 
 
 class SubscriberCampaignTests(APITestCase):
