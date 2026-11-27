@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Mail, Phone, MapPin, Globe, Instagram, Facebook, Download } from 'lucide-react';
-
-// X icon component since it's not in lucide-react
-const XIcon = ({ size = 18, style = {} }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="currentColor" 
-    style={style}
-  >
-    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
-  </svg>
-);
+import { Mail, Phone, MapPin, Globe, Instagram, Facebook, Music2 } from 'lucide-react';
 
 // WhatsApp icon component
 const WhatsAppIcon = ({ size = 18, style = {} }) => (
@@ -31,10 +18,15 @@ export default function SettingsView() {
     website: 'https://www.simbagrandtours.com',
     instagram: 'https://instagram.com/simba.grand.tours',
     facebook: 'https://web.facebook.com/simbagrandtours',
-    twitter: 'https://x.com/simba_tours',
+    tiktok: 'https://www.tiktok.com/@simba.grand.tours',
     whatsapp: '+254707984287'
   });
   const [saving, setSaving] = useState(false);
+  const [savingLegal, setSavingLegal] = useState(false);
+  const [legalSettings, setLegalSettings] = useState({
+    privacyPolicy: '',
+    termsConditions: ''
+  });
 
   useEffect(() => {
     fetchSettings();
@@ -53,9 +45,13 @@ export default function SettingsView() {
           website: data.website || prev.website,
           instagram: data.instagram || prev.instagram,
           facebook: data.facebook || prev.facebook,
-          twitter: data.twitter || prev.twitter,
+          tiktok: data.tiktok || prev.tiktok,
           whatsapp: data.whatsapp || prev.whatsapp
         }));
+        setLegalSettings({
+          privacyPolicy: data.privacy_policy || '',
+          termsConditions: data.terms_conditions || ''
+        });
       }
     } catch (e) {
       console.error('Error fetching settings:', e);
@@ -73,7 +69,7 @@ export default function SettingsView() {
         website: settings.website,
         instagram: settings.instagram,
         facebook: settings.facebook,
-        twitter: settings.twitter,
+        tiktok: settings.tiktok,
         whatsapp: settings.whatsapp
       };
       
@@ -87,8 +83,28 @@ export default function SettingsView() {
     }
   };
 
+  const handleSaveLegal = async () => {
+    setSavingLegal(true);
+    try {
+      await api.settings.update({
+        privacy_policy: legalSettings.privacyPolicy,
+        terms_conditions: legalSettings.termsConditions
+      });
+      alert('Legal pages saved successfully!');
+    } catch (e) {
+      console.error('Error saving legal pages:', e);
+      alert(e.message || 'Error saving legal pages. Please try again.');
+    } finally {
+      setSavingLegal(false);
+    }
+  };
+
   const handleChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLegalChange = (field, value) => {
+    setLegalSettings(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -182,13 +198,13 @@ export default function SettingsView() {
             </div>
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <XIcon size={18} style={{ color: '#000000' }} /> X (Twitter)
+                <Music2 size={18} style={{ color: '#000000' }} /> TikTok
               </label>
               <input 
                 type="text" 
-                value={settings.twitter} 
-                onChange={e => handleChange('twitter', e.target.value)} 
-                placeholder="https://x.com/yourprofile"
+                value={settings.tiktok}
+                onChange={e => handleChange('tiktok', e.target.value)}
+                placeholder="https://www.tiktok.com/@yourprofile"
               />
             </div>
           </div>
@@ -214,6 +230,41 @@ export default function SettingsView() {
             disabled={saving}
           >
             {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-header">
+          <h3>Privacy Policy and Terms and Conditions</h3>
+          <p>Update the legal pages shown to visitors. Use ## before section headings and leave a blank line between paragraphs.</p>
+        </div>
+        <div className="settings-form">
+          <div className="form-group">
+            <label htmlFor="privacy-policy">Privacy Policy</label>
+            <textarea
+              id="privacy-policy"
+              rows={16}
+              value={legalSettings.privacyPolicy}
+              onChange={e => handleLegalChange('privacyPolicy', e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="terms-conditions">Terms and Conditions</label>
+            <textarea
+              id="terms-conditions"
+              rows={16}
+              value={legalSettings.termsConditions}
+              onChange={e => handleLegalChange('termsConditions', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="settings-actions">
+          <button
+            className="btn-primary"
+            onClick={handleSaveLegal}
+            disabled={savingLegal}
+          >
+            {savingLegal ? 'Saving...' : 'Save Legal Pages'}
           </button>
         </div>
       </div>

@@ -96,7 +96,14 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual([item['full_name'] for item in testimonials], ['Featured guest'])
         featured = self.client.get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
-        self.assertEqual(self.client.get('/api/settings/website_settings/').status_code, status.HTTP_200_OK)
+        settings_response = self.client.get('/api/settings/website_settings/')
+        self.assertEqual(settings_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            settings_response.data['tiktok'],
+            'https://www.tiktok.com/@simba.grand.tours',
+        )
+        self.assertIn('Information we collect', settings_response.data['privacy_policy'])
+        self.assertIn('Bookings and payments', settings_response.data['terms_conditions'])
 
     def test_public_users_cannot_manage_destinations(self):
         response = self.client.post(
@@ -116,14 +123,27 @@ class PublicContentAccessTests(APITestCase):
         destinations = response.data['results']
         lake_nakuru = next(item for item in destinations if item['slug'] == 'lake-nakuru-national-park')
 
-        self.assertEqual(len(destinations), 14)
+        self.assertEqual(len(destinations), 16)
         self.assertEqual(lake_nakuru['images'], ['/images/lakenakuru.jpg'])
         self.assertEqual(len(lake_nakuru['highlights']), 3)
         self.assertIsNone(lake_nakuru['starting_price'])
         mara = next(item for item in destinations if item['slug'] == 'maasai-mara-national-reserve')
         migration = next(item for item in destinations if item['slug'] == 'serengeti-great-migration')
+        malindi = next(item for item in destinations if item['slug'] == 'malindi')
+        mombasa = next(item for item in destinations if item['slug'] == 'mombasa')
+        diani = next(item for item in destinations if item['slug'] == 'diani-beach-south-coast')
+        lamu = next(item for item in destinations if item['slug'] == 'lamu-island')
         self.assertEqual(mara['images'], [])
         self.assertEqual(migration['images'], [])
+        self.assertEqual(
+            {diani['category_label'], malindi['category_label'], mombasa['category_label'], lamu['category_label']},
+            {'Beach and Coastal Escapes'},
+        )
+        self.assertEqual(malindi['package_ids'], [])
+        self.assertEqual(mombasa['package_ids'], [])
+        lake_naivasha = next(item for item in destinations if item['slug'] == 'lake-naivasha-hells-gate')
+        self.assertEqual(lake_naivasha['name'], 'Lake Naivasha and Hell’s Gate')
+        self.assertFalse(any('&' in item['name'] for item in destinations))
 
     def test_private_inbox_and_subscriber_records_are_not_public(self):
         for endpoint in ('/api/contact-messages/', '/api/subscribers/'):
@@ -269,6 +289,38 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual(duplicate.status_code, status.HTTP_409_CONFLICT)
         featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in featured], ['Featured guest'])
+
+    def test_booking_details_are_optional_and_unverified_reviews_stay_private(self):
+        submissions = [
+            {},
+            {'email': 'optional@example.com'},
+            {'booking_reference': 'SGT-OPTIONAL'},
+        ]
+
+        for index, booking_details in enumerate(submissions):
+            with self.subTest(booking_details=booking_details):
+                response = self.client.post(
+                    '/api/testimonials/',
+                    {
+                        'full_name': f'Unverified guest {index}',
+                        'location': 'Nairobi',
+                        'message': 'A good trip.',
+                        'rating': 5,
+                        'is_verified': True,
+                        **booking_details,
+                    },
+                    format='json',
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertFalse(response.data['is_verified'])
+                self.assertFalse(response.data['is_featured'])
+
+        public_names = [
+            item['full_name']
+            for item in APIClient().get('/api/testimonials/').data['results']
+        ]
+        self.assertFalse(any(name.startswith('Unverified guest') for name in public_names))
 
 
 class DestinationManagementTests(APITestCase):
@@ -636,9 +688,15 @@ class AdminContentAccessTests(APITestCase):
             {'visible': False},
             format='json',
         )
+        settings_response = self.client.patch(
+            '/api/settings/website_settings/',
+            {'privacy_policy': 'Unauthorized edit'},
+            format='json',
+        )
 
         self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(update_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(settings_response.status_code, status.HTTP_403_FORBIDDEN)
         self.safari.refresh_from_db()
         self.assertTrue(self.safari.visible)
 
@@ -667,6 +725,33 @@ class AdminContentAccessTests(APITestCase):
         public_featured = APIClient().get('/api/testimonials/featured/').data
         self.assertEqual([item['full_name'] for item in public_featured], ['New guest'])
 
+    def test_staff_can_verify_unverified_testimonials_before_featuring(self):
+        testimonial = Testimonial.objects.create(
+            full_name='Unverified guest',
+            message='A good trip.',
+            is_verified=False,
+        )
+        self.client.force_authenticate(user=self.staff_user)
+
+        verification = self.client.patch(
+            f'/api/testimonials/{testimonial.id}/',
+            {'is_verified': True},
+            format='json',
+        )
+
+        self.assertEqual(verification.status_code, status.HTTP_200_OK)
+        self.assertTrue(verification.data['is_verified'])
+
+        featuring = self.client.patch(
+            f'/api/testimonials/{testimonial.id}/',
+            {'is_featured': True},
+            format='json',
+        )
+
+        self.assertEqual(featuring.status_code, status.HTTP_200_OK)
+        public_featured = APIClient().get('/api/testimonials/featured/').data
+        self.assertEqual([item['full_name'] for item in public_featured], ['Unverified guest'])
+
     def test_settings_accept_domains_without_a_scheme(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.patch(
@@ -675,7 +760,7 @@ class AdminContentAccessTests(APITestCase):
                 'website': 'www.simbagrandtours.com',
                 'instagram': 'instagram.com/simba.grand.tours',
                 'facebook': '',
-                'twitter': 'https://x.com/simba_tours',
+                'tiktok': 'tiktok.com/@simba.grand.tours',
             },
             format='json',
         )
@@ -683,6 +768,23 @@ class AdminContentAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['website'], 'https://www.simbagrandtours.com')
         self.assertEqual(response.data['instagram'], 'https://instagram.com/simba.grand.tours')
+        self.assertEqual(response.data['tiktok'], 'https://tiktok.com/@simba.grand.tours')
+
+    def test_staff_can_update_legal_pages_visible_to_public(self):
+        self.client.force_authenticate(user=self.staff_user)
+        response = self.client.patch(
+            '/api/settings/website_settings/',
+            {
+                'privacy_policy': '## Privacy updates\n\nUpdated privacy copy.',
+                'terms_conditions': '## Booking updates\n\nUpdated terms copy.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        public_settings = APIClient().get('/api/settings/website_settings/').data
+        self.assertEqual(public_settings['privacy_policy'], '## Privacy updates\n\nUpdated privacy copy.')
+        self.assertEqual(public_settings['terms_conditions'], '## Booking updates\n\nUpdated terms copy.')
 
 
 class BookingFlowTests(APITestCase):

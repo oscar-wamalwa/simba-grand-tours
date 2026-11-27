@@ -8,6 +8,8 @@ from django.db import models
 from django.db.models import Q, Sum
 from django.utils import timezone
 
+from .legal_defaults import DEFAULT_PRIVACY_POLICY, DEFAULT_TERMS_CONDITIONS
+
 
 def generate_booking_reference():
     return f"SGT-{uuid.uuid4().hex[:16].upper()}"
@@ -59,9 +61,9 @@ class Safari(models.Model):
 class Destination(models.Model):
     CATEGORY_CHOICES = [
         ('iconic_safaris', 'Iconic Safaris'),
-        ('beach_coastal_escapes', 'Beach & Coastal Escapes'),
+        ('beach_coastal_escapes', 'Beach and Coastal Escapes'),
         ('rift_valley_weekenders', 'Rift Valley Weekenders'),
-        ('hidden_gems_road_trips', 'Hidden Gems & Road Trips'),
+        ('hidden_gems_road_trips', 'Hidden Gems and Road Trips'),
     ]
 
     name = models.CharField(max_length=200)
@@ -331,7 +333,10 @@ class Settings(models.Model):
     instagram = models.URLField(blank=True, null=True)
     facebook = models.URLField(blank=True, null=True)
     twitter = models.URLField(blank=True, null=True)
+    tiktok = models.URLField(default='https://www.tiktok.com/@simba.grand.tours')
     whatsapp = models.CharField(max_length=50, blank=True, null=True)
+    privacy_policy = models.TextField(default=DEFAULT_PRIVACY_POLICY, blank=True)
+    terms_conditions = models.TextField(default=DEFAULT_TERMS_CONDITIONS, blank=True)
     featured_testimonials = models.JSONField(default=list, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 

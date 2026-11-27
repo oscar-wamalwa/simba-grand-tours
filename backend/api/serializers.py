@@ -382,12 +382,14 @@ class SettingsSerializer(serializers.ModelSerializer):
     instagram = URLWithDefaultSchemeField(required=False, allow_blank=True, allow_null=True)
     facebook = URLWithDefaultSchemeField(required=False, allow_blank=True, allow_null=True)
     twitter = URLWithDefaultSchemeField(required=False, allow_blank=True, allow_null=True)
+    tiktok = URLWithDefaultSchemeField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Settings
         fields = [
             'id', 'site_name', 'site_email', 'site_phone', 'address',
-            'website', 'instagram', 'facebook', 'twitter', 'whatsapp',
+            'website', 'instagram', 'facebook', 'twitter', 'tiktok', 'whatsapp',
+            'privacy_policy', 'terms_conditions',
             'featured_testimonials', 'updated_at'
         ]
         read_only_fields = ['id', 'updated_at']
@@ -408,7 +410,7 @@ class TestimonialSerializer(serializers.ModelSerializer):
             'message', 'is_featured', 'is_verified', 'booking', 'created_at',
             'fullName', 'isFeatured'
         ]
-        read_only_fields = ['id', 'is_verified', 'booking', 'created_at']
+        read_only_fields = ['id', 'booking', 'created_at']
 
     def get_fields(self):
         fields = super().get_fields()

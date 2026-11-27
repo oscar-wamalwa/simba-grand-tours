@@ -1,19 +1,6 @@
 import { useState } from 'react';
-import { Instagram, Facebook, MessageCircle } from 'lucide-react';
+import { Instagram, Facebook, MessageCircle, Music2 } from 'lucide-react';
 import api from '../api';
-
-// X icon component since it's not in lucide-react
-const XIcon = ({ size = 20, style = {} }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="currentColor" 
-    style={style}
-  >
-    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
-  </svg>
-);
 
 function FooterSection({ onNavigate, settings = {} }) {
   const [email, setEmail] = useState('');
@@ -149,8 +136,8 @@ function FooterSection({ onNavigate, settings = {} }) {
               <a href={settings.facebook || 'https://web.facebook.com/simbagrandtours'} target="_blank" rel="noopener noreferrer" className="social-icon">
                 <Facebook size={20} />
               </a>
-              <a href={settings.twitter || 'https://x.com/simba_tours'} target="_blank" rel="noopener noreferrer" className="social-icon">
-                <XIcon size={20} />
+              <a href={settings.tiktok || 'https://www.tiktok.com/@simba.grand.tours'} target="_blank" rel="noopener noreferrer" className="social-icon" aria-label="TikTok">
+                <Music2 size={20} />
               </a>
             </div>
           </div>
@@ -174,6 +161,10 @@ function FooterSection({ onNavigate, settings = {} }) {
         
         <div className="footer-bottom">
           <p>© 2026 {settings.siteName || 'Simba Grand Tours'}. All rights reserved.</p>
+          <div className="footer-legal-links">
+            <button type="button" onClick={() => onNavigate('privacy')}>Privacy Policy</button>
+            <button type="button" onClick={() => onNavigate('terms')}>Terms and Conditions</button>
+          </div>
         </div>
       </div>
     </footer>

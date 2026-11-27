@@ -76,12 +76,12 @@ function ReviewModal({ onClose }) {
           <div className="modal-success">
             <CheckCircle size={64} color="#c49a6c" />
             <h2>Thank You!</h2>
-            <p>Your verified review has been submitted successfully.</p>
+            <p>Your review has been received and is awaiting admin review before it can be featured.</p>
           </div>
         ) : (
           <>
             <h2>Share Your Experience</h2>
-            <p className="modal-subtitle">Reviews are available to travelers with a confirmed booking.</p>
+            <p className="modal-subtitle">Booking details are optional. Reviews without matching booking details are sent for admin review before they can be featured.</p>
             <form onSubmit={handleSubmit} className="review-form">
               <div className="form-row">
                 <div className="form-group">
@@ -98,14 +98,15 @@ function ReviewModal({ onClose }) {
               </div>
               <div className="form-row two-col">
                 <div className="form-group">
-                  <label>Booking email *</label>
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+                  <label>Booking email (optional)</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} />
                 </div>
                 <div className="form-group">
-                  <label>Booking reference *</label>
-                  <input name="bookingReference" value={formData.bookingReference} onChange={handleChange} required placeholder="SGT-..." />
+                  <label>Booking reference (optional)</label>
+                  <input name="bookingReference" value={formData.bookingReference} onChange={handleChange} placeholder="SGT-..." />
                 </div>
               </div>
+              <p className="modal-subtitle">Provide both details to verify your review against a confirmed booking. If either is missing, an administrator will review your submission before it can be featured.</p>
               <div className="form-row two-col">
                 <div className="form-group">
                   <label>Location *</label>

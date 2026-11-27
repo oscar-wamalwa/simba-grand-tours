@@ -7,6 +7,7 @@ import api from './api';
 const HomeSection = lazy(() => import('./components/HomeSection'));
 const SafarisPage = lazy(() => import('./components/SafarisPage'));
 const DestinationsPage = lazy(() => import('./components/DestinationsPage'));
+const LegalPage = lazy(() => import('./components/LegalPage'));
 const PulsePage = lazy(() => import('./components/PulsePage'));
 const ServicesPage = lazy(() => import('./components/ServicesPage'));
 const AboutPage = lazy(() => import('./components/AboutPage'));
@@ -23,13 +24,13 @@ const defaultSettings = {
   website: 'www.simbagrandtours.com',
   instagram: 'https://instagram.com/simba.grand.tours',
   facebook: 'https://web.facebook.com/simbagrandtours',
-  twitter: 'https://x.com/simba_tours',
+  tiktok: 'https://www.tiktok.com/@simba.grand.tours',
   whatsapp: '+254707984287'
 };
 
 // Empty default safaris - data loaded from API only
 const defaultSafaris = [];
-const clientPages = new Set(['home', 'safaris', 'details', 'destinations', 'pulse', 'services', 'about', 'contact']);
+const clientPages = new Set(['home', 'safaris', 'details', 'destinations', 'pulse', 'services', 'about', 'contact', 'privacy', 'terms']);
 
 // Loading fallback - instant render
 const LoadingFallback = () => (
@@ -158,7 +159,9 @@ export default function App() {
             website: settingsData.website || prev.website,
             instagram: settingsData.instagram || prev.instagram,
             facebook: settingsData.facebook || prev.facebook,
-            twitter: settingsData.twitter || prev.twitter,
+            tiktok: settingsData.tiktok || prev.tiktok,
+            privacyPolicy: settingsData.privacy_policy || prev.privacyPolicy,
+            termsConditions: settingsData.terms_conditions || prev.termsConditions,
             whatsapp: settingsData.whatsapp || prev.whatsapp
           }));
         }
@@ -303,6 +306,8 @@ export default function App() {
         {page === 'services' && <ServicesPage />}
         {page === 'about' && <AboutPage onNavigate={navigateTo} />}
         {page === 'contact' && <ContactPage />}
+        {page === 'privacy' && <LegalPage type="privacy" settings={settings} onNavigate={navigateTo} />}
+        {page === 'terms' && <LegalPage type="terms" settings={settings} onNavigate={navigateTo} />}
         
         <FooterSection onNavigate={navigateTo} settings={settings} />
         

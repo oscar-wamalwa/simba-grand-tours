@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { MessageCircle, Star, Download, Trash2, X, MapPin } from 'lucide-react';
+import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle } from 'lucide-react';
 
 export default function TestimoniesView() {
   const [testimonials, setTestimonials] = useState([]);
@@ -50,8 +50,18 @@ export default function TestimoniesView() {
     }
   };
 
+  const verifyTestimonial = async (testimonialId) => {
+    try {
+      await api.testimonials.partialUpdate(testimonialId, { is_verified: true });
+      await fetchTestimonials();
+    } catch (error) {
+      console.error('Error verifying testimonial:', error);
+      alert(error.message || 'Could not verify testimonial. Please try again.');
+    }
+  };
+
   const downloadCSV = () => {
-    const headers = ['Name', 'Email', 'Location', 'Safari', 'Rating', 'Message', 'Submitted At', 'Featured'];
+    const headers = ['Name', 'Email', 'Location', 'Safari', 'Rating', 'Message', 'Submitted At', 'Verified', 'Featured'];
     const rows = testimonials.map(t => [
       t.full_name || t.fullName || 'Anonymous',
       t.email || '',
@@ -60,6 +70,7 @@ export default function TestimoniesView() {
       t.rating || 5,
       t.message || '',
       t.created_at ? new Date(t.created_at).toLocaleString() : t.createdAt ? new Date(t.createdAt).toLocaleString() : 'N/A',
+      t.is_verified ? 'Yes' : 'No',
       featuredTestimonials.includes(t.id) ? 'Yes' : 'No'
     ]);
 
@@ -111,7 +122,7 @@ export default function TestimoniesView() {
       </div>
 
       <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '20px', padding: '0 20px' }}>
-        Select up to 3 testimonials to display on the homepage.
+        Verify submissions before featuring them. Select up to 3 verified testimonials to display on the homepage.
       </p>
 
       {testimonials.length === 0 ? (
@@ -153,11 +164,22 @@ export default function TestimoniesView() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
+                {!t.is_verified && (
+                  <button
+                    className="action-btn"
+                    onClick={(e) => { e.stopPropagation(); verifyTestimonial(t.id); }}
+                    title="Mark testimonial as verified"
+                    aria-label={`Verify testimonial from ${t.fullName || t.full_name || 'Anonymous'}`}
+                  >
+                    <CheckCircle size={16} />
+                  </button>
+                )}
                 <button
                   className="action-btn"
                   onClick={(e) => { e.stopPropagation(); toggleFeatured(t.id); }}
+                  disabled={!t.is_verified}
                   style={{ color: featuredTestimonials.includes(t.id) ? 'var(--gold-majesty)' : 'var(--gray-dark)' }}
-                  title={featuredTestimonials.includes(t.id) ? 'Remove from featured' : 'Mark as featured'}
+                  title={!t.is_verified ? 'Verify before featuring' : featuredTestimonials.includes(t.id) ? 'Remove from featured' : 'Mark as featured'}
                 >
                   <Star size={16} fill={featuredTestimonials.includes(t.id) ? 'currentColor' : 'none'} />
                 </button>

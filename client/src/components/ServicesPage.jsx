@@ -15,7 +15,7 @@ function ServicesPage() {
     { title: "Retreats", icon: <Coffee size={32} />, desc: "Wellness retreats in serene natural settings." },
     { title: "Adventure Challenges", icon: <Compass size={32} />, desc: "Thrilling expeditions and extreme adventures." },
     { title: "Cultural Tours", icon: <Landmark size={32} />, desc: "Immerse in local traditions and cultures." },
-    { title: "Wildlife & Game Drives", icon: <Binoculars size={32} />, desc: "Expert-guided wildlife encounters." },
+    { title: "Wildlife and Game Drives", icon: <Binoculars size={32} />, desc: "Expert-guided wildlife encounters." },
     { title: "Water Adventures", icon: <Droplets size={32} />, desc: "Kayaking, boat safaris and water activities." },
     { title: "Guided Tours", icon: <Backpack size={32} />, desc: "Comprehensive guided experiences." },
     { title: "Solo Traveller Support", icon: <User size={32} />, desc: "Safe adventures for independent travelers." },

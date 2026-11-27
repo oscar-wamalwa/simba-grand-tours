@@ -5,9 +5,9 @@ import { formatKes } from '../currency';
 
 const categories = [
   ['iconic_safaris', 'Iconic Safaris'],
-  ['beach_coastal_escapes', 'Beach & Coastal Escapes'],
+  ['beach_coastal_escapes', 'Beach and Coastal Escapes'],
   ['rift_valley_weekenders', 'Rift Valley Weekenders'],
-  ['hidden_gems_road_trips', 'Hidden Gems & Road Trips'],
+  ['hidden_gems_road_trips', 'Hidden Gems and Road Trips'],
 ];
 
 const emptyForm = {

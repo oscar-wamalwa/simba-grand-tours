@@ -465,22 +465,19 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         data = dict(request.data)
         booking_reference = str(data.pop('booking_reference', '')).strip()
         email = str(data.get('email', '')).strip()
-        if not booking_reference or not email:
-            return Response(
-                {'detail': 'A confirmed booking reference and booking email are required.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        booking = Booking.objects.filter(
-            reference__iexact=booking_reference,
-            email__iexact=email,
-            status=Booking.Status.CONFIRMED,
-        ).first()
-        if not booking:
-            return Response(
-                {'detail': 'No confirmed booking matches that reference and email.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if booking.reviews.exists():
+        booking = None
+        if booking_reference and email:
+            booking = Booking.objects.filter(
+                reference__iexact=booking_reference,
+                email__iexact=email,
+                status=Booking.Status.CONFIRMED,
+            ).first()
+            if not booking:
+                return Response(
+                    {'detail': 'No confirmed booking matches that reference and email.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if booking and booking.reviews.exists():
             return Response(
                 {'detail': 'A review has already been submitted for this booking.'},
                 status=status.HTTP_409_CONFLICT,
@@ -494,7 +491,11 @@ class TestimonialViewSet(viewsets.ModelViewSet):
             logger.error(f"[TESTIMONIAL] Validation errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        serializer.save(booking=booking, is_verified=True, is_featured=False)
+        serializer.save(
+            booking=booking,
+            is_verified=booking is not None,
+            is_featured=False,
+        )
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
