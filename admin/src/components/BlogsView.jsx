@@ -145,12 +145,18 @@ export default function BlogsView({ onRefresh }) {
                     <td><p style={{ fontSize: '0.9rem', color: 'var(--gray-dark)' }}>{formatDate(blog.created_at)}</p></td>
                     <td>
                       <span className={`status-badge ${blog.status === 'published' ? 'active' : 'archived'}`}>
-                        {blog.status === 'published' ? 'Published' : 'Draft'}
+                        {blog.status === 'published'
+                          ? 'Published'
+                          : blog.status === 'pending_review' ? 'Pending review' : 'Draft'}
                       </span>
                     </td>
                     <td>
                       <div className="table-actions">
-                        <button className="action-btn" onClick={() => toggleStatus(blog)} title={blog.status === 'published' ? 'Unpublish' : 'Publish'}>
+                        <button className="action-btn" onClick={() => toggleStatus(blog)} title={
+                          blog.status === 'published'
+                            ? 'Unpublish'
+                            : blog.status === 'pending_review' ? 'Approve and publish' : 'Publish'
+                        }>
                           {blog.status === 'published' ? <HideIcon size={16} /> : <Eye size={16} />}
                         </button>
                         <button className="action-btn" onClick={() => editBlog(blog)}><Edit2 size={16} /></button>
@@ -446,6 +452,11 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
                 >
                   <Eye size={16} /> Published
                 </button>
+                {form.status === 'pending_review' && (
+                  <button type="button" className="status-toggle-btn active" disabled>
+                    Pending review
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -841,6 +841,32 @@ a { text-decoration: none; color: inherit; }
 
 .pulse-page { margin-bottom: -60px; }
 
+.story-submission {
+  max-width: 900px;
+  margin: 0 auto 36px;
+  padding: 28px;
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+.story-submission-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.story-submission-heading h2 { margin: 0 0 8px; color: var(--savanna-black); font-family: 'Playfair Display', serif; }
+.story-submission-heading p, .story-submission-note { margin: 0; color: var(--text-light); line-height: 1.6; }
+.story-submission-form { display: grid; gap: 18px; margin-top: 24px; }
+.story-submission-form .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.story-submission-form label { display: grid; gap: 8px; color: var(--savanna-black); font-weight: 600; }
+.story-submission-form input, .story-submission-form select, .story-submission-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-medium);
+  border-radius: 8px;
+  font: inherit;
+}
+.story-submission-form textarea { resize: vertical; }
+.story-submission-feedback { margin: 0; }
+.story-submission-feedback.error { color: #b42318; }
+.story-submission-feedback.success { margin-top: 18px; color: var(--success); }
+
 .blogs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
 
 .blog-card {
@@ -966,6 +992,10 @@ a { text-decoration: none; color: inherit; }
     grid-template-columns: minmax(0, 1fr);
     gap: 22px;
   }
+
+  .story-submission { padding: 22px; }
+  .story-submission-heading { align-items: flex-start; flex-direction: column; }
+  .story-submission-form .form-row { grid-template-columns: minmax(0, 1fr); }
 
   .blog-card {
     min-width: 0;

@@ -112,6 +112,46 @@ class PublicContentAccessTests(APITestCase):
         self.assertEqual(review.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(subscriber.status_code, status.HTTP_201_CREATED)
 
+    def test_public_blog_submission_requires_staff_approval_before_publication(self):
+        response = self.client.post(
+            '/api/blogs/',
+            {
+                'title': 'A guest safari story',
+                'category': 'Safari Story',
+                'author': 'Amina Guest',
+                'location': 'Maasai Mara',
+                'content': 'We saw elephants at sunrise.',
+                'status': 'published',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], 'pending_review')
+        self.assertNotIn(
+            'A guest safari story',
+            [blog['title'] for blog in self.client.get('/api/blogs/').data['results']],
+        )
+
+        staff_user = get_user_model().objects.create_user(
+            username='blog-approver',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_user)
+        staff_blogs = self.client.get('/api/blogs/').data['results']
+        self.assertIn('A guest safari story', [blog['title'] for blog in staff_blogs])
+        approval = self.client.patch(
+            f"/api/blogs/{response.data['id']}/",
+            {'status': 'published'},
+            format='json',
+        )
+        self.assertEqual(approval.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=None)
+        published_titles = [blog['title'] for blog in self.client.get('/api/blogs/').data['results']]
+        self.assertIn('A guest safari story', published_titles)
+
     def test_public_reviews_require_a_confirmed_booking_and_matching_email(self):
         safari = Safari.objects.create(
             title='Completed safari',

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import api from '../api';
 
@@ -5,6 +6,17 @@ const PulsePage = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedBlog, setExpandedBlog] = useState(null);
+  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
+  const [submission, setSubmission] = useState({
+    title: '',
+    author: '',
+    location: '',
+    category: 'Safari Story',
+    content: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const [submissionSuccess, setSubmissionSuccess] = useState('');
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -58,6 +70,29 @@ const PulsePage = () => {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  const submitStory = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setSubmissionError('');
+    setSubmissionSuccess('');
+    try {
+      await api.blogs.create(submission);
+      setSubmission({
+        title: '',
+        author: '',
+        location: '',
+        category: 'Safari Story',
+        content: '',
+      });
+      setShowSubmissionForm(false);
+      setSubmissionSuccess('Thank you! Your story has been submitted for review before publication.');
+    } catch (error) {
+      setSubmissionError(error.message || 'Could not submit your story. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="pulse-page">
@@ -86,6 +121,90 @@ const PulsePage = () => {
       </header>
 
       <div className="container section-padding">
+        <section className="story-submission">
+          <div className="story-submission-heading">
+            <div>
+              <h2>Share your story</h2>
+              <p>Have a safari story or travel tip to share? Send it to our team for review.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setShowSubmissionForm(open => !open);
+                setSubmissionError('');
+                setSubmissionSuccess('');
+              }}
+            >
+              {showSubmissionForm ? 'Close form' : 'Write a story'}
+            </button>
+          </div>
+          {submissionSuccess && <p className="story-submission-feedback success" role="status">{submissionSuccess}</p>}
+          {showSubmissionForm && (
+            <form className="story-submission-form" onSubmit={submitStory}>
+              <p className="story-submission-note">Stories are reviewed by Simba Grand Tours before they appear publicly. Please don’t include private information.</p>
+              <div className="form-row">
+                <label>
+                  Story title
+                  <input
+                    value={submission.title}
+                    onChange={event => setSubmission(prev => ({ ...prev, title: event.target.value }))}
+                    maxLength={255}
+                    required
+                  />
+                </label>
+                <label>
+                  Your name
+                  <input
+                    value={submission.author}
+                    onChange={event => setSubmission(prev => ({ ...prev, author: event.target.value }))}
+                    maxLength={255}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  Location
+                  <input
+                    value={submission.location}
+                    onChange={event => setSubmission(prev => ({ ...prev, location: event.target.value }))}
+                    maxLength={255}
+                    placeholder="e.g. Maasai Mara, Kenya"
+                  />
+                </label>
+                <label>
+                  Category
+                  <select
+                    value={submission.category}
+                    onChange={event => setSubmission(prev => ({ ...prev, category: event.target.value }))}
+                  >
+                    <option>Safari Story</option>
+                    <option>Travel Tips</option>
+                    <option>Wildlife Update</option>
+                    <option>Conservation</option>
+                    <option>Guest Post</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                Your story
+                <textarea
+                  value={submission.content}
+                  onChange={event => setSubmission(prev => ({ ...prev, content: event.target.value }))}
+                  rows={8}
+                  maxLength={20000}
+                  required
+                />
+              </label>
+              {submissionError && <p className="story-submission-feedback error" role="alert">{submissionError}</p>}
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit for review'}
+              </button>
+            </form>
+          )}
+        </section>
+
         <div className="blogs-grid">
           {blogs.length === 0 ? (
             <div className="no-results">
@@ -130,5 +249,3 @@ const PulsePage = () => {
 };
 
 export default PulsePage;
-
-import { useEffect, useState } from 'react';

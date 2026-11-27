@@ -17,6 +17,8 @@ The admin Sales Reports page uses the staff-only `GET /api/bookings/report/` end
 
 Admins can set a flat reservation booking fee and terms on each safari. The booking fee is charged once per reservation; the departure's per-person price remains the full trip amount. Promo discounts apply to the full amount, and the M-Pesa prompt charges only the configured fee. A successful fee payment reserves the seats and leaves the discounted balance due for collection separately.
 
+Visitors can submit stories from The Simba Pulse. Public submissions are rate-limited and always enter pending review; staff must approve and publish them before they appear publicly.
+
 Run `python manage.py migrate` after deployment. Configure a daily Railway cron job to run:
 
 ```sh

@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
+from rest_framework.throttling import AnonRateThrottle
 try:
     from rest_framework.response import Response
 except Exception:
@@ -28,6 +29,10 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class PublicBlogSubmissionThrottle(AnonRateThrottle):
+    rate = '5/hour'
 
 
 class StaffWritePermission(permissions.BasePermission):
@@ -126,6 +131,12 @@ class BlogViewSet(viewsets.ModelViewSet):
     serializer_class = BlogSerializer
     permission_classes = [StaffWritePermission]
     public_read = True
+    public_create = True
+
+    def get_throttles(self):
+        if self.action == 'create' and not (self.request.user and self.request.user.is_staff):
+            return [PublicBlogSubmissionThrottle()]
+        return super().get_throttles()
 
     def get_queryset(self):
         queryset = Blog.objects.all()
@@ -145,7 +156,10 @@ class BlogViewSet(viewsets.ModelViewSet):
         return queryset.order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save()
+        if self.request.user and self.request.user.is_staff:
+            serializer.save()
+        else:
+            serializer.save(status='pending_review')
 
     def perform_update(self, serializer):
         serializer.save(updated_at=timezone.now())

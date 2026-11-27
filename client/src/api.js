@@ -81,6 +81,7 @@ export const blogsApi = {
     const response = await apiRequest(`/blogs/${queryString ? `?${queryString}` : ''}`);
     return response.results || response;
   },
+  create: (data) => apiRequest('/blogs/', { method: 'POST', body: data }),
 };
 
 // Subscriber API
