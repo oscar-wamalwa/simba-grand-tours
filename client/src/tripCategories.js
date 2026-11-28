@@ -9,6 +9,30 @@ export const TRIP_TYPES = [
   'Lakeside & Boat Excursions',
 ];
 
+// Maps older free-text trip types (e.g. "3-Day SGR Beach Getaway") to TRIP_TYPES.
+export function normalizeTripType(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const exact = TRIP_TYPES.find(item => item.toLowerCase() === text.toLowerCase());
+  if (exact) return exact;
+  const lower = text.toLowerCase();
+  const rules = [
+    ['beach', 'Beach Getaway'],
+    ['road', 'Road Trip'],
+    ['hik', 'Hiking & Adventure'],
+    ['adventure', 'Hiking & Adventure'],
+    ['wildlife', 'Wildlife & Game Drives'],
+    ['game', 'Wildlife & Game Drives'],
+    ['cultur', 'Cultural Experience'],
+    ['corporate', 'Corporate & Team Building'],
+    ['team', 'Corporate & Team Building'],
+    ['lake', 'Lakeside & Boat Excursions'],
+    ['boat', 'Lakeside & Boat Excursions'],
+  ];
+  const rule = rules.find(([keyword]) => lower.includes(keyword));
+  return rule ? rule[1] : text;
+}
+
 // Trip style: how the trip is organised, paced or accommodated.
 export const TRIP_STYLES = [
   { value: 'group_joining', label: 'Group Joining' },

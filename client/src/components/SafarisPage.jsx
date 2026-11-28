@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck
 import api from '../api';
 import FilterDropdown from './FilterDropdown';
 
-import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle } from '../tripCategories';
+import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle, normalizeTripType } from '../tripCategories';
 
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
@@ -574,7 +574,7 @@ function SafarisPage({
       || packageFilterIds.includes(String(safari.id));
     const matchesDestination = !filters.destination
       || (safari.location || '').trim() === filters.destination;
-    const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
+    const matchesType = !filters.tripType || normalizeTripType(safari.trip_type) === filters.tripType;
     const matchesDuration = !filters.duration || durationCategory(safari.duration) === filters.duration;
     const matchesMode = !filters.tripMode || normalizeTripStyle(safari.trip_mode) === filters.tripMode || (safari.trip_mode === 'either' && filters.tripMode === 'private_custom');
     const matchesPrice = (safari.price || 0) <= filters.priceRange;

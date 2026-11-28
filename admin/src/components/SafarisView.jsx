@@ -4,7 +4,7 @@ import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 import Select from './Select';
-import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle } from '../tripCategories';
+import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle, normalizeTripType } from '../tripCategories';
 
 const normalizeSafari = (safari) => ({
   ...safari,
@@ -256,7 +256,7 @@ export default function SafarisView({ onRefresh }) {
       booking_terms: s.booking_terms || '',
       duration: durationCategory(s.duration) || s.duration, 
       difficulty: s.difficulty, 
-      trip_type: s.trip_type || '',
+      trip_type: normalizeTripType(s.trip_type),
       trip_mode: normalizeTripStyle(s.trip_mode) || 'group_joining',
       county: s.county || '',
       images: s.images || [], 
