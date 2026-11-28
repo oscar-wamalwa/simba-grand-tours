@@ -72,6 +72,7 @@ class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
 
     thumb_route = 'safaris'
     bookings_open = serializers.SerializerMethodField()
+    has_open_departure = serializers.SerializerMethodField()
 
     def get_bookings_open(self, safari):
         # Closed when staff close the trip, or once every scheduled departure is closed or past.
@@ -83,6 +84,13 @@ class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
         today = timezone.localdate()
         return any(item.is_open and item.start_date >= today for item in departures)
 
+    def get_has_open_departure(self, safari):
+        today = timezone.localdate()
+        return safari.is_open and any(
+            not item.is_archived and item.is_open and item.start_date >= today
+            for item in safari.departures.all()
+        )
+
     class Meta:
         model = Safari
         fields = [
@@ -91,7 +99,7 @@ class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
             'difficulty', 'images', 'videos', 'highlights', 'inclusions', 'exclusions',
             'itinerary', 'visible', 'is_open', 'is_signature', 'trip_type', 'trip_mode',
             'county', 'pickup_points', 'packing_checklist', 'is_featured',
-            'bookings_open', 'created_at', 'updated_at'
+            'bookings_open', 'has_open_departure', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {

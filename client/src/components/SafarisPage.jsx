@@ -710,7 +710,9 @@ function SafarisPage({
                     <div className="card-footer">
                       <span className="price">{formatPrice(safari.price)}</span>
                     </div>
-                    <span className={`trip-status ${safari.bookings_open === false ? 'closed' : 'open'}`}>{safari.bookings_open === false ? 'Closed' : 'Open'}</span>
+                    {safari.bookings_open === false
+                      ? <span className="trip-status closed">Closed</span>
+                      : safari.has_open_departure && <span className="trip-status open">Open</span>}
                     <button className="btn-gold-sm" disabled={safari.bookings_open === false}>View Details</button>
                   </div>
                 </div>

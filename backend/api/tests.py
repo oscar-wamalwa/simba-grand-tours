@@ -994,6 +994,16 @@ class BookingFlowTests(APITestCase):
         response = self.client.post('/api/bookings/create/', self.booking_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_open_label_needs_a_published_departure(self):
+        def card():
+            results = self.client.get('/api/safaris/').data['results']
+            return next(item for item in results if item['id'] == self.safari.id)
+        self.assertTrue(card()['has_open_departure'])
+        self.departure.is_archived = True
+        self.departure.save()
+        self.assertFalse(card()['has_open_departure'])
+        self.assertTrue(card()['bookings_open'])
+
     @override_settings(MPESA_CALLBACK_TOKEN='callback-secret')
     def test_booking_holds_seats_and_starts_kes_payment(self):
         with self.settings(MPESA_CALLBACK_TOKEN='callback-secret'):
