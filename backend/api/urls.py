@@ -16,6 +16,7 @@ from .views import (
     BlogViewSet,
     ContactMessageViewSet,
     DestinationViewSet,
+    PhotoThumbnailView,
     SafariViewSet,
     SettingsViewSet,
     SubscriberViewSet,
@@ -50,6 +51,7 @@ router.register(r'testimonials', TestimonialViewSet, basename='testimonial')
 router.register(r'settings', SettingsViewSet, basename='settings')
 
 urlpatterns = [
+    path('media/<str:kind>/<int:pk>/<int:index>/', PhotoThumbnailView.as_view(), name='photo-thumbnail'),
     path('bookings/create/', BookingCreateView.as_view(), name='booking-create'),
     path('bookings/<str:reference>/status/', BookingStatusView.as_view(), name='booking-status'),
     path('payments/mpesa/callback/<str:token>/', MpesaCallbackView.as_view(), name='mpesa-callback'),

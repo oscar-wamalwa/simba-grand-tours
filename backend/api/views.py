@@ -2,16 +2,21 @@
 Django REST Framework views for Simba Grand Tours API.
 """
 
+import base64
+import io
 import logging
 import smtplib
 
 from django.conf import settings
+from django.http import HttpResponse
+from PIL import Image
 from django.core.mail import get_connection, send_mail
 from django.db.models.deletion import ProtectedError
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
 try:
     from rest_framework.response import Response
 except Exception:
@@ -599,3 +604,29 @@ class TestimonialViewSet(viewsets.ModelViewSet):
         logger.info(f"[TESTIMONIAL] Found {len(serializer.data)} featured testimonials")
         return Response(serializer.data)
 
+
+
+class PhotoThumbnailView(APIView):
+    """Serve one stored photo of a visible safari or destination as a resized, cacheable JPEG."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    models = {'safaris': Safari, 'destinations': Destination}
+    max_width = 900
+
+    def get(self, request, kind, pk, index):
+        model = self.models.get(kind)
+        item = model.objects.filter(pk=pk, visible=True).first() if model else None
+        images = (item.images or []) if item else []
+        if index >= len(images) or not str(images[index]).startswith('data:image/'):
+            return HttpResponse(status=404)
+        try:
+            image = Image.open(io.BytesIO(base64.b64decode(images[index].split(',', 1)[1])))
+            image.thumbnail((self.max_width, self.max_width))
+            buffer = io.BytesIO()
+            image.convert('RGB').save(buffer, 'JPEG', quality=78, optimize=True, progressive=True)
+        except Exception:
+            return HttpResponse(status=404)
+        response = HttpResponse(buffer.getvalue(), content_type='image/jpeg')
+        response['Cache-Control'] = 'public, max-age=31536000, immutable'
+        return response

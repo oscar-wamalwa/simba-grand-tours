@@ -156,14 +156,14 @@ export default function App() {
     const fetchData = async () => {
       // Independent requests run together so the page isn't waiting on them one by one.
       await Promise.all([
-        api.safaris.getAll({ visible: 'true' })
+        api.safaris.getAll({ visible: 'true', thumbs: '1' })
           .then(safarisData => setSafaris(safarisData.map(d => ({
             id: d.id,
             ...d,
             isSignature: d.is_signature ?? d.isSignature ?? false
           }))))
           .catch(err => console.error('Error fetching safaris:', err.message)),
-        api.destinations.getAll()
+        api.destinations.getAll({ thumbs: '1' })
           .then(setDestinations)
           .catch(err => console.error('Error fetching destinations:', err.message)),
         api.settings.get()

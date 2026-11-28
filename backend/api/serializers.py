@@ -49,9 +49,28 @@ class URLWithDefaultSchemeField(serializers.URLField):
         return super().to_internal_value(data)
 
 
-class SafariSerializer(serializers.ModelSerializer):
+class ThumbnailImagesMixin:
+    """With ?thumbs=1, return cacheable image URLs instead of embedding full base64 photos."""
+
+    thumb_route = ''
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and request.query_params.get('thumbs') and data.get('images'):
+            version = int(instance.updated_at.timestamp())
+            data['images'] = [
+                request.build_absolute_uri(f'/api/media/{self.thumb_route}/{instance.pk}/{index}/?v={version}')
+                if isinstance(image, str) and image.startswith('data:image/') else image
+                for index, image in enumerate(data['images'])
+            ]
+        return data
+
+
+class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
     """Serializer for Safari model."""
 
+    thumb_route = 'safaris'
     bookings_open = serializers.SerializerMethodField()
 
     def get_bookings_open(self, safari):
@@ -106,7 +125,8 @@ class SafariSerializer(serializers.ModelSerializer):
         return value
 
 
-class DestinationSerializer(serializers.ModelSerializer):
+class DestinationSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
+    thumb_route = 'destinations'
     category_label = serializers.CharField(source='get_category_display', read_only=True)
     package_ids = serializers.PrimaryKeyRelatedField(
         source='safaris',

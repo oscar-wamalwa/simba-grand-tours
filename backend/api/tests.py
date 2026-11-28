@@ -1798,3 +1798,36 @@ class PromoCodeTests(APITestCase):
         self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(valid.status_code, status.HTTP_201_CREATED)
         self.assertEqual(PromoCode.objects.get().code, 'SUMMER')
+
+
+class PhotoThumbnailTests(APITestCase):
+    def setUp(self):
+        import base64, io
+        from PIL import Image
+        buffer = io.BytesIO()
+        Image.new('RGB', (2000, 1500), 'green').save(buffer, 'JPEG')
+        self.photo = 'data:image/jpeg;base64,' + base64.b64encode(buffer.getvalue()).decode()
+        self.safari = Safari.objects.create(
+            title='Thumb', description='d', location='Kenya', price=100, images=[self.photo], visible=True,
+        )
+        self.hidden = Safari.objects.create(
+            title='Hidden', description='d', location='Kenya', price=100, images=[self.photo], visible=False,
+        )
+
+    def test_list_returns_thumbnail_urls_only_when_requested(self):
+        full = self.client.get('/api/safaris/?visible=true').json()
+        full = full.get('results', full)
+        self.assertTrue(full[0]['images'][0].startswith('data:image/'))
+        slim = self.client.get('/api/safaris/?visible=true&thumbs=1').json()
+        slim = slim.get('results', slim)
+        self.assertIn(f'/api/media/safaris/{self.safari.pk}/0/', slim[0]['images'][0])
+
+    def test_thumbnail_is_resized_cacheable_and_hides_unpublished(self):
+        import io
+        from PIL import Image
+        response = self.client.get(f'/api/media/safaris/{self.safari.pk}/0/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('immutable', response['Cache-Control'])
+        self.assertLessEqual(Image.open(io.BytesIO(response.content)).width, 900)
+        self.assertEqual(self.client.get(f'/api/media/safaris/{self.hidden.pk}/0/').status_code, 404)
+        self.assertEqual(self.client.get(f'/api/media/safaris/{self.safari.pk}/5/').status_code, 404)
