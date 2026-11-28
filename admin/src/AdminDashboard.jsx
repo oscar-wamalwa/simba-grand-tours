@@ -68,7 +68,9 @@ export default function AdminDashboard({ onLogout }) {
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [stats, setStats] = useState({
-    visitors: 0,
+    bookings: 0,
+    weekly: [],
+    topSafaris: [],
     subscribers: 0,
     safaris: 0,
     messages: 0,
@@ -98,15 +100,38 @@ export default function AdminDashboard({ onLogout }) {
 
   const fetchStats = async () => {
     try {
-      const [safaris, subscribers, _messages, blogs, unread] = await Promise.all([
+      const [safaris, subscribers, _messages, blogs, unread, bookings] = await Promise.all([
         api.safaris.getAll(),
         api.subscribers.getAll(),
         api.messages.getAll(),
         api.blogs.getAll({ status: 'published' }),
-        api.messages.getUnreadCount()
+        api.messages.getUnreadCount(),
+        api.bookings.getAll().catch(() => [])
       ]);
+      const confirmed = bookings.filter(item => item.status === 'confirmed');
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const weekly = [3, 2, 1, 0].map(weeksAgo => {
+        const end = now - weeksAgo * weekMs;
+        const start = end - weekMs;
+        const count = confirmed.filter(item => {
+          const time = new Date(item.created_at).getTime();
+          return time > start && time <= end;
+        }).length;
+        return { label: weeksAgo === 0 ? 'This week' : `${weeksAgo} wk ago`, count };
+      });
+      const perSafari = {};
+      confirmed.forEach(item => {
+        perSafari[item.safari_title] = (perSafari[item.safari_title] || 0) + item.participant_count;
+      });
+      const topSafaris = Object.entries(perSafari)
+        .map(([title, travelers]) => ({ title, travelers }))
+        .sort((x, y) => y.travelers - x.travelers)
+        .slice(0, 5);
       setStats({
-        visitors: 0,
+        bookings: confirmed.length,
+        weekly,
+        topSafaris,
         subscribers: subscribers.length,
         safaris: safaris.filter(item => item.visible).length,
         messages: unread.unread_count || 0,

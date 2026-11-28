@@ -1,25 +1,26 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Users, Map, MessageSquare } from 'lucide-react';
+import { TrendingUp, Users, Map, MessageSquare } from 'lucide-react';
 
 export default function DashboardView({ stats }) {
+  const weekly = stats.weekly || [];
+  const topSafaris = stats.topSafaris || [];
+  const maxWeekly = Math.max(1, ...weekly.map(week => week.count));
+  const maxTravelers = Math.max(1, ...topSafaris.map(item => item.travelers));
+
   return (
     <>
       <div className="stats-grid">
         {[
-          { icon: <TrendingUp size={28} />, iconClass: 'visitors', value: stats.visitors, label: 'Total Visitors', change: '0%', positive: true },
-          { icon: <Users size={28} />, iconClass: 'subscribers', value: stats.subscribers, label: 'Subscribers', change: '+0', positive: true },
-          { icon: <Map size={28} />, iconClass: 'safaris', value: stats.safaris, label: 'Active Safaris', change: '+0', positive: true },
-          { icon: <MessageSquare size={28} />, iconClass: 'messages', value: stats.messages, label: 'New Messages', change: '0', positive: false },
+          { icon: <TrendingUp size={28} />, iconClass: 'visitors', value: stats.bookings, label: 'Confirmed Bookings' },
+          { icon: <Users size={28} />, iconClass: 'subscribers', value: stats.subscribers, label: 'Subscribers' },
+          { icon: <Map size={28} />, iconClass: 'safaris', value: stats.safaris, label: 'Active Safaris' },
+          { icon: <MessageSquare size={28} />, iconClass: 'messages', value: stats.messages, label: 'New Messages' },
         ].map((stat, i) => (
           <div key={i} className="stat-card fade-in">
             <div className={`stat-icon ${stat.iconClass}`}>{stat.icon}</div>
             <div className="stat-content">
               <p className="stat-value">{stat.value}</p>
               <p className="stat-label">{stat.label}</p>
-              <span className={`stat-change ${stat.positive ? 'positive' : 'negative'}`}>
-                {stat.positive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                {stat.change} this month
-              </span>
             </div>
           </div>
         ))}
@@ -27,33 +28,34 @@ export default function DashboardView({ stats }) {
 
       <div className="charts-section">
         <div className="chart-card">
-          <div className="chart-header"><h3>Weekly Visitors - January</h3></div>
+          <div className="chart-header"><h3>Confirmed Bookings - Last 4 Weeks</h3></div>
           <div className="visitor-chart">
-            {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((week, i) => (
+            {weekly.map((week, i) => (
               <div key={i} className="chart-bar-wrapper">
-                <div className="chart-bar" style={{ height: '50px' }}></div>
-                <span className="chart-label">{week}</span>
+                <span className="chart-label">{week.count}</span>
+                <div className="chart-bar" style={{ height: `${Math.max(4, (week.count / maxWeekly) * 200)}px` }}></div>
+                <span className="chart-label">{week.label}</span>
               </div>
             ))}
           </div>
         </div>
 
         <div className="chart-card">
-          <div className="chart-header"><h3>Traffic Sources</h3></div>
-          <div className="pie-chart-container">
-            <div className="pie-chart"></div>
-            <div className="pie-legend">
-              {['Direct (60%)', 'Social Media (40%)'].map((s, i) => (
-                <div key={i} className="legend-item">
-                  <span className="legend-color" style={{ background: ['var(--gold-majesty)','#27ae60'][i] }}></span>
-                  <span>{s}</span>
+          <div className="chart-header"><h3>Top Safaris by Travelers</h3></div>
+          {topSafaris.length === 0 ? (
+            <p className="chart-empty">No confirmed bookings yet.</p>
+          ) : (
+            <div className="top-safaris">
+              {topSafaris.map(item => (
+                <div key={item.title} className="top-safari-row">
+                  <div className="top-safari-head"><span>{item.title}</span><strong>{item.travelers}</strong></div>
+                  <div className="top-safari-track"><div className="top-safari-fill" style={{ width: `${(item.travelers / maxTravelers) * 100}%` }}></div></div>
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
   );
 }
-
