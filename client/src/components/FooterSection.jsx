@@ -125,7 +125,7 @@ function FooterSection({ onNavigate, settings = {} }) {
         <div className="footer-links">
           <div className="footer-column">
             <h4>{settings.siteName || 'Simba Grand Tours'}</h4>
-            <p>Your premier gateway to the African continent since 2024.</p>
+            <p>Your premier gateway to the African continent since 2026.</p>
             <div className="social-icons">
               <a href={settings.instagram || 'https://instagram.com/simba.grand.tours'} target="_blank" rel="noopener noreferrer" className="social-icon">
                 <Instagram size={20} />
