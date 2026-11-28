@@ -11,16 +11,18 @@ const WhatsAppIcon = ({ size = 18, style = {} }) => (
 
 export default function SettingsView() {
   const [settings, setSettings] = useState({
-    siteName: 'Simba Grand Tours',
-    siteEmail: 'simbagrandtours@gmail.com',
-    sitePhone: '+254 707 984 287',
-    address: 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD',
-    website: 'https://simbagrandtours.co.ke',
-    instagram: 'https://instagram.com/simba.grand.tours',
-    facebook: 'https://web.facebook.com/simbagrandtours',
-    tiktok: 'https://www.tiktok.com/@simba.grand.tours',
-    whatsapp: '+254707984287'
+    siteName: '',
+    siteEmail: '',
+    sitePhone: '',
+    address: '',
+    website: '',
+    instagram: '',
+    facebook: '',
+    tiktok: '',
+    whatsapp: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingLegal, setSavingLegal] = useState(false);
   const [legalSettings, setLegalSettings] = useState({
@@ -36,18 +38,17 @@ export default function SettingsView() {
     try {
       const data = await api.settings.get();
       if (data) {
-        setSettings(prev => ({
-          ...prev,
-          siteName: data.site_name || prev.siteName,
-          siteEmail: data.site_email || prev.siteEmail,
-          sitePhone: data.site_phone || prev.sitePhone,
-          address: data.address || prev.address,
-          website: data.website || prev.website,
-          instagram: data.instagram || prev.instagram,
-          facebook: data.facebook || prev.facebook,
-          tiktok: data.tiktok || prev.tiktok,
-          whatsapp: data.whatsapp || prev.whatsapp
-        }));
+        setSettings({
+          siteName: data.site_name || '',
+          siteEmail: data.site_email || '',
+          sitePhone: data.site_phone || '',
+          address: data.address || '',
+          website: data.website || '',
+          instagram: data.instagram || '',
+          facebook: data.facebook || '',
+          tiktok: data.tiktok || '',
+          whatsapp: data.whatsapp || ''
+        });
         setLegalSettings({
           privacyPolicy: data.privacy_policy || '',
           termsConditions: data.terms_conditions || ''
@@ -55,6 +56,9 @@ export default function SettingsView() {
       }
     } catch (e) {
       console.error('Error fetching settings:', e);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,6 +110,14 @@ export default function SettingsView() {
   const handleLegalChange = (field, value) => {
     setLegalSettings(prev => ({ ...prev, [field]: value }));
   };
+
+  if (loading) {
+    return <div className="settings-view"><p className="chart-empty">Loading settings...</p></div>;
+  }
+
+  if (loadError) {
+    return <div className="settings-view"><p className="chart-empty">Could not load settings. Refresh the page and try again.</p></div>;
+  }
 
   return (
     <div className="settings-view fade-in">
