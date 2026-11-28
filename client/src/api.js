@@ -24,7 +24,14 @@ async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      const fieldMessage = Object.entries(errorData)
+        .filter(([key]) => key !== 'detail')
+        .map(([key, value]) => `${key}: ${[].concat(value).join(' ')}`)
+        .join(' ');
+      const message = response.status === 429
+        ? 'You have sent too many requests. Please wait a while and try again.'
+        : errorData.detail || fieldMessage;
+      throw new Error(message || `Something went wrong (error ${response.status}). Please try again.`);
     }
     
     // Handle empty responses

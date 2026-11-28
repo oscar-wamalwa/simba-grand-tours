@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 class PublicBlogSubmissionThrottle(AnonRateThrottle):
     scope = 'public_blog_submission'
-    rate = '5/hour'
+    rate = '20/hour'
 
 
 class PublicBlogCommentThrottle(AnonRateThrottle):
