@@ -89,7 +89,7 @@ const PulsePage = () => {
       const comments = await api.blogComments.getAll({ blog: blogId });
       setCommentsByBlog(prev => ({ ...prev, [blogId]: comments }));
     } catch (error) {
-      setCommentError(error.message || 'Could not load replies. Please try again.');
+      setCommentError(error.message || 'Could not load comments. Please try again.');
     } finally {
       setCommentsLoading(false);
     }
@@ -122,9 +122,9 @@ const PulsePage = () => {
         content: commentForm.content.trim(),
       });
       setCommentForm({ name: '', email: '', content: '' });
-      setCommentSuccess('Your reply was sent for review and will appear after approval.');
+      setCommentSuccess('Your comment was sent for review and will appear after approval.');
     } catch (error) {
-      setCommentError(error.message || 'Could not submit your reply. Please try again.');
+      setCommentError(error.message || 'Could not submit your comment. Please try again.');
     } finally {
       setCommentSubmitting(false);
     }
@@ -390,12 +390,12 @@ const PulsePage = () => {
                     className="btn-outline-full blog-replies-toggle"
                     onClick={() => toggleComments(blog.id)}
                   >
-                    {commentsOpenBlog === blog.id ? 'Close replies' : 'Read replies or reply'}
+                    {commentsOpenBlog === blog.id ? 'Close comments' : 'Read or leave a comment'}
                   </button>
                   {commentsOpenBlog === blog.id && (
-                    <section className="blog-replies" aria-label={`Replies to ${blog.title}`}>
+                    <section className="blog-replies" aria-label={`Comments on ${blog.title}`}>
                       {commentsLoading ? (
-                        <p>Loading approved replies...</p>
+                        <p>Loading approved comments...</p>
                       ) : commentsByBlog[blog.id]?.length ? (
                         commentsByBlog[blog.id].map(comment => (
                           <article className="blog-reply" key={comment.id}>
@@ -405,10 +405,10 @@ const PulsePage = () => {
                           </article>
                         ))
                       ) : (
-                        <p>No approved replies yet.</p>
+                        <p>No approved comments yet.</p>
                       )}
                       <form onSubmit={event => submitComment(event, blog.id)} className="blog-reply-form">
-                        <h4>Leave a reply</h4>
+                        <h4>Leave a comment</h4>
                         <label>
                           Your name
                           <input
@@ -427,7 +427,7 @@ const PulsePage = () => {
                           />
                         </label>
                         <label>
-                          Your reply
+                          Your comment
                           <textarea
                             value={commentForm.content}
                             onChange={event => setCommentForm(prev => ({ ...prev, content: event.target.value }))}
@@ -440,7 +440,7 @@ const PulsePage = () => {
                         {commentSuccess && <p className="story-submission-feedback success" role="status">{commentSuccess}</p>}
                         <button className="story-action-btn story-action-btn-submit" type="submit" disabled={commentSubmitting}>
                           <Send size={17} />
-                          {commentSubmitting ? 'Submitting...' : 'Submit reply for review'}
+                          {commentSubmitting ? 'Submitting...' : 'Submit comment for review'}
                         </button>
                       </form>
                     </section>

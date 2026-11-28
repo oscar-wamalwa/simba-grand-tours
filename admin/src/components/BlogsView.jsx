@@ -96,7 +96,7 @@ export default function BlogsView({ onRefresh }) {
       setCommentError('');
     } catch (error) {
       console.error('Error fetching blog replies:', error);
-      setCommentError('Could not load reader replies. Please refresh and try again.');
+      setCommentError('Could not load reader comments. Please refresh and try again.');
     }
   };
 
@@ -131,13 +131,13 @@ export default function BlogsView({ onRefresh }) {
       await api.blogComments.partialUpdate(comment.id, { status });
       await fetchComments();
     } catch (error) {
-      console.error('Error moderating blog reply:', error);
-      alert(error.message || 'Could not update the reply. Please try again.');
+      console.error('Error moderating blog comment:', error);
+      alert(error.message || 'Could not update the comment. Please try again.');
     }
   };
 
   const deleteComment = async (comment) => {
-    if (!window.confirm('Permanently delete this reply? It will be removed from the public blog and cannot be restored.')) {
+    if (!window.confirm('Permanently delete this comment? It will be removed from the public blog and cannot be restored.')) {
       return;
     }
 
@@ -146,8 +146,8 @@ export default function BlogsView({ onRefresh }) {
       await api.blogComments.delete(comment.id);
       await fetchComments();
     } catch (error) {
-      console.error('Error deleting blog reply:', error);
-      alert(error.message || 'Could not delete the reply. Please try again.');
+      console.error('Error deleting blog comment:', error);
+      alert(error.message || 'Could not delete the comment. Please try again.');
     } finally {
       setDeletingCommentId(null);
     }
@@ -306,13 +306,13 @@ export default function BlogsView({ onRefresh }) {
       <div className="data-card blog-comments-moderation">
         <div className="data-card-header blog-comments-header">
           <div>
-            <h3>Reader Replies</h3>
-            <p>Review, hide, or permanently delete replies.</p>
+            <h3>Reader Comments</h3>
+            <p>Review, hide, or permanently delete comments.</p>
           </div>
           <label className="blog-comment-filter">
             Show
             <select value={commentFilter} onChange={event => setCommentFilter(event.target.value)}>
-              <option value="all">All replies ({comments.length})</option>
+              <option value="all">All comments ({comments.length})</option>
               <option value="pending_review">Pending ({commentCounts.pending_review || 0})</option>
               <option value="approved">Published ({commentCounts.approved || 0})</option>
               <option value="rejected">Hidden ({commentCounts.rejected || 0})</option>
@@ -321,7 +321,7 @@ export default function BlogsView({ onRefresh }) {
         </div>
         {commentError && <p className="contact-reply-feedback error" role="alert">{commentError}</p>}
         {!commentError && filteredComments.length === 0 ? (
-          <p className="blog-comments-empty">No replies match this filter.</p>
+          <p className="blog-comments-empty">No comments match this filter.</p>
         ) : (
           <div className="blog-comments-list">
             {filteredComments.map(comment => {
