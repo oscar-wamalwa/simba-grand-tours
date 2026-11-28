@@ -30,6 +30,17 @@ function ContactBookingOptions({ safari, departure, settings }) {
   );
 }
 
+function ChipGroup({ labelledBy, value, options, allLabel, onChange }) {
+  return (
+    <div className="chip-group" role="group" aria-labelledby={labelledBy}>
+      <button type="button" className={`chip${value === '' ? ' active' : ''}`} aria-pressed={value === ''} onClick={() => onChange('')}>{allLabel}</button>
+      {options.map(option => (
+        <button type="button" key={option.value} className={`chip${value === option.value ? ' active' : ''}`} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>
+      ))}
+    </div>
+  );
+}
+
 function SafarisPage({
   safaris,
   onSelect,
@@ -623,33 +634,20 @@ function SafarisPage({
         <aside className="sidebar">
           <h3>Filter Tours</h3>
           <div className="filter-group">
-            <label className="filter-label">Destinations</label>
-            <select value={filters.destination} onChange={event => setFilters(prev => ({ ...prev, destination: event.target.value }))}>
-              <option value="">All destinations</option>
-              {destinations.map(destination => <option key={destination} value={destination}>{destination}</option>)}
-            </select>
+            <span className="filter-label" id="filter-destination">Destinations</span>
+            <ChipGroup labelledBy="filter-destination" value={filters.destination} allLabel="All" options={destinations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, destination: value }))} />
           </div>
           <div className="filter-group">
-            <label className="filter-label">Trip type</label>
-            <select value={filters.tripType} onChange={event => setFilters(prev => ({ ...prev, tripType: event.target.value }))}>
-              <option value="">All trip types</option>
-              {tripTypes.map(type => <option key={type} value={type}>{type}</option>)}
-            </select>
+            <span className="filter-label" id="filter-trip-type">Trip type</span>
+            <ChipGroup labelledBy="filter-trip-type" value={filters.tripType} allLabel="All" options={tripTypes.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, tripType: value }))} />
           </div>
           <div className="filter-group">
-            <label className="filter-label">Duration</label>
-            <select value={filters.duration} onChange={event => setFilters(prev => ({ ...prev, duration: event.target.value }))}>
-              <option value="">Any duration</option>
-              {durations.map(duration => <option key={duration} value={duration}>{duration}</option>)}
-            </select>
+            <span className="filter-label" id="filter-duration">Duration</span>
+            <ChipGroup labelledBy="filter-duration" value={filters.duration} allLabel="Any" options={durations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, duration: value }))} />
           </div>
           <div className="filter-group">
-            <label className="filter-label">Group or private</label>
-            <select value={filters.tripMode} onChange={event => setFilters(prev => ({ ...prev, tripMode: event.target.value }))}>
-              <option value="">Any trip style</option>
-              <option value="group">Group</option>
-              <option value="private">Private</option>
-            </select>
+            <span className="filter-label" id="filter-trip-mode">Group or private</span>
+            <ChipGroup labelledBy="filter-trip-mode" value={filters.tripMode} allLabel="Any" options={[{ value: 'group', label: 'Group' }, { value: 'private', label: 'Private' }]} onChange={value => setFilters(prev => ({ ...prev, tripMode: value }))} />
           </div>
           <div className="filter-group">
             <label className="filter-label">Maximum price: {formatPrice(filters.priceRange)}</label>
