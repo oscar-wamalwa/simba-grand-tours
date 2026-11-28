@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Mountain, Map, Users, Tent, Coffee, Compass, Landmark, Binoculars, Droplets,
-  User, Backpack, GraduationCap, Sun, Heart, ArrowRight, MessageCircle, X,
+  User, Backpack, GraduationCap, Sun, Heart, Home, ArrowRight, MessageCircle, X,
 } from 'lucide-react';
 
 const servicesBg = '/images/okavango.jpg';
@@ -87,6 +87,12 @@ function ServicesPage({ onNavigate, onRequestCustomSafari }) {
       icon: <Sun size={32} />,
       desc: 'All-inclusive holiday combinations.',
       description: 'Combine accommodation, transport, safari experiences and other activities in one itinerary. We can adjust the trip length and options around your dates, interests and budget.',
+    },
+    {
+      title: 'Family Packages',
+      icon: <Home size={32} />,
+      desc: 'Safe, memorable trips for the whole family.',
+      description: 'Plan a trip that works for parents, children and grandparents alike, with a comfortable pace, family-friendly activities and flexible transport. We can adjust the itinerary around your family size, ages and budget.',
     },
     {
       title: 'Romantic Trips',

@@ -1,6 +1,7 @@
 export const TRIP_TYPES = [
   'Wildlife & Game Drives',
   'Holiday',
+  'Family',
   'Solo Traveller',
   'Beach Getaway',
   'Day Trip',
