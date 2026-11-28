@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck
 import api from '../api';
 import FilterDropdown from './FilterDropdown';
 
-import { TRIP_TYPES, DURATION_CATEGORIES, durationCategory } from '../tripCategories';
+import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle } from '../tripCategories';
 
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
@@ -576,7 +576,7 @@ function SafarisPage({
       || (safari.location || '').trim() === filters.destination;
     const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
     const matchesDuration = !filters.duration || durationCategory(safari.duration) === filters.duration;
-    const matchesMode = !filters.tripMode || safari.trip_mode === filters.tripMode || safari.trip_mode === 'either';
+    const matchesMode = !filters.tripMode || normalizeTripStyle(safari.trip_mode) === filters.tripMode || (safari.trip_mode === 'either' && filters.tripMode === 'private_custom');
     const matchesPrice = (safari.price || 0) <= filters.priceRange;
     return matchesDestinationPackages && matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
   });
@@ -639,8 +639,8 @@ function SafarisPage({
             </button>
           </div>
           <div className="filter-group">
-            <span className="filter-label" id="filter-trip-mode">Group or private</span>
-            <FilterDropdown labelledBy="filter-trip-mode" value={filters.tripMode} allLabel="Any" options={[{ value: 'group', label: 'Group' }, { value: 'private', label: 'Private' }]} onChange={value => setFilters(prev => ({ ...prev, tripMode: value }))} />
+            <span className="filter-label" id="filter-trip-mode">Trip style</span>
+            <FilterDropdown labelledBy="filter-trip-mode" value={filters.tripMode} allLabel="Any" options={TRIP_STYLES} onChange={value => setFilters(prev => ({ ...prev, tripMode: value }))} />
           </div>
           <div className="filter-group">
             <label className="filter-label">Maximum price: {formatPrice(filters.priceRange)}</label>

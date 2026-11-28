@@ -77,11 +77,20 @@ class Safari(models.Model):
     duration = models.CharField(max_length=50, blank=True, null=True)
     difficulty = models.CharField(max_length=50, default='Moderate')
     trip_type = models.CharField(max_length=100, blank=True)
-    trip_mode = models.CharField(
-        max_length=20,
-        choices=[('group', 'Group'), ('private', 'Private'), ('either', 'Group or private')],
-        default='either',
-    )
+    TRIP_STYLE_CHOICES = [
+        ('group_joining', 'Group Joining'),
+        ('private_custom', 'Private & Custom'),
+        ('budget', 'Budget / Backpacker'),
+        ('mid_range', 'Mid-Range'),
+        ('luxury', 'Luxury'),
+        ('camping', 'Camping'),
+        ('sgr_train', 'SGR Train Safari'),
+        ('solo_family', 'Solo Traveller / Family Friendly'),
+        ('group', 'Group (legacy)'),
+        ('private', 'Private (legacy)'),
+        ('either', 'Group or private (legacy)'),
+    ]
+    trip_mode = models.CharField(max_length=20, choices=TRIP_STYLE_CHOICES, default='group_joining')
     county = models.CharField(max_length=100, blank=True)
     images = models.JSONField(default=list, blank=True)
     videos = models.JSONField(default=list, blank=True)

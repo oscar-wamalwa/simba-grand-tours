@@ -4,7 +4,7 @@ import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 import Select from './Select';
-import { TRIP_TYPES, DURATION_CATEGORIES, durationCategory } from '../tripCategories';
+import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle } from '../tripCategories';
 
 const normalizeSafari = (safari) => ({
   ...safari,
@@ -28,7 +28,7 @@ export default function SafarisView({ onRefresh }) {
     duration: '', 
     difficulty: 'Moderate', 
     trip_type: '',
-    trip_mode: 'either',
+    trip_mode: 'group_joining',
     county: '',
     images: [], 
     videos: [],
@@ -175,7 +175,7 @@ export default function SafarisView({ onRefresh }) {
       
       setShowModal(false);
       setEditing(null);
-      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false });
+      setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'group_joining', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false });
       fetchSafaris();
       onRefresh && onRefresh();
     } catch (error) { 
@@ -257,7 +257,7 @@ export default function SafarisView({ onRefresh }) {
       duration: durationCategory(s.duration) || s.duration, 
       difficulty: s.difficulty, 
       trip_type: s.trip_type || '',
-      trip_mode: s.trip_mode || 'either',
+      trip_mode: normalizeTripStyle(s.trip_mode) || 'group_joining',
       county: s.county || '',
       images: s.images || [], 
       videos: s.videos || [],
@@ -308,7 +308,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setAddingDestination(false); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setAddingDestination(false); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'group_joining', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -405,7 +405,7 @@ export default function SafarisView({ onRefresh }) {
                   </Select></div>
                   <div className="form-group"><label>Trip style</label>
                     <Select value={form.trip_mode} onChange={e => setForm({ ...form, trip_mode: e.target.value })}>
-                      <option value="either">Group or private</option><option value="group">Group</option><option value="private">Private</option>
+                      {TRIP_STYLES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </Select>
                   </div>
                   <div className="form-group"><label>Difficulty</label>
