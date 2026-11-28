@@ -43,7 +43,51 @@ export default function SafarisView({ onRefresh }) {
     isSignature: false,
   });
 
-  useEffect(() => { fetchSafaris(); }, []);
+  const [destinations, setDestinations] = useState([]);
+  const [addingDestination, setAddingDestination] = useState(false);
+  const [newDestination, setNewDestination] = useState({ name: '', category: 'iconic_safaris' });
+  const [destinationError, setDestinationError] = useState('');
+  const [savingDestination, setSavingDestination] = useState(false);
+
+  useEffect(() => { fetchSafaris(); fetchDestinations(); }, []);
+
+  const fetchDestinations = async () => {
+    try {
+      setDestinations(await api.destinations.getAll());
+    } catch (error) {
+      console.error('Error fetching destinations:', error);
+    }
+  };
+
+  const makeSlug = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+  const createDestination = async () => {
+    const name = newDestination.name.trim();
+    if (!name) { setDestinationError('Enter the destination name.'); return; }
+    if (destinations.some(item => item.name.toLowerCase() === name.toLowerCase())) {
+      setDestinationError('That destination already exists. Pick it from the list.');
+      return;
+    }
+    setSavingDestination(true);
+    setDestinationError('');
+    try {
+      const created = await api.destinations.create({
+        name,
+        slug: makeSlug(name),
+        category: newDestination.category,
+        hook: `Discover ${name} with Simba Grand Tours.`,
+        visible: true,
+      });
+      setDestinations(prev => [...prev, created]);
+      setForm(prev => ({ ...prev, location: created.name }));
+      setAddingDestination(false);
+      setNewDestination({ name: '', category: 'iconic_safaris' });
+    } catch (error) {
+      setDestinationError(error.message || 'Could not add the destination.');
+    } finally {
+      setSavingDestination(false);
+    }
+  };
 
   const fetchSafaris = async () => {
     try {
@@ -116,10 +160,17 @@ export default function SafarisView({ onRefresh }) {
         isSignature: form.isSignature
       };
       
-      if (editing) {
-        await api.safaris.update(editing.id, data);
-      } else {
-        await api.safaris.create(data);
+      const saved = editing
+        ? await api.safaris.update(editing.id, data)
+        : await api.safaris.create(data);
+
+      // Keep the destination's package list in step with the safari's destination.
+      const destination = destinations.find(item => item.name === form.location);
+      if (destination && saved?.id && !(destination.package_ids || []).includes(saved.id)) {
+        await api.destinations.partialUpdate(destination.id, {
+          package_ids: [...(destination.package_ids || []), saved.id],
+        }).catch(error => console.error('Could not link destination:', error));
+        fetchDestinations();
       }
       
       setShowModal(false);
@@ -186,6 +237,7 @@ export default function SafarisView({ onRefresh }) {
   };
 
   const editSafari = async (summary) => {
+    setAddingDestination(false);
     let s = summary;
     try {
       s = normalizeSafari(await api.safaris.getById(summary.id));
@@ -256,7 +308,7 @@ export default function SafarisView({ onRefresh }) {
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>
-          <button className="btn-primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false }); setShowModal(true); }}>
+          <button className="btn-primary" onClick={() => { setEditing(null); setAddingDestination(false); setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'either', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false }); setShowModal(true); }}>
             <Plus size={18} /> Add New Safari
           </button>
         </div>
@@ -306,7 +358,30 @@ export default function SafarisView({ onRefresh }) {
                 <div className="form-group"><label>Title *</label><input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required /></div>
                 <div className="form-group"><label>Description *</label><textarea rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required /></div>
                 <div className="form-row">
-                  <div className="form-group"><label>Destination *</label><input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} required /></div>
+                  <div className="form-group"><label>Destination *</label>
+                    <Select value={addingDestination ? '__new__' : form.location} required onChange={e => {
+                      if (e.target.value === '__new__') { setAddingDestination(true); setDestinationError(''); }
+                      else { setAddingDestination(false); setForm({ ...form, location: e.target.value }); }
+                    }}>
+                      <option value="">Choose a destination</option>
+                      {form.location && !destinations.some(item => item.name === form.location) && <option value={form.location}>{form.location}</option>}
+                      {destinations.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                      <option value="__new__">+ Add a new destination</option>
+                    </Select>
+                    {addingDestination && (
+                      <div className="new-destination-box">
+                        <input type="text" value={newDestination.name} onChange={e => setNewDestination({ ...newDestination, name: e.target.value })} placeholder="New destination name, e.g. Diani" />
+                        <Select value={newDestination.category} onChange={e => setNewDestination({ ...newDestination, category: e.target.value })}>
+                          <option value="iconic_safaris">Iconic Safaris</option>
+                          <option value="beach_coastal_escapes">Beach and Coastal Escapes</option>
+                          <option value="rift_valley_weekenders">Rift Valley Weekenders</option>
+                          <option value="hidden_gems_road_trips">Hidden Gems and Road Trips</option>
+                        </Select>
+                        {destinationError && <small className="new-destination-error">{destinationError}</small>}
+                        <button type="button" className="btn-primary" onClick={createDestination} disabled={savingDestination}>{savingDestination ? 'Adding...' : 'Add destination'}</button>
+                      </div>
+                    )}
+                  </div>
                   <div className="form-group"><label>Full Amount (KES) *</label><input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required /></div>
                   <div className="form-group"><label>Booking Fee (KES)</label><input type="number" min="1" step="1" value={form.booking_fee_kes} onChange={e => setForm({ ...form, booking_fee_kes: e.target.value })} /></div>
                 </div>

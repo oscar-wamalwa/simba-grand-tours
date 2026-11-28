@@ -573,14 +573,14 @@ function SafarisPage({
     const matchesDestinationPackages = packageFilterIds.length === 0
       || packageFilterIds.includes(String(safari.id));
     const matchesDestination = !filters.destination
-      || `${safari.location || ''} ${safari.county || ''}`.toLowerCase().includes(filters.destination.toLowerCase());
+      || (safari.location || '').trim() === filters.destination;
     const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
     const matchesDuration = !filters.duration || durationCategory(safari.duration) === filters.duration;
     const matchesMode = !filters.tripMode || safari.trip_mode === filters.tripMode || safari.trip_mode === 'either';
     const matchesPrice = (safari.price || 0) <= filters.priceRange;
     return matchesDestinationPackages && matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
   });
-  const destinations = [...new Set(safaris.flatMap(safari => [safari.county, safari.location]).filter(Boolean))].sort();
+  const destinations = [...new Set(safaris.map(safari => (safari.location || '').trim()).filter(Boolean))].sort();
 
   return (
     <div className="safaris-page fade-in">
