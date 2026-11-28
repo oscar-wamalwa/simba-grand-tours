@@ -672,7 +672,7 @@ function SafarisPage({
 
         <main className="listing-grid-main">
           <div className="listings-header">
-            <h2 className="section-title">{packageFilterIds.length ? 'Packages for this Destination' : 'Our Premier Safari Tours'}</h2>
+            <h2 className="section-title">{packageFilterIds.length ? 'Packages for this Destination' : 'Our Safaris'}</h2>
             <span className="results-count">{filteredSafaris.length} tours found</span>
           </div>
           
