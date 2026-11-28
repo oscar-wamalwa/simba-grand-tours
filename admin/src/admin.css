@@ -657,3 +657,8 @@ button.admin-profile { border: 0; font: inherit; color: inherit; text-align: lef
 .toast-success svg { color: #27ae60; }
 .toast-error { border-left-color: #e74c3c; }
 .toast-error svg { color: #e74c3c; }
+
+.promo-pool-trips { border: 1px solid var(--gray-medium, #ddd); border-radius: 8px; padding: 10px 12px; margin: 10px 0; display: grid; gap: 6px; max-height: 180px; overflow-y: auto; }
+.promo-pool-trips legend { font-size: 0.85rem; padding: 0 6px; }
+.promo-pool-trip { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.promo-pool-trip input { width: auto; }

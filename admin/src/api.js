@@ -147,7 +147,7 @@ export const promoPoolApi = {
     const response = await apiRequest('/promo-pool/');
     return response.results || response;
   },
-  generate: (items) => apiRequest('/promo-pool/generate/', { method: 'POST', body: { items } }),
+  generate: (items, safariIds) => apiRequest('/promo-pool/generate/', { method: 'POST', body: { items, safari_ids: safariIds } }),
   update: (id, data) => apiRequest(`/promo-pool/${id}/`, { method: 'PATCH', body: data }),
   delete: (id) => apiRequest(`/promo-pool/${id}/`, { method: 'DELETE' }),
   clearUsed: () => apiRequest('/promo-pool/clear-used/', { method: 'POST' }),

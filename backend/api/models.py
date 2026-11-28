@@ -213,6 +213,8 @@ class PromoPoolCode(models.Model):
     code = models.CharField(max_length=40, unique=True)
     discount_kes = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
+    # Empty means the code works on every trip.
+    safaris = models.ManyToManyField('Safari', blank=True, related_name='promo_pool_codes')
     claimed_at = models.DateTimeField(null=True, blank=True)
     claimed_trip = models.CharField(max_length=255, blank=True)
     claimed_price_kes = models.PositiveIntegerField(null=True, blank=True)

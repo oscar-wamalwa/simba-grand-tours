@@ -7,6 +7,8 @@ import { notify } from '../toast';
 export default function PromoPoolPanel() {
   const [codes, setCodes] = useState([]);
   const [rows, setRows] = useState([{ discount_kes: '', quantity: '' }]);
+  const [safaris, setSafaris] = useState([]);
+  const [selectedSafaris, setSelectedSafaris] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -21,7 +23,12 @@ export default function PromoPoolPanel() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    api.safaris.getAll().then(setSafaris).catch(() => setSafaris([]));
+  }, [load]);
+
+  const toggleSafari = id => setSelectedSafaris(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]));
 
   const updateRow = (index, field, value) => setRows(prev => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
 
@@ -30,8 +37,9 @@ export default function PromoPoolPanel() {
     setSaving(true);
     try {
       const items = rows.map(row => ({ discount_kes: Number(row.discount_kes), quantity: Number(row.quantity) }));
-      const created = await api.promoPool.generate(items);
+      const created = await api.promoPool.generate(items, selectedSafaris);
       setRows([{ discount_kes: '', quantity: '' }]);
+      setSelectedSafaris([]);
       notify(`${created.length} promo codes published.`);
       await load();
     } catch (error) {
@@ -89,6 +97,14 @@ export default function PromoPoolPanel() {
             {rows.length > 1 && <button type="button" className="btn-secondary" onClick={() => setRows(prev => prev.filter((_, i) => i !== index))}>Remove</button>}
           </div>
         ))}
+        <fieldset className="promo-pool-trips">
+          <legend>Which trips can use these codes? (none ticked = all trips)</legend>
+          {safaris.map(safari => (
+            <label key={safari.id} className="promo-pool-trip">
+              <input type="checkbox" checked={selectedSafaris.includes(safari.id)} onChange={() => toggleSafari(safari.id)} /> {safari.title}
+            </label>
+          ))}
+        </fieldset>
         <div className="campaign-actions">
           <button type="button" className="btn-secondary" onClick={() => setRows(prev => [...prev, { discount_kes: '', quantity: '' }])}><Plus size={16} /> Add another amount</button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Publishing...' : 'Publish codes'}</button>
@@ -100,7 +116,7 @@ export default function PromoPoolPanel() {
             <div>
               <strong>{code.code}</strong>
               <p>
-                KES {Number(code.discount_kes).toLocaleString()} off
+                KES {Number(code.discount_kes).toLocaleString()} off · {code.safari_titles?.length ? code.safari_titles.join(', ') : 'All trips'}
                 {code.claimed_at
                   ? ` · Used ${new Date(code.claimed_at).toLocaleString('en-KE')} on ${code.claimed_trip} (price shown KES ${Number(code.claimed_price_kes).toLocaleString()})`
                   : ' · Available'}

@@ -1937,7 +1937,7 @@ class PromoPoolTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(response.data), 4)
         self.assertEqual(len({row['code'] for row in response.data}), 4)
-        self.assertEqual(self.client.get('/api/promo-pool-public/status/').data, {'total': 4, 'remaining': 4})
+        self.assertEqual(self.client.get(f'/api/promo-pool-public/status/?safari={self.safari.pk}').data, {'total': 4, 'remaining': 4})
 
     def test_each_claim_gets_a_different_code_until_empty(self):
         self.generate([{'discount_kes': 100, 'quantity': 2}])
@@ -1949,12 +1949,27 @@ class PromoPoolTests(APITestCase):
         self.assertNotEqual(first.data['code'], second.data['code'])
         third = self.client.post('/api/promo-pool-public/claim/', {'safari': self.safari.pk}, format='json')
         self.assertEqual(third.status_code, 409)
-        self.assertEqual(self.client.get('/api/promo-pool-public/status/').data['remaining'], 0)
+        self.assertEqual(self.client.get(f'/api/promo-pool-public/status/?safari={self.safari.pk}').data['remaining'], 0)
 
     def test_inactive_codes_are_not_handed_out(self):
         rows = self.generate([{'discount_kes': 100, 'quantity': 1}]).data
         self.client.force_authenticate(user=self.staff)
         self.client.patch(f"/api/promo-pool/{rows[0]['id']}/", {'is_active': False}, format='json')
         self.client.force_authenticate(user=None)
-        self.assertEqual(self.client.get('/api/promo-pool-public/status/').data['total'], 0)
+        self.assertEqual(self.client.get(f'/api/promo-pool-public/status/?safari={self.safari.pk}').data['total'], 0)
         self.assertEqual(self.client.post('/api/promo-pool-public/claim/', {'safari': self.safari.pk}, format='json').status_code, 409)
+
+    def test_codes_only_apply_to_selected_trips(self):
+        from .models import Safari
+        other = Safari.objects.create(title='Diani', description='d', location='Diani', price=3000, visible=True)
+        self.generate_for([self.safari.pk], [{'discount_kes': 200, 'quantity': 1}])
+        self.assertEqual(self.client.get(f'/api/promo-pool-public/status/?safari={other.pk}').data['remaining'], 0)
+        self.assertEqual(self.client.post('/api/promo-pool-public/claim/', {'safari': other.pk}, format='json').status_code, 409)
+        self.assertEqual(self.client.get(f'/api/promo-pool-public/status/?safari={self.safari.pk}').data['remaining'], 1)
+        self.assertEqual(self.client.post('/api/promo-pool-public/claim/', {'safari': self.safari.pk}, format='json').status_code, 201)
+
+    def generate_for(self, safari_ids, items):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.post('/api/promo-pool/generate/', {'items': items, 'safari_ids': safari_ids}, format='json')
+        self.client.force_authenticate(user=None)
+        return response

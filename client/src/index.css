@@ -1536,3 +1536,5 @@ a { text-decoration: none; color: inherit; }
 .promo-reveal-result .btn-large { justify-self: start; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
 .promo-price strong { font-size: 1.3rem; color: var(--deep-bronze); }
 .promo-price s { color: var(--text-light); }
+.departure-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.get-code-button { width: auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 0.85rem; }

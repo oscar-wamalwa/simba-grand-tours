@@ -1,6 +1,7 @@
 import secrets
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -20,6 +21,18 @@ class PromoPoolClaimThrottle(AnonRateThrottle):
     rate = '10/hour'
 
 
+def available_for(safari_id):
+    """Active, unused-or-used pool codes that apply to a trip (no trips selected = all trips)."""
+    return PromoPoolCode.objects.filter(is_active=True).filter(
+        Q(safaris__isnull=True) | Q(safaris__pk=safari_id)
+    ).distinct()
+
+
+def counts_for(safari_id):
+    codes = available_for(safari_id)
+    return {'total': codes.count(), 'remaining': codes.filter(claimed_at__isnull=True).count()}
+
+
 def new_code():
     while True:
         code = 'SIMBA-' + ''.join(secrets.choice(CODE_ALPHABET) for _ in range(5))
@@ -31,11 +44,11 @@ class PromoPoolStatusView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        active = PromoPoolCode.objects.filter(is_active=True)
-        return Response({
-            'total': active.count(),
-            'remaining': active.filter(claimed_at__isnull=True).count(),
-        })
+        try:
+            safari_id = int(request.query_params.get('safari'))
+        except (TypeError, ValueError):
+            return Response({'total': 0, 'remaining': 0})
+        return Response(counts_for(safari_id))
 
 
 class PromoPoolClaimView(APIView):
@@ -50,7 +63,7 @@ class PromoPoolClaimView(APIView):
         with transaction.atomic():
             candidates = list(
                 PromoPoolCode.objects.select_for_update()
-                .filter(is_active=True, claimed_at__isnull=True)
+                .filter(pk__in=available_for(safari.pk).filter(claimed_at__isnull=True).values('pk'))
             )
             if not candidates:
                 return Response({'detail': 'No promo codes left.'}, status=status.HTTP_409_CONFLICT)
@@ -61,14 +74,12 @@ class PromoPoolClaimView(APIView):
             promo.claimed_trip = safari.title
             promo.claimed_price_kes = discounted
             promo.save(update_fields=['claimed_at', 'claimed_trip', 'claimed_price_kes'])
-        active = PromoPoolCode.objects.filter(is_active=True)
         return Response({
             'code': promo.code,
             'discount_kes': promo.discount_kes,
             'original_price_kes': price,
             'discounted_price_kes': discounted,
-            'total': active.count(),
-            'remaining': active.filter(claimed_at__isnull=True).count(),
+            **counts_for(safari.pk),
         }, status=status.HTTP_201_CREATED)
 
 
@@ -77,7 +88,7 @@ class PromoPoolAdminViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        return PromoPoolCode.objects.all()
+        return PromoPoolCode.objects.prefetch_related('safaris')
 
     def get_serializer_class(self):
         from .serializers import PromoPoolCodeSerializer
@@ -103,11 +114,19 @@ class PromoPoolAdminViewSet(viewsets.ModelViewSet):
             parsed.append((discount, quantity))
         if sum(quantity for _, quantity in parsed) > MAX_BATCH_SIZE:
             raise ValidationError({'items': f'A batch can have at most {MAX_BATCH_SIZE} codes.'})
+        safari_ids = request.data.get('safari_ids') or []
+        if not isinstance(safari_ids, list):
+            raise ValidationError({'safari_ids': 'Choose trips from the list.'})
+        safaris = list(Safari.objects.filter(pk__in=safari_ids))
+        if len(safaris) != len(set(safari_ids)):
+            raise ValidationError({'safari_ids': 'One of the selected trips no longer exists.'})
         with transaction.atomic():
-            created = [
-                PromoPoolCode.objects.create(code=new_code(), discount_kes=discount)
-                for discount, quantity in parsed for _ in range(quantity)
-            ]
+            created = []
+            for discount, quantity in parsed:
+                for _ in range(quantity):
+                    code = PromoPoolCode.objects.create(code=new_code(), discount_kes=discount)
+                    code.safaris.set(safaris)
+                    created.append(code)
         serializer = self.get_serializer(created, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

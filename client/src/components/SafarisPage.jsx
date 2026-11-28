@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, MessageCircle, Phone } from 'lucide-react';
 import api from '../api';
 import FilterDropdown from './FilterDropdown';
-import PromoReveal from './PromoReveal';
+import { usePromoPool, GetCodeButton, PromoResult } from './PromoReveal';
 
 import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle, normalizeTripType } from '../tripCategories';
 
@@ -72,6 +72,8 @@ function SafarisPage({
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [bookingResult, setBookingResult] = useState(null);
+  const promo = usePromoPool(selectedSafari);
+  const [promoDepartureId, setPromoDepartureId] = useState(null);
   const [bookingStatus, setBookingStatus] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [waitlistMessage, setWaitlistMessage] = useState('');
@@ -332,7 +334,6 @@ function SafarisPage({
                 </span>}
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
               </div>
-              <PromoReveal safari={selectedSafari} settings={settings} formatPrice={formatPrice} />
               <p>{selectedSafari.description || 'A carefully designed safari experience with exceptional wildlife encounters and comfortable, memorable stays.'}</p>
               {highlights.length > 0 && (
                 <>
@@ -419,6 +420,8 @@ function SafarisPage({
                         {departure.pickup_time && <span><Clock size={15} /> Pickup: {departure.pickup_time}</span>}
                       </div>
                       {departure.seats_available > 0 ? (
+                        <div className="departure-buttons">
+                        <GetCodeButton promo={{ ...promo, getCode: () => { setPromoDepartureId(departure.id); promo.getCode(); } }} />
                         <button
                           type="button"
                           className="btn-gold-sm"
@@ -434,6 +437,7 @@ function SafarisPage({
                             ? selectedDepartureId === String(departure.id) ? 'Selected' : 'Book'
                             : 'Booking fee not set'}
                         </button>
+                        </div>
                       ) : (
                         <button
                           type="button"
@@ -448,6 +452,9 @@ function SafarisPage({
                         </button>
                       )}
                     </article>
+                    {departure.seats_available > 0 && (promoDepartureId ?? departures.find(item => item.seats_available > 0)?.id) === departure.id && (
+                      <PromoResult promo={promo} safari={selectedSafari} settings={settings} formatPrice={formatPrice} />
+                    )}
                     {!onlinePaymentsEnabled && selectedDepartureId === String(departure.id) && departure.seats_available > 0 && (
                       <ContactBookingOptions safari={selectedSafari} departure={departure} settings={settings} />
                     )}

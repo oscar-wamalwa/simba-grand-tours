@@ -638,10 +638,15 @@ class TestimonialSerializer(serializers.ModelSerializer):
 
 
 class PromoPoolCodeSerializer(serializers.ModelSerializer):
+    safari_titles = serializers.SerializerMethodField()
+
+    def get_safari_titles(self, obj):
+        return [safari.title for safari in obj.safaris.all()]
+
     class Meta:
         model = PromoPoolCode
         fields = [
-            'id', 'code', 'discount_kes', 'is_active', 'claimed_at',
+            'id', 'code', 'discount_kes', 'is_active', 'safari_titles', 'claimed_at',
             'claimed_trip', 'claimed_price_kes', 'created_at',
         ]
         read_only_fields = ['id', 'code', 'discount_kes', 'claimed_at', 'claimed_trip', 'claimed_price_kes', 'created_at']
