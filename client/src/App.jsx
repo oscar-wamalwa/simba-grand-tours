@@ -154,61 +154,46 @@ export default function App() {
     };
 
     const fetchData = async () => {
-      try {
-        // Fetch only visible safaris for client
-        console.log('Fetching safaris from API...');
-        const safarisData = await api.safaris.getAll({ visible: 'true' });
-        console.log('Safaris fetched:', safarisData?.length || 0);
-        setSafaris(safarisData.map(d => ({
-          id: d.id,
-          ...d,
-          isSignature: d.is_signature ?? d.isSignature ?? false
-        })));
-      } catch (err) {
-        console.error('Error fetching safaris:', err.message);
-      }
-
-      try {
-        const destinationsData = await api.destinations.getAll();
-        setDestinations(destinationsData);
-      } catch (err) {
-        console.error('Error fetching destinations:', err.message);
-      }
-
-      try {
-        const settingsData = await api.settings.get();
-        if (settingsData) {
-          setSettings(prev => ({
-            ...prev,
-            siteName: settingsData.site_name || prev.siteName,
-            siteEmail: settingsData.site_email || prev.siteEmail,
-            sitePhone: settingsData.site_phone || prev.sitePhone,
-            address: settingsData.address || prev.address,
-            website: settingsData.website || prev.website,
-            instagram: settingsData.instagram || prev.instagram,
-            facebook: settingsData.facebook || prev.facebook,
-            tiktok: settingsData.tiktok || prev.tiktok,
-            privacyPolicy: settingsData.privacy_policy || prev.privacyPolicy,
-            termsConditions: settingsData.terms_conditions || prev.termsConditions,
-            whatsapp: settingsData.whatsapp || prev.whatsapp
-          }));
-        }
-      } catch (err) {
-        console.error('Error fetching website settings:', err.message);
-      }
-
-      await fetchFeaturedTestimonials();
-
-      try {
-        const announcementData = await api.announcements.getAll();
-        setAnnouncements(announcementData);
-      } catch (err) {
-        console.error('Error fetching trip announcements:', err.message);
-      }
+      // Independent requests run together so the page isn't waiting on them one by one.
+      await Promise.all([
+        api.safaris.getAll({ visible: 'true' })
+          .then(safarisData => setSafaris(safarisData.map(d => ({
+            id: d.id,
+            ...d,
+            isSignature: d.is_signature ?? d.isSignature ?? false
+          }))))
+          .catch(err => console.error('Error fetching safaris:', err.message)),
+        api.destinations.getAll()
+          .then(setDestinations)
+          .catch(err => console.error('Error fetching destinations:', err.message)),
+        api.settings.get()
+          .then(settingsData => {
+            if (!settingsData) return;
+            setSettings(prev => ({
+              ...prev,
+              siteName: settingsData.site_name || prev.siteName,
+              siteEmail: settingsData.site_email || prev.siteEmail,
+              sitePhone: settingsData.site_phone || prev.sitePhone,
+              address: settingsData.address || prev.address,
+              website: settingsData.website || prev.website,
+              instagram: settingsData.instagram || prev.instagram,
+              facebook: settingsData.facebook || prev.facebook,
+              tiktok: settingsData.tiktok || prev.tiktok,
+              privacyPolicy: settingsData.privacy_policy || prev.privacyPolicy,
+              termsConditions: settingsData.terms_conditions || prev.termsConditions,
+              whatsapp: settingsData.whatsapp || prev.whatsapp
+            }));
+          })
+          .catch(err => console.error('Error fetching website settings:', err.message)),
+        fetchFeaturedTestimonials(),
+        api.announcements.getAll()
+          .then(setAnnouncements)
+          .catch(err => console.error('Error fetching trip announcements:', err.message)),
+      ]);
     };
 
     // Start fetching after a small delay to let initial render complete
-    const timer = setTimeout(fetchData, 100);
+    const timer = setTimeout(fetchData, 0);
     window.addEventListener('focus', fetchFeaturedTestimonials);
     return () => {
       clearTimeout(timer);

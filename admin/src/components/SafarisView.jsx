@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 
 const normalizeSafari = (safari) => ({
@@ -64,13 +65,7 @@ export default function SafarisView({ onRefresh }) {
         try {
           console.log(`Processing file ${index + 1}:`, file.name);
           
-          // Convert file to base64 for API upload
-          const reader = new FileReader();
-          const base64Data = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          const base64Data = await prepareImage(file);
           
           console.log('Image prepared for upload');
           return base64Data;

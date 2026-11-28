@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Edit2, Eye, EyeOff, MapPin, Plus, Trash2, X } from 'lucide-react';
 import api from '../api';
+import { prepareImage } from '../imageUpload';
 
 const categories = [
   ['iconic_safaris', 'Iconic Safaris'],
@@ -93,12 +94,7 @@ export default function DestinationsView({ formatPrice }) {
     setUploading(true);
     setActionError('');
     try {
-      const urls = await Promise.all(files.map(file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-        reader.readAsDataURL(file);
-      })));
+      const urls = await Promise.all(files.map(prepareImage));
       setForm(current => ({ ...current, images: [...current.images, ...urls] }));
       setImagePreviews(current => [...current, ...urls.map(url => ({ url }))]);
     } catch (error) {
