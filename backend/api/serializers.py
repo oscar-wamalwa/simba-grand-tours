@@ -74,7 +74,9 @@ class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
     bookings_open = serializers.SerializerMethodField()
 
     def get_bookings_open(self, safari):
-        # Closed once every scheduled departure is closed or past; trips without departures stay open.
+        # Closed when staff close the trip, or once every scheduled departure is closed or past.
+        if not safari.is_open:
+            return False
         departures = [item for item in safari.departures.all() if not item.is_archived]
         if not departures:
             return True
@@ -87,7 +89,7 @@ class SafariSerializer(ThumbnailImagesMixin, serializers.ModelSerializer):
             'id', 'title', 'description', 'location', 'price', 'booking_fee_kes',
             'booking_terms', 'duration',
             'difficulty', 'images', 'videos', 'highlights', 'inclusions', 'exclusions',
-            'itinerary', 'visible', 'is_signature', 'trip_type', 'trip_mode',
+            'itinerary', 'visible', 'is_open', 'is_signature', 'trip_type', 'trip_mode',
             'county', 'pickup_points', 'packing_checklist', 'is_featured',
             'bookings_open', 'created_at', 'updated_at'
         ]
