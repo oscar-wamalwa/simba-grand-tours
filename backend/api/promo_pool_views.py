@@ -35,7 +35,7 @@ def counts_for(safari_id):
 
 def new_code():
     while True:
-        code = 'SIMBA-' + ''.join(secrets.choice(CODE_ALPHABET) for _ in range(5))
+        code = 'SGT-' + ''.join(secrets.choice(CODE_ALPHABET) for _ in range(5))
         if not PromoPoolCode.objects.filter(code=code).exists():
             return code
 
