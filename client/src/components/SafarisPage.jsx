@@ -628,7 +628,7 @@ function SafarisPage({
             <FilterDropdown labelledBy="filter-destination" value={filters.destination} allLabel="All" options={destinations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, destination: value }))} />
           </div>
           <div className="filter-group">
-            <span className="filter-label" id="filter-trip-type">Trip type</span>
+            <span className="filter-label" id="filter-trip-type">Safari type</span>
             <FilterDropdown labelledBy="filter-trip-type" value={filters.tripType} allLabel="All" options={TRIP_TYPES.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, tripType: value }))} />
           </div>
           <div className="filter-group">

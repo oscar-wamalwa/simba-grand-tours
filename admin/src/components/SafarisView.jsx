@@ -4,7 +4,7 @@ import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 import Select from './Select';
-import { TRIP_TYPES, DURATION_CATEGORIES } from '../tripCategories';
+import { TRIP_TYPES, DURATION_CATEGORIES, durationCategory } from '../tripCategories';
 
 const normalizeSafari = (safari) => ({
   ...safari,
@@ -202,7 +202,7 @@ export default function SafarisView({ onRefresh }) {
       price: s.price, 
       booking_fee_kes: s.booking_fee_kes ?? '',
       booking_terms: s.booking_terms || '',
-      duration: s.duration, 
+      duration: durationCategory(s.duration) || s.duration, 
       difficulty: s.difficulty, 
       trip_type: s.trip_type || '',
       trip_mode: s.trip_mode || 'either',
@@ -316,16 +316,16 @@ export default function SafarisView({ onRefresh }) {
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label>County</label><input type="text" value={form.county} onChange={e => setForm({ ...form, county: e.target.value })} /></div>
-                  <div className="form-group"><label>Trip type</label><Select value={form.trip_type} onChange={e => setForm({ ...form, trip_type: e.target.value })}>
-                    <option value="">Choose a trip type</option>
-                    {form.trip_type && !TRIP_TYPES.includes(form.trip_type) && <option value={form.trip_type}>{form.trip_type} (old - please recategorise)</option>}
+                  <div className="form-group"><label>Safari type</label><Select value={form.trip_type} onChange={e => setForm({ ...form, trip_type: e.target.value })}>
+                    <option value="">Choose a safari type</option>
+                    {form.trip_type && !TRIP_TYPES.includes(form.trip_type) && <option value={form.trip_type}>{form.trip_type}</option>}
                     {TRIP_TYPES.map(item => <option key={item} value={item}>{item}</option>)}
                   </Select></div>
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label>Duration</label><Select value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })}>
                     <option value="">Choose a duration</option>
-                    {form.duration && !DURATION_CATEGORIES.includes(form.duration) && <option value={form.duration}>{form.duration} (old - please recategorise)</option>}
+                    {form.duration && !DURATION_CATEGORIES.includes(form.duration) && <option value={form.duration}>{form.duration}</option>}
                     {DURATION_CATEGORIES.map(item => <option key={item} value={item}>{item}</option>)}
                   </Select></div>
                   <div className="form-group"><label>Trip style</label>
