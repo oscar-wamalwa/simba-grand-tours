@@ -183,7 +183,15 @@ export default function SafarisView({ onRefresh }) {
     }
   };
 
-  const editSafari = (s) => {
+  const editSafari = async (summary) => {
+    let s = summary;
+    try {
+      s = normalizeSafari(await api.safaris.getById(summary.id));
+    } catch (error) {
+      console.error('Error loading safari:', error);
+      setActionError('Could not load this safari. Please try again.');
+      return;
+    }
     setEditing(s);
     setForm({ 
       title: s.title, 

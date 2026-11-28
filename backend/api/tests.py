@@ -1842,6 +1842,20 @@ class PhotoThumbnailTests(APITestCase):
         slim = slim.get('results', slim)
         self.assertIn(f'/api/media/safaris/{self.safari.pk}/0/', slim[0]['images'][0])
 
+    def test_light_mode_drops_photos_for_staff_only(self):
+        from django.contrib.auth import get_user_model
+        staff = get_user_model().objects.create_user('lightstaff', password='pw', is_staff=True)
+        anonymous = self.client.get('/api/safaris/?light=1').json()
+        anonymous = anonymous.get('results', anonymous)
+        self.assertTrue(anonymous[0]['images'][0].startswith('data:image/'))
+        self.client.force_authenticate(staff)
+        light = self.client.get('/api/safaris/?light=1').json()
+        light = light.get('results', light)
+        self.assertEqual({item['title']: (item['images'], item['image_count']) for item in light},
+                         {'Thumb': ([], 1), 'Hidden': ([], 1)})
+        detail = self.client.get(f'/api/safaris/{self.safari.pk}/').json()
+        self.assertTrue(detail['images'][0].startswith('data:image/'))
+
     def test_thumbnail_is_resized_cacheable_and_hides_unpublished(self):
         import io
         from PIL import Image

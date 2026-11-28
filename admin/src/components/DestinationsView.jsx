@@ -72,7 +72,15 @@ export default function DestinationsView({ formatPrice }) {
     setShowModal(true);
   };
 
-  const editDestination = (destination) => {
+  const editDestination = async (summary) => {
+    let destination = summary;
+    try {
+      destination = await api.destinations.getById(summary.id);
+    } catch (error) {
+      console.error('Could not load destination:', error);
+      setActionError('Could not load this destination. Please try again.');
+      return;
+    }
     setEditing(destination);
     setForm({
       ...emptyForm,

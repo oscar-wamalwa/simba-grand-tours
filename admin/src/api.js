@@ -89,7 +89,7 @@ async function getAllPages(endpoint, params = {}) {
 // Safari API
 export const safarisApi = {
   getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
+    const queryString = new URLSearchParams({ light: '1', ...params }).toString();
     const response = await apiRequest(`/safaris/${queryString ? `?${queryString}` : ''}`);
     return response.results || response;
   },
@@ -103,9 +103,10 @@ export const safarisApi = {
 
 export const destinationsApi = {
   getAll: async () => {
-    const response = await apiRequest('/destinations/');
+    const response = await apiRequest('/destinations/?light=1');
     return response.results || response;
   },
+  getById: (id) => apiRequest(`/destinations/${id}/`),
   create: (data) => apiRequest('/destinations/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/destinations/${id}/`, { method: 'PUT', body: data }),
   partialUpdate: (id, data) => apiRequest(`/destinations/${id}/`, { method: 'PATCH', body: data }),

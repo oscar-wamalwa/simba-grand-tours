@@ -57,7 +57,10 @@ class ThumbnailImagesMixin:
     def to_representation(self, instance):
         data = super().to_representation(instance)
         request = self.context.get('request')
-        if request and request.query_params.get('thumbs') and data.get('images'):
+        if request and request.query_params.get('light') and request.user and request.user.is_staff:
+            data['images'] = []
+            data['image_count'] = len(instance.images or [])
+        elif request and request.query_params.get('thumbs') and data.get('images'):
             version = int(instance.updated_at.timestamp())
             data['images'] = [
                 request.build_absolute_uri(f'/api/media/{self.thumb_route}/{instance.pk}/{index}/?v={version}')
