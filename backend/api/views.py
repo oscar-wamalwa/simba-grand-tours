@@ -483,7 +483,7 @@ class SettingsViewSet(viewsets.ModelViewSet):
                 'site_email': 'simbagrandtours@gmail.com',
                 'site_phone': '+254 707 984 287',
                 'address': 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD',
-                'website': 'https://www.simbagrandtours.com',
+                'website': 'https://simbagrandtours.co.ke',
             }
         )
         return obj

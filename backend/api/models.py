@@ -407,7 +407,7 @@ class Settings(models.Model):
     site_email = models.EmailField(default='simbagrandtours@gmail.com')
     site_phone = models.CharField(max_length=50, default='+254 707 984 287')
     address = models.TextField(default='Platinumz Plaza, Tom Mboya Street, Nairobi CBD')
-    website = models.URLField(default='https://www.simbagrandtours.com')
+    website = models.URLField(default='https://simbagrandtours.co.ke')
     instagram = models.URLField(blank=True, null=True)
     facebook = models.URLField(blank=True, null=True)
     twitter = models.URLField(blank=True, null=True)

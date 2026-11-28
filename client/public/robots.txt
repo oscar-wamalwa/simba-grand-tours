@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://simba-grand-tours-client.vercel.app/sitemap.xml
+Sitemap: https://simbagrandtours.co.ke/sitemap.xml

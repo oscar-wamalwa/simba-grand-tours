@@ -15,7 +15,7 @@ export default function SettingsView() {
     siteEmail: 'simbagrandtours@gmail.com',
     sitePhone: '+254 707 984 287',
     address: 'Platinumz Plaza, Tom Mboya Street, Nairobi CBD',
-    website: 'https://www.simbagrandtours.com',
+    website: 'https://simbagrandtours.co.ke',
     instagram: 'https://instagram.com/simba.grand.tours',
     facebook: 'https://web.facebook.com/simbagrandtours',
     tiktok: 'https://www.tiktok.com/@simba.grand.tours',
