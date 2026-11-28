@@ -1,10 +1,11 @@
 export const TRIP_TYPES = [
-  'Wildlife Safari',
+  'Wildlife & Game Drives',
+  'Holiday',
+  'Solo Traveller',
   'Beach Getaway',
   'Day Trip',
   'Weekend Getaway',
   'Road Trip',
-  'SGR Train Trip',
   'Hiking & Adventure',
   'Cultural Experience',
   'Camping',
