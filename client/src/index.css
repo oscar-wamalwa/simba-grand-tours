@@ -141,17 +141,12 @@ a { text-decoration: none; color: inherit; }
 .nav-actions .btn-gold { white-space: nowrap; padding: 12px 22px; }
 
 .currency-select-control { display: flex; align-items: center; }
-.currency-select-control select {
-  min-width: 68px;
-  padding: 8px 7px;
-  border: 1px solid var(--gray-medium);
-  border-radius: 6px;
-  background: var(--white);
-  color: var(--savanna-black);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
+.field-dropdown { display: grid; gap: 8px; color: var(--savanna-black); font-weight: 600; min-width: 0; }
+.field-dropdown > span { font-size: inherit; }
+.filter-dropdown.compact { min-width: 76px; }
+.filter-dropdown.compact .filter-dropdown-trigger { padding: 7px 10px; border-radius: 999px; font-size: 0.82rem; }
+.filter-dropdown.compact .filter-dropdown-menu { left: auto; right: 0; min-width: 150px; right: 0; }
+.filter-dropdown-menu button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .nav-phone { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
 
@@ -1480,7 +1475,7 @@ a { text-decoration: none; color: inherit; }
 @media (max-width: 480px) {
   .container { padding-inline: 16px; }
   .section-padding { padding-block: 42px; }
-  .currency-select-control select { min-width: 58px; padding: 7px 4px; font-size: 0.75rem; }
+  .filter-dropdown.compact { min-width: 0; }
   .hero { min-height: 330px; padding-block: 48px; }
   .hero-content h1 { font-size: clamp(1.8rem, 8vw, 2.2rem); }
   .section-title, .contact-form-container h2 { font-size: 1.5rem; }
@@ -1505,7 +1500,9 @@ a { text-decoration: none; color: inherit; }
   .nav-logo img { width: 50px !important; height: 50px !important; }
   .nav-actions { gap: 6px; }
   .nav-actions .btn-gold { padding: 8px; font-size: 0.7rem; }
-  .currency-select-control select { min-width: 54px; }
+  .filter-dropdown.compact { min-width: 0; }
+  .filter-dropdown.compact .filter-dropdown-trigger { gap: 3px; padding: 6px 6px 6px 8px; font-size: 0.72rem; }
+  .filter-dropdown.compact .filter-dropdown-trigger svg { width: 13px; height: 13px; }
   .mobile-menu-btn { min-width: 36px; min-height: 36px; }
   .services-grid { grid-template-columns: minmax(0, 1fr); }
   .service-card { padding: 22px 18px; }

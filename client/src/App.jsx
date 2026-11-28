@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Menu, X } from 'lucide-react';
 import api from './api';
+import FilterDropdown from './components/FilterDropdown';
 import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
 
 // Icons - load only what's needed for initial render
@@ -289,21 +290,21 @@ export default function App() {
           
           <div className="nav-actions">
             <button className="btn-gold" onClick={() => navigateTo('safaris')}>Plan My Safari</button>
-            <label className="currency-select-control">
-              <select
-                aria-label="Display prices in"
+            <div className="currency-select-control">
+              <FilterDropdown
+                compact
+                ariaLabel="Display prices in"
                 title={exchangeRate?.rate
                   ? `USD values are rounded to whole dollars. 1 USD = KES ${exchangeRate.rate.toFixed(2)}.`
                   : 'USD exchange rate is currently unavailable.'}
                 value={currency}
-                onChange={handleCurrencyChange}
-              >
-                <option value="KES">KES</option>
-                <option value="USD" disabled={!exchangeRate?.rate}>
-                  {exchangeRateError && exchangeRate?.rate ? 'USD (saved rate)' : !exchangeRate?.rate ? 'USD unavailable' : 'USD'}
-                </option>
-              </select>
-            </label>
+                onChange={value => handleCurrencyChange({ target: { value } })}
+                options={[
+                  { value: 'KES', label: 'KES' },
+                  { value: 'USD', disabled: !exchangeRate?.rate, label: exchangeRateError && exchangeRate?.rate ? 'USD (saved rate)' : !exchangeRate?.rate ? 'USD unavailable' : 'USD' },
+                ]}
+              />
+            </div>
             <span className="nav-phone">{settings.sitePhone}</span>
             <button
               type="button"

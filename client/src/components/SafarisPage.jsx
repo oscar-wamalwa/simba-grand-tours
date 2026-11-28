@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, ChevronDown, Check, MessageCircle, Phone } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, MessageCircle, Phone } from 'lucide-react';
 import api from '../api';
+import FilterDropdown from './FilterDropdown';
 
 const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
@@ -26,49 +27,6 @@ function ContactBookingOptions({ safari, departure, settings }) {
           <span><strong>Call us</strong><small>{phone}</small></span>
         </a>
       </div>
-    </div>
-  );
-}
-
-function FilterDropdown({ labelledBy, value, options, allLabel, onChange }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-  const choices = [{ value: '', label: allLabel }, ...options];
-  const current = choices.find(choice => choice.value === value) || choices[0];
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = event => {
-      if (event.type === 'keydown' ? event.key === 'Escape' : !wrapRef.current?.contains(event.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('touchstart', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('touchstart', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [open]);
-
-  return (
-    <div className={`filter-dropdown${open ? ' open' : ''}`} ref={wrapRef}>
-      <button type="button" className="filter-dropdown-trigger" aria-haspopup="listbox" aria-expanded={open} aria-labelledby={labelledBy} onClick={() => setOpen(prev => !prev)}>
-        <span className={value ? 'selected' : ''}>{current.label}</span>
-        <ChevronDown size={18} aria-hidden="true" />
-      </button>
-      {open && (
-        <ul className="filter-dropdown-menu" role="listbox" aria-labelledby={labelledBy}>
-          {choices.map(choice => (
-            <li key={choice.value || 'all'} role="option" aria-selected={choice.value === value}>
-              <button type="button" className={choice.value === value ? 'active' : ''} onClick={() => { onChange(choice.value); setOpen(false); }}>
-                {choice.label}
-                {choice.value === value && <Check size={16} aria-hidden="true" />}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
@@ -768,7 +726,7 @@ function SafarisPage({
             <label>Email<input type="email" required value={customTripForm.email} onChange={event => setCustomTripForm(prev => ({ ...prev, email: event.target.value }))} /></label>
             <label>Phone<input type="tel" required value={customTripForm.phone} onChange={event => setCustomTripForm(prev => ({ ...prev, phone: event.target.value }))} /></label>
             <label>Destination or county<input required value={customTripForm.destination} onChange={event => setCustomTripForm(prev => ({ ...prev, destination: event.target.value }))} /></label>
-            <label>Trip style<select value={customTripForm.trip_mode} onChange={event => setCustomTripForm(prev => ({ ...prev, trip_mode: event.target.value }))}><option value="group">Group</option><option value="private">Private</option></select></label>
+            <div className="field-dropdown"><span id="custom-trip-style">Trip style</span><FilterDropdown labelledBy="custom-trip-style" value={customTripForm.trip_mode} options={[{ value: 'group', label: 'Group' }, { value: 'private', label: 'Private' }]} onChange={value => setCustomTripForm(prev => ({ ...prev, trip_mode: value }))} /></div>
             <label>Preferred date<input type="date" value={customTripForm.preferred_date} onChange={event => setCustomTripForm(prev => ({ ...prev, preferred_date: event.target.value }))} /></label>
             <label>Number of travelers<input type="number" min="1" max="100" required value={customTripForm.participant_count} onChange={event => setCustomTripForm(prev => ({ ...prev, participant_count: event.target.value }))} /></label>
           </div>

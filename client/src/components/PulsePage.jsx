@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MapPin, PenLine, Send, X } from 'lucide-react';
 import api from '../api';
+import FilterDropdown from './FilterDropdown';
 
 const MAX_BLOG_IMAGE_DATA_LENGTH = 2_000_000;
 
@@ -286,19 +287,10 @@ const PulsePage = () => {
                     placeholder="e.g. Maasai Mara, Kenya"
                   />
                 </label>
-                <label>
-                  Category
-                  <select
-                    value={submission.category}
-                    onChange={event => setSubmission(prev => ({ ...prev, category: event.target.value }))}
-                  >
-                    <option>Safari Story</option>
-                    <option>Travel Tips</option>
-                    <option>Wildlife Update</option>
-                    <option>Conservation</option>
-                    <option>Guest Post</option>
-                  </select>
-                </label>
+                <div className="field-dropdown">
+                  <span id="pulse-category">Category</span>
+                  <FilterDropdown labelledBy="pulse-category" value={submission.category} options={['Safari Story', 'Travel Tips', 'Wildlife Update', 'Conservation', 'Guest Post'].map(item => ({ value: item, label: item }))} onChange={value => setSubmission(prev => ({ ...prev, category: value }))} />
+                </div>
               </div>
               <label>
                 Your story
