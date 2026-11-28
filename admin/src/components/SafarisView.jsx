@@ -262,12 +262,14 @@ export default function SafarisView({ onRefresh }) {
                 <td><p className="safari-title">{safari.title}</p></td>
                 <td><p className="safari-location">{safari.location}</p></td>
                 <td><span className={`status-badge ${safari.visible !== false ? 'active' : 'archived'}`}>{safari.visible !== false ? 'Active' : 'Hidden'}</span></td>
-                <td><span className={`status-badge ${safari.is_open === false ? 'archived' : 'active'}`}>{safari.is_open === false ? 'Closed' : 'Open'}</span></td>
+                <td>
+                  <span className={`status-badge ${safari.is_open === false ? 'archived' : 'active'}`}>{safari.is_open === false ? 'Closed' : 'Open'}</span>
+                  <button className="action-btn" style={{ display: 'block', marginTop: '8px' }} onClick={() => toggleOpen(safari)}>{safari.is_open === false ? 'Open trip' : 'Close trip'}</button>
+                </td>
                 <td>{safari.isSignature ? <span className="signature-badge"><Star size={14} /> Signature</span> : <span className="signature-badge inactive">Not Signature</span>}</td>
                 <td>
                   <div className="table-actions">
                     <button className="action-btn" onClick={() => toggleVisibility(safari)} title={safari.visible ? 'Hide' : 'Show'}>{safari.visible ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                    <button className="action-btn" onClick={() => toggleOpen(safari)}>{safari.is_open === false ? 'Open trip' : 'Close trip'}</button>
                     <button className="action-btn signature-btn" onClick={() => toggleSignature(safari)} style={{ color: safari.isSignature ? 'var(--gold-majesty)' : 'var(--gray-dark)' }}>
                       <Star size={16} fill={safari.isSignature ? 'currentColor' : 'none'} />
                     </button>
