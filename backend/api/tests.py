@@ -1901,3 +1901,19 @@ class AdminProfileTests(APITestCase):
         bad = self.client.patch('/api/auth/profile/', {'photo': 'data:image/png;base64,AAAA'}, format='json')
         self.assertEqual(bad.status_code, 400)
         self.assertEqual(self.client.get('/api/auth/profile/').data['photo'], self.PNG)
+
+
+class PastDepartureTests(APITestCase):
+    def test_staff_can_record_a_past_trip_and_it_stays_closed(self):
+        staff = get_user_model().objects.create_user(username='past', password='pass12345', is_staff=True)
+        self.client.force_authenticate(user=staff)
+        safari = Safari.objects.create(title='May trip', description='Done', location='Kenya', price='1000.00')
+        response = self.client.post('/api/departures/', {
+            'safari': safari.id, 'start_date': '2026-05-10', 'end_date': '2026-05-12',
+            'seats_total': 10, 'price_kes': 1000,
+        }, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        self.client.force_authenticate(user=None)
+        detail = self.client.get(f'/api/safaris/{safari.id}/').data
+        self.assertFalse(detail['bookings_open'])
+        self.assertFalse(detail['has_open_departure'])

@@ -179,11 +179,6 @@ class TripDepartureSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def validate_start_date(self, value):
-        if value < timezone.localdate():
-            raise serializers.ValidationError('Trip departure date must be today or in the future.')
-        return value
-
     def validate_seats_total(self, value):
         if self.instance and value < self.instance.seats_taken:
             raise serializers.ValidationError(
