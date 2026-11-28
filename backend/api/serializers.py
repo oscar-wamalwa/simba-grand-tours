@@ -571,6 +571,11 @@ class TestimonialSerializer(serializers.ModelSerializer):
                 self.fields[field_name].allow_blank = True
                 self.fields[field_name].allow_null = True
 
+    def validate_rating(self, value):
+        if not 1 <= value <= 5:
+            raise serializers.ValidationError('Rating must be between 1 and 5.')
+        return value
+
     def to_internal_value(self, data):
         # Convert camelCase to snake_case for processing
         converted = data.copy()

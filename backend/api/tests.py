@@ -773,6 +773,26 @@ class AdminContentAccessTests(APITestCase):
             is_verified=True,
         )
 
+    def test_only_staff_can_edit_testimonial_text_before_publishing(self):
+        url = f'/api/testimonials/{self.testimonial.id}/'
+        payload = {'message': 'A great experience, truly', 'full_name': 'Jane Guest', 'rating': 4}
+
+        self.assertIn(self.client.patch(url, payload, format='json').status_code, (401, 403, 404))
+        self.client.force_authenticate(user=self.regular_user)
+        self.assertIn(self.client.patch(url, payload, format='json').status_code, (401, 403, 404))
+
+        self.client.force_authenticate(user=self.staff_user)
+        invalid = self.client.patch(url, {'rating': 9}, format='json')
+        edited = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(edited.status_code, status.HTTP_200_OK)
+        self.testimonial.refresh_from_db()
+        self.assertEqual(self.testimonial.message, 'A great experience, truly')
+        self.assertEqual(self.testimonial.full_name, 'Jane Guest')
+        self.assertEqual(self.testimonial.rating, 4)
+        self.assertFalse(self.testimonial.is_featured)
+
     def test_non_staff_users_cannot_write_content(self):
         self.client.force_authenticate(user=self.regular_user)
 

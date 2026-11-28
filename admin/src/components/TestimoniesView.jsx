@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle } from 'lucide-react';
+import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle, Edit2 } from 'lucide-react';
 
 const MAX_FEATURED_TESTIMONIALS = 6;
 
@@ -9,6 +9,38 @@ export default function TestimoniesView() {
   const [featuredTestimonials, setFeaturedTestimonials] = useState([]);
   const [selectedTestimonial, setSelectedTestimonial] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null); // Stores testimonial to delete
+  const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (testimonial) => {
+    setEditError('');
+    setEditForm({
+      id: testimonial.id,
+      full_name: testimonial.full_name || testimonial.fullName || '',
+      location: testimonial.location || '',
+      safari: testimonial.safari || '',
+      rating: testimonial.rating || 5,
+      message: testimonial.message || '',
+    });
+  };
+
+  const saveEdit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setEditError('');
+    try {
+      const { id, ...fields } = editForm;
+      const updated = await api.testimonials.partialUpdate(id, { ...fields, rating: Number(fields.rating) });
+      setTestimonials(current => current.map(item => item.id === id ? { ...item, ...updated } : item));
+      setSelectedTestimonial(current => current && current.id === id ? { ...current, ...updated } : current);
+      setEditForm(null);
+    } catch (error) {
+      setEditError(error.message || 'Could not save the testimonial. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => { fetchTestimonials(); }, []);
 
@@ -127,7 +159,7 @@ export default function TestimoniesView() {
       </div>
 
       <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '20px', padding: '0 20px' }}>
-        Select up to 6 testimonials to display on the homepage. Verification is optional and can be changed independently.
+        Select up to 6 testimonials to display on the homepage. New reviews stay hidden until you feature them, and you can edit the wording (typos, name, rating) before publishing. Verification is optional and can be changed independently.
       </p>
 
       {testimonials.length === 0 ? (
@@ -176,6 +208,14 @@ export default function TestimoniesView() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   className="action-btn"
+                  onClick={(e) => { e.stopPropagation(); setSelectedTestimonial(t); startEdit(t); }}
+                  title="Edit testimonial"
+                  aria-label={`Edit testimonial by ${t.fullName || t.full_name || 'Anonymous'}`}
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  className="action-btn"
                   onClick={(e) => { e.stopPropagation(); toggleVerification(t); }}
                   title={t.is_verified ? 'Mark traveller as unverified' : 'Verify traveller'}
                   aria-label={`${t.is_verified ? 'Unverify' : 'Verify'} traveller ${t.fullName || t.full_name || 'Anonymous'}`}
@@ -207,15 +247,36 @@ export default function TestimoniesView() {
       )}
 
       {selectedTestimonial && (
-        <div className="modal-overlay show" onClick={() => setSelectedTestimonial(null)}>
+        <div className="modal-overlay show" onClick={() => { setSelectedTestimonial(null); setEditForm(null); }}>
           <div className="modal" onClick={event => event.stopPropagation()}>
             <div className="modal-header">
               <h3>Testimonial Details</h3>
-              <button className="modal-close" onClick={() => setSelectedTestimonial(null)} aria-label="Close testimonial details">
+              <button className="modal-close" onClick={() => { setSelectedTestimonial(null); setEditForm(null); }} aria-label="Close testimonial details">
                 <X size={20} />
               </button>
             </div>
+            {editForm ? (
+              <form className="modal-body" onSubmit={saveEdit}>
+                <div className="form-group"><label>Name<input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} /></label></div>
+                <div className="form-group"><label>Location<input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} /></label></div>
+                <div className="form-group"><label>Safari<input value={editForm.safari} onChange={e => setEditForm({ ...editForm, safari: e.target.value })} /></label></div>
+                <div className="form-group">
+                  <label>Rating
+                    <select value={editForm.rating} onChange={e => setEditForm({ ...editForm, rating: e.target.value })}>
+                      {[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value} / 5</option>)}
+                    </select>
+                  </label>
+                </div>
+                <div className="form-group"><label>Review text<textarea rows="6" value={editForm.message} onChange={e => setEditForm({ ...editForm, message: e.target.value })} /></label></div>
+                {editError && <p className="form-status error" role="alert">{editError}</p>}
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn-secondary" onClick={() => setEditForm(null)} disabled={saving}>Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
+                </div>
+              </form>
+            ) : (
             <div className="modal-body">
+              <button type="button" className="btn-secondary" onClick={() => startEdit(selectedTestimonial)} style={{ float: 'right' }}><Edit2 size={14} /> Edit</button>
               <h4>{selectedTestimonial.fullName || selectedTestimonial.full_name || 'Anonymous'}</h4>
               <p>
                 Submitted {selectedTestimonial.created_at ? new Date(selectedTestimonial.created_at).toLocaleString() : 'date unavailable'}
@@ -230,6 +291,7 @@ export default function TestimoniesView() {
                 {selectedTestimonial.message || 'No message provided.'}
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
