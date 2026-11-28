@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, Edit2, Plus, RefreshCw, X } from 'lucide-react';
+import { Download, Edit2, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import api from '../api';
 
 const emptyItem = () => ({ description: '', quantity: '1', unit_price: '' });
@@ -125,6 +125,19 @@ export default function InvoicesView() {
     }
   };
 
+  const remove = async invoice => {
+    if (!window.confirm(`Permanently delete invoice ${invoice.number} for ${invoice.client_name}? This cannot be undone.`)) return;
+    setError('');
+    setMessage('');
+    try {
+      await api.invoices.delete(invoice.id);
+      setInvoices(prev => prev.filter(item => item.id !== invoice.id));
+      setMessage(`Invoice ${invoice.number} deleted.`);
+    } catch (requestError) {
+      setError(`Could not delete invoice ${invoice.number}: ${requestError.message}`);
+    }
+  };
+
   const save = async event => {
     event.preventDefault();
     const shouldDownload = event.nativeEvent.submitter?.value === 'download';
@@ -178,6 +191,7 @@ export default function InvoicesView() {
                   <td><div className="table-actions">
                     <button type="button" className="btn-secondary" disabled={Boolean(form)} onClick={() => startEdit(invoice)}><Edit2 size={15} /> Edit</button>
                     <button type="button" className="btn-secondary" disabled={downloadingId === invoice.id} onClick={() => download(invoice)}><Download size={15} /> DOCX</button>
+                    <button type="button" className="btn-danger" disabled={Boolean(form)} onClick={() => remove(invoice)}><Trash2 size={15} /> Delete</button>
                   </div></td>
                 </tr>
               ))}

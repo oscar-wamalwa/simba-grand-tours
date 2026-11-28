@@ -138,6 +138,7 @@ export const invoicesApi = {
   create: (data) => apiRequest('/invoices/', { method: 'POST', body: data }),
   update: (id, data) => apiRequest(`/invoices/${id}/`, { method: 'PUT', body: data }),
   document: (id) => apiRequest(`/invoices/${id}/document/`, { responseType: 'docx' }),
+  delete: (id) => apiRequest(`/invoices/${id}/`, { method: 'DELETE' }),
 };
 
 export const promoCodesApi = {

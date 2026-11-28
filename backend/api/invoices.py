@@ -185,7 +185,7 @@ def build_invoice_document(invoice):
 class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
     permission_classes = [StaffOnly]
-    http_method_names = ['get', 'post', 'put', 'head', 'options']
+    http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
         queryset = Invoice.objects.prefetch_related('items')

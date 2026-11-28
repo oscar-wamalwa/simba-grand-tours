@@ -1831,3 +1831,16 @@ class PhotoThumbnailTests(APITestCase):
         self.assertLessEqual(Image.open(io.BytesIO(response.content)).width, 900)
         self.assertEqual(self.client.get(f'/api/media/safaris/{self.hidden.pk}/0/').status_code, 404)
         self.assertEqual(self.client.get(f'/api/media/safaris/{self.safari.pk}/5/').status_code, 404)
+
+
+class InvoiceDeleteTests(APITestCase):
+    def test_only_staff_can_delete_an_invoice(self):
+        from .models import Invoice
+        invoice = Invoice.objects.create(
+            issue_date='2030-01-01', issuer_name='Simba Grand Tours', client_name='Test client',
+        )
+        url = f'/api/invoices/{invoice.pk}/'
+        self.assertEqual(self.client.delete(url).status_code, 401)
+        self.client.force_authenticate(get_user_model().objects.create_user(username='inv-del', is_staff=True))
+        self.assertEqual(self.client.delete(url).status_code, 204)
+        self.assertFalse(Invoice.objects.filter(pk=invoice.pk).exists())
