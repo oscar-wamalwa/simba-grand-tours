@@ -88,24 +88,30 @@ export default function PromoPoolPanel() {
         <h3><Gift size={20} /> "Get Code" promo pool</h3>
         <RefreshButton onClick={load} loading={loading} />
       </div>
-      <p>{left} of {active.length} active codes left. The Get Code button shows on trip pages only while codes remain.</p>
-      <form className="campaign-form" onSubmit={generate}>
+      <div className="promo-pool-summary">
+        <span className="promo-pool-count"><strong>{left}</strong> of {active.length} active codes left</span>
+        <span>The Get Code button shows on trip pages only while codes remain.</span>
+      </div>
+      <form className="promo-pool-form" onSubmit={generate}>
         {rows.map((row, index) => (
-          <div key={index} className="campaign-actions">
+          <div key={index} className="promo-pool-row">
             <label>KES off<input type="number" min="1" required value={row.discount_kes} onChange={event => updateRow(index, 'discount_kes', event.target.value)} placeholder="100" /></label>
             <label>How many codes<input type="number" min="1" max="100" required value={row.quantity} onChange={event => updateRow(index, 'quantity', event.target.value)} placeholder="3" /></label>
-            {rows.length > 1 && <button type="button" className="btn-secondary" onClick={() => setRows(prev => prev.filter((_, i) => i !== index))}>Remove</button>}
+            {rows.length > 1 && <button type="button" className="btn-secondary promo-pool-remove" onClick={() => setRows(prev => prev.filter((_, i) => i !== index))}>Remove</button>}
           </div>
         ))}
         <fieldset className="promo-pool-trips">
-          <legend>Which trips can use these codes? (none ticked = all trips)</legend>
+          <legend>Which trips can use these codes?</legend>
+          <p className="promo-pool-hint">Leave all unticked to make the codes work on every trip.</p>
           {safaris.map(safari => (
-            <label key={safari.id} className="promo-pool-trip">
-              <input type="checkbox" checked={selectedSafaris.includes(safari.id)} onChange={() => toggleSafari(safari.id)} /> {safari.title}
+            <label key={safari.id} className={`promo-pool-trip ${selectedSafaris.includes(safari.id) ? 'selected' : ''}`}>
+              <input type="checkbox" checked={selectedSafaris.includes(safari.id)} onChange={() => toggleSafari(safari.id)} />
+              <span className="promo-pool-check" aria-hidden="true" />
+              <span>{safari.title}</span>
             </label>
           ))}
         </fieldset>
-        <div className="campaign-actions">
+        <div className="promo-pool-footer">
           <button type="button" className="btn-secondary" onClick={() => setRows(prev => [...prev, { discount_kes: '', quantity: '' }])}><Plus size={16} /> Add another amount</button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Publishing...' : 'Publish codes'}</button>
         </div>
