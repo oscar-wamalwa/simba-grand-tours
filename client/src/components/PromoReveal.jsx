@@ -20,10 +20,18 @@ export function usePromoPool(safari) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setClaim(safariId ? readClaim(safariId) : null);
+    const stored = safariId ? readClaim(safariId) : null;
+    setClaim(stored);
     setError('');
     setCounts(null);
-    if (safariId) api.promoPool.getStatus(safariId).then(setCounts).catch(() => setCounts(null));
+    if (!safariId) return;
+    api.promoPool.getStatus(safariId, stored?.code).then(status => {
+      if (stored && status.claim_valid === false) {
+        localStorage.removeItem(storageKey(safariId));
+        setClaim(null);
+      }
+      setCounts(status);
+    }).catch(() => setCounts(null));
   }, [safariId]);
 
   const getCode = async () => {

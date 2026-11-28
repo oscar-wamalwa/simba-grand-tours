@@ -48,7 +48,11 @@ class PromoPoolStatusView(APIView):
             safari_id = int(request.query_params.get('safari'))
         except (TypeError, ValueError):
             return Response({'total': 0, 'remaining': 0})
-        return Response(counts_for(safari_id))
+        data = counts_for(safari_id)
+        code = request.query_params.get('code')
+        if code:
+            data['claim_valid'] = available_for(safari_id).filter(code=code, claimed_at__isnull=False).exists()
+        return Response(data)
 
 
 class PromoPoolClaimView(APIView):

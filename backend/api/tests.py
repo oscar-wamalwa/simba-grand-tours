@@ -1973,3 +1973,14 @@ class PromoPoolTests(APITestCase):
         response = self.client.post('/api/promo-pool/generate/', {'items': items, 'safari_ids': safari_ids}, format='json')
         self.client.force_authenticate(user=None)
         return response
+
+    def test_deleted_code_is_no_longer_valid_for_a_returning_visitor(self):
+        rows = self.generate([{'discount_kes': 100, 'quantity': 1}]).data
+        claim = self.client.post('/api/promo-pool-public/claim/', {'safari': self.safari.pk}, format='json').data
+        url = f"/api/promo-pool-public/status/?safari={self.safari.pk}&code={claim['code']}"
+        self.assertTrue(self.client.get(url).data['claim_valid'])
+        self.client.force_authenticate(user=self.staff)
+        self.client.delete(f"/api/promo-pool/{rows[0]['id']}/")
+        self.client.force_authenticate(user=None)
+        self.assertFalse(self.client.get(url).data['claim_valid'])
+

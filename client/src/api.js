@@ -95,7 +95,7 @@ export const bookingsApi = {
 };
 
 export const promoPoolApi = {
-  getStatus: (safari) => apiRequest(`/promo-pool-public/status/?safari=${encodeURIComponent(safari)}`),
+  getStatus: (safari, code = '') => apiRequest(`/promo-pool-public/status/?safari=${encodeURIComponent(safari)}${code ? `&code=${encodeURIComponent(code)}` : ''}`),
   claim: (safari) => apiRequest('/promo-pool-public/claim/', { method: 'POST', body: { safari } }),
 };
 
