@@ -38,7 +38,6 @@ export default function SafarisView({ onRefresh }) {
     visible: true, 
     isSignature: false,
   });
-  const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => { fetchSafaris(); }, []);
 
@@ -81,7 +80,6 @@ export default function SafarisView({ onRefresh }) {
       
       if (validUrls.length > 0) {
         setForm(prev => ({ ...prev, images: [...prev.images, ...validUrls] }));
-        setImagePreviews(prev => [...prev, ...validUrls.map(url => ({ url, isNew: true }))]);
       } else {
         alert('Failed to process images. Please try again.');
       }
@@ -95,9 +93,7 @@ export default function SafarisView({ onRefresh }) {
 
   const removeImage = async (index) => {
     const newImages = form.images.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
     setForm(prev => ({ ...prev, images: newImages }));
-    setImagePreviews(newPreviews);
   };
 
   const handleSubmit = async (e) => {
@@ -198,7 +194,6 @@ export default function SafarisView({ onRefresh }) {
       visible: s.visible, 
       isSignature: s.isSignature ?? s.is_signature ?? false,
     });
-    setImagePreviews((s.images || []).map(url => ({ url, isNew: false })));
     setShowModal(true);
   };
 
@@ -353,11 +348,11 @@ export default function SafarisView({ onRefresh }) {
                 <div className="form-group">
                   <label>Images</label>
                   <div className="safari-images-upload">
-                    {imagePreviews.length > 0 && (
+                    {form.images.length > 0 && (
                       <div className="image-previews-grid">
-                        {imagePreviews.map((preview, index) => (
+                        {form.images.map((url, index) => (
                           <div key={index} className="image-preview-item">
-                            <img src={preview.url} alt={`Safari image ${index + 1}`} className="safari-image-preview" />
+                            <img src={url} alt={`Safari image ${index + 1}`} className="safari-image-preview" />
                             <button 
                               type="button" 
                               className="remove-image-btn" 
