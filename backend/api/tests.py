@@ -1878,3 +1878,26 @@ class InvoiceDeleteTests(APITestCase):
         self.client.force_authenticate(get_user_model().objects.create_user(username='inv-del', is_staff=True))
         self.assertEqual(self.client.delete(url).status_code, 204)
         self.assertFalse(Invoice.objects.filter(pk=invoice.pk).exists())
+
+
+class AdminProfileTests(APITestCase):
+    PNG = (
+        'data:image/png;base64,'
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+    )
+
+    def test_staff_can_edit_own_profile_and_public_cannot(self):
+        self.assertEqual(self.client.get('/api/auth/profile/').status_code, 401)
+        staff = get_user_model().objects.create_user(username='boss', password='pass12345', is_staff=True)
+        self.client.force_authenticate(user=staff)
+        first = self.client.get('/api/auth/profile/').data
+        self.assertEqual(first['username'], 'boss')
+        self.assertEqual(first['display_name'], '')
+        response = self.client.patch(
+            '/api/auth/profile/', {'display_name': ' Oscar ', 'photo': self.PNG}, format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['display_name'], 'Oscar')
+        bad = self.client.patch('/api/auth/profile/', {'photo': 'data:image/png;base64,AAAA'}, format='json')
+        self.assertEqual(bad.status_code, 400)
+        self.assertEqual(self.client.get('/api/auth/profile/').data['photo'], self.PNG)

@@ -645,3 +645,9 @@
 
 .new-destination-box { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border: 1px dashed var(--gold-majesty); border-radius: 12px; }
 .new-destination-error { color: #e74c3c; }
+
+button.admin-profile { border: 0; font: inherit; color: inherit; text-align: left; }
+.profile-photo-edit { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
+.profile-photo-edit img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-majesty); }
+.profile-photo-edit > div { display: flex; gap: 10px; flex-wrap: wrap; }
+.profile-photo-button { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }

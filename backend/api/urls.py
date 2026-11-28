@@ -50,7 +50,10 @@ router.register(r'contact-messages', ContactMessageViewSet, basename='contact-me
 router.register(r'testimonials', TestimonialViewSet, basename='testimonial')
 router.register(r'settings', SettingsViewSet, basename='settings')
 
+from .profile_views import AdminProfileView
+
 urlpatterns = [
+    path('auth/profile/', AdminProfileView.as_view(), name='admin-profile'),
     path('media/<str:kind>/<int:pk>/<int:index>/', PhotoThumbnailView.as_view(), name='photo-thumbnail'),
     path('bookings/create/', BookingCreateView.as_view(), name='booking-create'),
     path('bookings/<str:reference>/status/', BookingStatusView.as_view(), name='booking-status'),

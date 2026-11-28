@@ -255,7 +255,9 @@ export const authApi = {
       throw new Error('Invalid username or password');
     }
     return response.json();
-  }
+  },
+  getProfile: () => apiRequest('/auth/profile/'),
+  updateProfile: (data) => apiRequest('/auth/profile/', { method: 'PATCH', body: data }),
 };
 
 export default {

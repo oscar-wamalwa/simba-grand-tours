@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
 import Select from './components/Select';
+import ProfileModal from './components/ProfileModal';
 import {
   DashboardView,
   SafarisView,
@@ -67,6 +68,8 @@ export default function AdminDashboard({ onLogout }) {
     return pageInfo[savedPage] ? savedPage : 'dashboard';
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
   const [stats, setStats] = useState({
     bookings: 0,
     weekly: [],
@@ -79,6 +82,11 @@ export default function AdminDashboard({ onLogout }) {
 
   useEffect(() => {
     if (token) fetchStats();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    api.auth.getProfile().then(setProfile).catch(error => console.error('Could not load profile:', error));
   }, [token]);
 
   useEffect(() => {
@@ -257,12 +265,16 @@ export default function AdminDashboard({ onLogout }) {
                 </option>
               </Select>
             </label>
-            <div className="admin-profile">
-              <img src={profilePic} alt="Administrator" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
-              <div className="admin-info"><span className="name">Admin</span><span className="role">Website Manager</span></div>
-            </div>
+            <button type="button" className="admin-profile" onClick={() => profile && setShowProfile(true)} aria-label="Edit profile" title="Edit profile">
+              <img src={profile?.photo || profilePic} alt="Administrator" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+              <div className="admin-info"><span className="name">{profile?.display_name || profile?.username || 'Admin'}</span><span className="role">Website Manager</span></div>
+            </button>
           </div>
         </header>
+
+        {showProfile && profile && (
+          <ProfileModal profile={profile} fallbackPhoto={profilePic} onClose={() => setShowProfile(false)} onSaved={setProfile} />
+        )}
 
         <div className="admin-content">
           {currentPage === 'dashboard' && <DashboardView stats={stats} />}

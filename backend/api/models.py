@@ -462,3 +462,15 @@ class Testimonial(models.Model):
     def __str__(self):
         return f"Testimonial from {self.full_name or 'Anonymous'} - {self.rating} stars"
 
+
+
+class AdminProfile(models.Model):
+    """Display name and photo for a staff account."""
+
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='admin_profile')
+    display_name = models.CharField(max_length=80, blank=True)
+    photo = models.TextField(blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.display_name or self.user.get_username()
