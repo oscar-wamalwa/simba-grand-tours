@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Edit2, Eye, EyeOff, MapPin, Plus, Trash2, X } from 'lucide-react';
 import api from '../api';
 import { prepareImage } from '../imageUpload';
+import LineListField from './LineListField';
 
 const categories = [
   ['iconic_safaris', 'Iconic Safaris'],
@@ -259,7 +260,7 @@ export default function DestinationsView({ formatPrice }) {
                 </div>
                 <div className="form-group">
                   <label htmlFor="destination-highlights">Signature highlights (one per line) *</label>
-                  <textarea id="destination-highlights" rows="3" value={form.highlights.join('\n')} onChange={event => setForm(current => ({ ...current, highlights: event.target.value.split('\n').map(item => item.trim()).filter(Boolean) }))} required />
+                  <LineListField id="destination-highlights" rows="3" value={form.highlights.join('\n')} onChange={items => setForm(current => ({ ...current, highlights: items }))} required />
                 </div>
                 <div className="form-row">
                   <div className="form-group">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 
@@ -322,33 +323,33 @@ export default function SafarisView({ onRefresh }) {
                 </div>
                 <div className="form-group">
                   <label>Highlights (one per line)</label>
-                  <textarea rows="3" value={(form.highlights || []).join('\n')} onChange={e => setForm({ ...form, highlights: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                  <LineListField rows="3" value={(form.highlights || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, highlights: items }))} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Included (one per line)</label>
-                    <textarea rows="4" value={(form.inclusions || []).join('\n')} onChange={e => setForm({ ...form, inclusions: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                    <LineListField rows="4" value={(form.inclusions || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, inclusions: items }))} />
                   </div>
                   <div className="form-group">
                     <label>Excluded (one per line)</label>
-                    <textarea rows="4" value={(form.exclusions || []).join('\n')} onChange={e => setForm({ ...form, exclusions: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} />
+                    <LineListField rows="4" value={(form.exclusions || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, exclusions: items }))} />
                   </div>
                 </div>
                 <div className="form-group">
                   <label>Itinerary (one day or stop per line)</label>
-                  <textarea rows="5" value={(form.itinerary || []).join('\n')} onChange={e => setForm({ ...form, itinerary: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder={'Day 1 - Arrival and lodge transfer\nDay 2 - Morning and evening game drives'} />
+                  <LineListField rows="5" value={(form.itinerary || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, itinerary: items }))} placeholder={'Day 1 - Arrival and lodge transfer\nDay 2 - Morning and evening game drives'} />
                 </div>
                 <div className="form-group">
                   <label>Pickup points (one per line; add times after a dash)</label>
-                  <textarea rows="3" value={(form.pickup_points || []).map(item => typeof item === 'string' ? item : `${item.name}${item.time ? ` - ${item.time}` : ''}`).join('\n')} onChange={e => setForm({ ...form, pickup_points: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="Nairobi CBD - 6:00 AM" />
+                  <LineListField rows="3" value={(form.pickup_points || []).map(item => typeof item === 'string' ? item : `${item.name}${item.time ? ` - ${item.time}` : ''}`).join('\n')} onChange={items => setForm(prev => ({ ...prev, pickup_points: items }))} placeholder="Nairobi CBD - 6:00 AM" />
                 </div>
                 <div className="form-group">
                   <label>Packing checklist (one item per line)</label>
-                  <textarea rows="3" value={(form.packing_checklist || []).join('\n')} onChange={e => setForm({ ...form, packing_checklist: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="Comfortable walking shoes" />
+                  <LineListField rows="3" value={(form.packing_checklist || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, packing_checklist: items }))} placeholder="Comfortable walking shoes" />
                 </div>
                 <div className="form-group">
                   <label>Video URLs (one per line)</label>
-                  <textarea rows="3" value={(form.videos || []).join('\n')} onChange={e => setForm({ ...form, videos: e.target.value.split('\n').map(item => item.trim()).filter(Boolean) })} placeholder="https://example.com/safari-video.mp4" />
+                  <LineListField rows="3" value={(form.videos || []).join('\n')} onChange={items => setForm(prev => ({ ...prev, videos: items }))} placeholder="https://example.com/safari-video.mp4" />
                 </div>
                 <div className="form-group">
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
