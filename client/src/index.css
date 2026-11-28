@@ -68,9 +68,10 @@ a { text-decoration: none; color: inherit; }
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 1300px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 40px;
+  gap: 28px;
 }
 
 .nav-logo {
@@ -78,7 +79,7 @@ a { text-decoration: none; color: inherit; }
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  flex: 0 0 250px;
+  flex: 0 0 150px;
   transition: transform 0.3s ease;
 }
 
@@ -95,9 +96,10 @@ a { text-decoration: none; color: inherit; }
 
 .nav-links-center {
   display: flex;
-  gap: 35px;
+  gap: clamp(14px, 2vw, 35px);
   justify-content: center;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .nav-link {
@@ -109,6 +111,7 @@ a { text-decoration: none; color: inherit; }
   color: var(--text-dark);
   padding: 8px 0;
   position: relative;
+  white-space: nowrap;
   transition: color 0.3s ease;
 }
 
@@ -131,10 +134,11 @@ a { text-decoration: none; color: inherit; }
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 25px;
-  flex: 0 0 300px;
+  gap: 16px;
+  flex: 0 0 auto;
   justify-content: flex-end;
 }
+.nav-actions .btn-gold { white-space: nowrap; padding: 12px 22px; }
 
 .currency-select-control { display: flex; align-items: center; }
 .currency-select-control select {
@@ -789,11 +793,22 @@ a { text-decoration: none; color: inherit; }
 .error-banner p { color: var(--sunset-ember); font-size: 1rem; }
 
 /* Responsive */
+@media (max-width: 1280px) {
+  .nav-phone { display: none; }
+}
+
+@media (max-width: 1140px) {
+  .nav-links-center { display: none; position: absolute; top: 80px; left: 0; right: 0; background: var(--white); flex-direction: column; padding: 20px; gap: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); z-index: 1001; }
+  .nav-links-center.nav-links-open { display: flex; }
+  .nav-links-center .nav-link { width: 100%; padding: 10px 12px; text-align: left; }
+  .nav-actions { margin-left: auto; }
+  .mobile-menu-btn { display: grid; place-items: center; min-width: 40px; min-height: 40px; }
+}
+
 @media (max-width: 1024px) {
-  .nav-container { padding: 0 24px; }
-  .nav-logo { flex: 0 0 150px; }
-  .nav-links-center { gap: 18px; }
-  .nav-actions { flex: 0 0 240px; gap: 12px; }
+  .nav-container { padding: 0 24px; gap: 16px; }
+  .nav-logo { flex: 0 0 110px; }
+  .nav-actions { gap: 12px; }
   .nav-phone { display: none; }
   .signature-grid { grid-template-columns: repeat(2, 1fr); }
   .destination-grid-home { grid-template-columns: repeat(2, minmax(0, 1fr)); }
