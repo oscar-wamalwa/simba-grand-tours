@@ -7,6 +7,12 @@ const safarisBg = '/images/greatmigration.jpg';
 const bookingsEnabled = import.meta.env.VITE_BOOKINGS_ENABLED !== 'false';
 const onlinePaymentsEnabled = import.meta.env.VITE_ONLINE_PAYMENTS_ENABLED === 'true';
 
+const normalizeDuration = (value) => {
+  const text = String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const days = text.match(/^(\d+)\s*-?\s*days?\b/);
+  return days ? `${Number(days[1])} ${Number(days[1]) === 1 ? 'day' : 'days'}` : text;
+};
+
 function ContactBookingOptions({ safari, departure, settings }) {
   const phone = String(settings.sitePhone || '+254 707 984 287');
   const whatsappNumber = String(settings.whatsapp || phone).replace(/\D/g, '');
@@ -573,14 +579,19 @@ function SafarisPage({
     const matchesDestination = !filters.destination
       || `${safari.location || ''} ${safari.county || ''}`.toLowerCase().includes(filters.destination.toLowerCase());
     const matchesType = !filters.tripType || safari.trip_type === filters.tripType;
-    const matchesDuration = !filters.duration || safari.duration === filters.duration;
+    const matchesDuration = !filters.duration || normalizeDuration(safari.duration) === normalizeDuration(filters.duration);
     const matchesMode = !filters.tripMode || safari.trip_mode === filters.tripMode || safari.trip_mode === 'either';
     const matchesPrice = (safari.price || 0) <= filters.priceRange;
     return matchesDestinationPackages && matchesDestination && matchesType && matchesDuration && matchesMode && matchesPrice;
   });
   const destinations = [...new Set(safaris.flatMap(safari => [safari.county, safari.location]).filter(Boolean))].sort();
   const tripTypes = [...new Set(safaris.map(safari => safari.trip_type).filter(Boolean))].sort();
-  const durations = [...new Set(safaris.map(safari => safari.duration).filter(Boolean))].sort();
+  const durationLabels = new Map();
+  safaris.forEach(safari => {
+    const key = normalizeDuration(safari.duration);
+    if (key && !durationLabels.has(key)) durationLabels.set(key, key.replace(/\b\w/g, letter => letter.toUpperCase()));
+  });
+  const durations = [...durationLabels.values()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return (
     <div className="safaris-page fade-in">
