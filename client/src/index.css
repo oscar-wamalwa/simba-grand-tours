@@ -1514,3 +1514,17 @@ a { text-decoration: none; color: inherit; }
 .card-body > .trip-status.closed { background: #b3261e; }
 .card.card-closed { opacity: 0.5; filter: grayscale(0.8); cursor: not-allowed; }
 .card.card-closed * { pointer-events: none; }
+
+.custom-trip-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 14px;
+  border: 1.5px dashed var(--deep-bronze);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--deep-bronze);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.custom-trip-button:hover { background: var(--deep-bronze); color: #fff; }
