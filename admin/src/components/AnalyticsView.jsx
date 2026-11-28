@@ -121,7 +121,7 @@ export default function AnalyticsView({ formatPrice }) {
             />
           </label>
           <button type="submit" className="btn-primary" disabled={loading}>
-            <RefreshCw size={17} /> Apply dates
+            <RefreshCw size={17} className={loading ? "refresh-spin" : undefined} /> Apply dates
           </button>
         </form>
         {error && <p className="form-status error" role="alert">{error}</p>}

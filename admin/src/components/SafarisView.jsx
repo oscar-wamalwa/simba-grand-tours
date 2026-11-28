@@ -4,6 +4,8 @@ import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
 import Select from './Select';
+import RefreshButton from './RefreshButton';
+import { notify } from '../toast';
 import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle, normalizeTripType } from '../tripCategories';
 
 const normalizeSafari = (safari) => ({
@@ -178,9 +180,10 @@ export default function SafarisView({ onRefresh }) {
       setForm({ title: '', description: '', location: '', price: '', booking_fee_kes: '', booking_terms: '', duration: '', difficulty: 'Moderate', trip_type: '', trip_mode: 'group_joining', county: '', images: [], videos: [], highlights: [], inclusions: [], exclusions: [], itinerary: [], pickup_points: [], packing_checklist: [], visible: true, is_open: true, isSignature: false });
       fetchSafaris();
       onRefresh && onRefresh();
+      notify(editing ? 'Trip updated successfully.' : 'Trip added successfully.');
     } catch (error) { 
       console.error('Error saving safari:', error); 
-      alert('Error saving safari. Please try again.');
+      notify(error.message || 'Error saving safari. Please try again.', 'error');
     }
   };
 
@@ -190,6 +193,7 @@ export default function SafarisView({ onRefresh }) {
         await api.safaris.delete(safari.id);
         fetchSafaris();
         onRefresh && onRefresh();
+        notify('Trip deleted.');
       } catch (error) {
         console.error('Error deleting safari:', error);
         alert(error.message || 'Error deleting safari. Please try again.');
@@ -205,6 +209,7 @@ export default function SafarisView({ onRefresh }) {
         ? normalizeSafari(updated)
         : item));
       onRefresh?.();
+      notify(updated.visible ? 'Trip is now visible on the website.' : 'Trip is now hidden from the website.');
     } catch (error) {
       console.error('Error updating visibility:', error);
       setActionError('Could not update safari visibility. Please try again.');
@@ -217,6 +222,7 @@ export default function SafarisView({ onRefresh }) {
       const updated = await api.safaris.partialUpdate(safari.id, { is_open: safari.is_open === false });
       setSafaris(current => current.map(item => item.id === safari.id ? normalizeSafari(updated) : item));
       onRefresh?.();
+      notify(updated.is_open === false ? 'Trip closed for bookings.' : 'Trip opened for bookings.');
     } catch (error) {
       console.error('Error updating open status:', error);
       setActionError('Could not update the open/closed status. Please try again.');
@@ -305,6 +311,7 @@ export default function SafarisView({ onRefresh }) {
         <h3>Safari Packages Management</h3>
         <div className="data-actions">
           <div className="search-box"><Search size={18} /><input type="text" placeholder="Search safaris..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+          <RefreshButton onClick={fetchSafaris} />
           <button className="btn-secondary" onClick={downloadCSV} style={{ padding: '10px 16px' }}>
             <Download size={18} /> Download CSV
           </button>

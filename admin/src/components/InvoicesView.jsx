@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Download, Edit2, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import api from '../api';
 import Select from './Select';
+import RefreshButton from './RefreshButton';
+import { notify } from '../toast';
 
 const emptyItem = () => ({ description: '', quantity: '1', unit_price: '' });
 const today = () => {
@@ -68,6 +70,7 @@ export default function InvoicesView() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  useEffect(() => { if (message) notify(message); }, [message]);
 
   const refresh = async () => {
     setLoading(true);
@@ -174,7 +177,7 @@ export default function InvoicesView() {
         <div className="data-card-header">
           <div><h3>Invoices</h3><p>Saved invoices can be edited and downloaded again. Amounts are entered in the invoice currency.</p></div>
           <div className="data-actions">
-            <button type="button" className="btn-secondary" disabled={loading} onClick={refresh}><RefreshCw size={17} /> Refresh</button>
+            <RefreshButton onClick={refresh} loading={loading} />
             <button type="button" className="btn-primary" disabled={Boolean(form) || settingsLoading} onClick={startNew}><Plus size={17} /> New invoice</button>
           </div>
         </div>

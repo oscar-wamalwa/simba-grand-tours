@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, RefreshCw, Users } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import api from '../api';
 import Select from './Select';
+import RefreshButton from './RefreshButton';
+import { notify } from '../toast';
 
 const initialPromo = {
   code: '',
@@ -41,6 +43,7 @@ export default function CampaignsView({ formatPrice }) {
   const [editingAnnouncementId, setEditingAnnouncementId] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  useEffect(() => { if (message) notify(message); }, [message]);
   const [loading, setLoading] = useState(true);
 
   const refresh = async () => {
@@ -227,7 +230,7 @@ export default function CampaignsView({ formatPrice }) {
       <div className="data-card">
         <div className="data-card-header">
           <h3>Promo codes</h3>
-          <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}><RefreshCw size={17} /> Refresh</button>
+          <RefreshButton onClick={refresh} loading={loading} />
         </div>
         <form className="departure-create-form" onSubmit={createPromo}>
           <label>Code<input required maxLength="40" value={promoForm.code} onChange={event => setPromoForm(prev => ({ ...prev, code: event.target.value.toUpperCase() }))} /></label>

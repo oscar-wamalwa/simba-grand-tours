@@ -651,3 +651,9 @@ button.admin-profile { border: 0; font: inherit; color: inherit; text-align: lef
 .profile-photo-edit img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-majesty); }
 .profile-photo-edit > div { display: flex; gap: 10px; flex-wrap: wrap; }
 .profile-photo-button { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.toast-host { position: fixed; top: 20px; right: 20px; z-index: 3000; display: grid; gap: 10px; max-width: calc(100vw - 40px); }
+.toast { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); border-left: 5px solid #27ae60; font-weight: 500; animation: fadeIn 0.25s ease; }
+.toast-success svg { color: #27ae60; }
+.toast-error { border-left-color: #e74c3c; }
+.toast-error svg { color: #e74c3c; }

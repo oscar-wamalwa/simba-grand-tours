@@ -24,6 +24,7 @@ import {
 import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
 import Select from './components/Select';
 import ProfileModal from './components/ProfileModal';
+import ToastHost from './components/ToastHost';
 import {
   DashboardView,
   SafarisView,
@@ -272,6 +273,7 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         </header>
 
+        <ToastHost />
         {showProfile && profile && (
           <ProfileModal profile={profile} fallbackPhoto={profilePic} onClose={() => setShowProfile(false)} onSaved={setProfile} />
         )}

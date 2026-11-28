@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Download, Edit2, Plus, RefreshCw, TicketCheck, Trash2, X } from 'lucide-react';
+import { CalendarDays, Download, Edit2, Plus, TicketCheck, Trash2, X } from 'lucide-react';
 import api from '../api';
 import Select from './Select';
+import RefreshButton from './RefreshButton';
+import { notify } from '../toast';
 
 const initialDeparture = {
   safari: '',
@@ -40,6 +42,7 @@ export default function BookingsView({ formatPrice }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  useEffect(() => { if (message) notify(message); }, [message]);
   const [departureActionError, setDepartureActionError] = useState(null);
   const [editingDeparture, setEditingDeparture] = useState(null);
   const [departureEditForm, setDepartureEditForm] = useState(null);
@@ -287,7 +290,7 @@ export default function BookingsView({ formatPrice }) {
     setMessage('');
     try {
       await api.bookings.delete(booking.id);
-      window.alert(`Booking ${booking.reference} deleted successfully.`);
+      notify(`Booking ${booking.reference} deleted successfully.`);
       await refresh();
     } catch (requestError) {
       setError(requestError.message || 'Could not delete booking.');
@@ -342,9 +345,7 @@ export default function BookingsView({ formatPrice }) {
             <h3>Trip departures and seat availability</h3>
             <p>Create, edit, archive or delete departures. Archived departures retain their booking records.</p>
           </div>
-          <button type="button" className="btn-secondary" onClick={refresh} disabled={loading}>
-            <RefreshCw size={17} className={loading ? 'refresh-spin' : undefined} /> {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
+          <RefreshButton onClick={refresh} loading={loading} />
         </div>
         {error && <p className="form-status error" role="alert">{error}</p>}
         {message && <p className="form-status success" role="status">{message}</p>}
