@@ -1,13 +1,15 @@
-import { Settings, Clock, Award, Shield, Heart } from 'lucide-react';
+import { Settings, Clock, Award, Shield, Heart, BedDouble, MessageCircle } from 'lucide-react';
 
 const aboutBg = '/images/diani.jpg';
 
 function AboutPage({ onNavigate }) {
   const features = [
-    { icon: <Settings size={28} />, title: "Signature Planning", desc: "Hand-crafted, private itineraries for discerning travelers." },
-    { icon: <Clock size={28} />, title: "24/7 Support", desc: "Our team is a phone call away." },
-    { icon: <Award size={28} />, title: "Elite Guides", desc: "Certified professionals with deep expertise." },
-    { icon: <Shield size={28} />, title: "Safety First", desc: "Modern 4x4 vehicles and comprehensive insurance." }
+    { icon: <Settings size={28} />, title: "Tailored Itineraries", desc: "Hand-crafted trips, private or group, planned around your pace and interests." },
+    { icon: <Clock size={28} />, title: "Dependable Support", desc: "Our team is on hand Monday to Saturday, from planning to the day you return." },
+    { icon: <Award size={28} />, title: "Expert Local Guides", desc: "Knowledgeable, certified guides who know the land and its wildlife." },
+    { icon: <Shield size={28} />, title: "Safe Travel", desc: "Well-maintained 4x4 vehicles, experienced drivers and comprehensive insurance." },
+    { icon: <BedDouble size={28} />, title: "Trusted Accommodation", desc: "Carefully chosen lodges, camps and hotels that are comfortable, clean and welcoming." },
+    { icon: <MessageCircle size={28} />, title: "Easy Booking", desc: "Reserve by phone call, WhatsApp or our contact form, with clear communication throughout." }
   ];
 
   return (
