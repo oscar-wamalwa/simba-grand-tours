@@ -87,6 +87,21 @@ export default function App() {
   const initialHistoryState = useRef({ page, safariId: selectedSafariId, packageIds: [] });
 
   useEffect(() => {
+    const titles = {
+      safaris: 'Our Safaris',
+      destinations: 'Destinations',
+      pulse: 'Simba Pulse',
+      services: 'Services',
+      about: 'About Us',
+      contact: 'Contact Us',
+      privacy: 'Privacy Policy',
+      terms: 'Terms & Conditions',
+    };
+    const name = page === 'details' ? selectedSafari?.title : titles[page];
+    document.title = name ? `${name} | Simba Grand Tours` : 'Simba Grand Tours | Safaris & Tours in Kenya';
+  }, [page, selectedSafari]);
+
+  useEffect(() => {
     window.history.replaceState(
       initialHistoryState.current,
       '',
