@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { MessageCircle, Star, Download, Trash2, X, MapPin, CheckCircle, Edit2 } from 'lucide-react';
+import Select from './Select';
 
 const MAX_FEATURED_TESTIMONIALS = 6;
 
@@ -262,9 +263,9 @@ export default function TestimoniesView() {
                 <div className="form-group"><label>Safari<input value={editForm.safari} onChange={e => setEditForm({ ...editForm, safari: e.target.value })} /></label></div>
                 <div className="form-group">
                   <label>Rating
-                    <select value={editForm.rating} onChange={e => setEditForm({ ...editForm, rating: e.target.value })}>
+                    <Select value={editForm.rating} onChange={e => setEditForm({ ...editForm, rating: e.target.value })}>
                       {[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value} / 5</option>)}
-                    </select>
+                    </Select>
                   </label>
                 </div>
                 <div className="form-group"><label>Review text<textarea rows="6" value={editForm.message} onChange={e => setEditForm({ ...editForm, message: e.target.value })} /></label></div>

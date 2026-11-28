@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Download, Edit2, Plus, RefreshCw, TicketCheck, Trash2, X } from 'lucide-react';
 import api from '../api';
+import Select from './Select';
 
 const initialDeparture = {
   safari: '',
@@ -349,10 +350,10 @@ export default function BookingsView({ formatPrice }) {
         {message && <p className="form-status success" role="status">{message}</p>}
         <form className="departure-create-form" onSubmit={createDeparture}>
           <label>Safari
-            <select required value={departureForm.safari} onChange={event => setDepartureForm(prev => ({ ...prev, safari: event.target.value }))}>
+            <Select required value={departureForm.safari} onChange={event => setDepartureForm(prev => ({ ...prev, safari: event.target.value }))}>
               <option value="">Select a trip</option>
               {safaris.map(safari => <option key={safari.id} value={safari.id}>{safari.title}</option>)}
-            </select>
+            </Select>
           </label>
           <label>Start date
             <input type="date" required value={departureForm.start_date} onChange={event => setDepartureForm(prev => ({ ...prev, start_date: event.target.value }))} />
@@ -418,10 +419,10 @@ export default function BookingsView({ formatPrice }) {
           <h3><TicketCheck size={20} /> Bookings and payment receipts</h3>
           <button type="button" className="btn-primary" onClick={() => openManualBooking(null)}><Plus size={18} /> Add manual booking</button>
           <label className="booking-filter">Filter by departure
-            <select value={selectedDeparture} onChange={event => setSelectedDeparture(event.target.value)}>
+            <Select value={selectedDeparture} onChange={event => setSelectedDeparture(event.target.value)}>
               <option value="">All departures</option>
               {departures.map(departure => <option key={departure.id} value={departure.id}>{departure.safari_title} · {departure.start_date}</option>)}
-            </select>
+            </Select>
           </label>
         </div>
         <div className="data-table-wrapper">
@@ -471,10 +472,10 @@ export default function BookingsView({ formatPrice }) {
                 <p>Record a payment you have checked separately. No payment or refund is processed here. Confirmed bookings reserve seats. Only the booking contact is added to the passenger manifest.</p>
                 <div className="form-group">
                   <label htmlFor="manual-departure">Trip and date</label>
-                  <select id="manual-departure" required value={manualForm.departure} onChange={event => setManualForm(prev => ({ ...prev, departure: event.target.value }))}>
+                  <Select id="manual-departure" required value={manualForm.departure} onChange={event => setManualForm(prev => ({ ...prev, departure: event.target.value }))}>
                     <option value="">Select a departure</option>
                     {departures.filter(item => !item.is_archived || item.id === manualBooking?.departure).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}
-                  </select>
+                  </Select>
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label htmlFor="manual-name">Traveler name</label><input id="manual-name" required maxLength="255" value={manualForm.full_name} onChange={event => setManualForm(prev => ({ ...prev, full_name: event.target.value }))} /></div>
@@ -485,7 +486,7 @@ export default function BookingsView({ formatPrice }) {
                   <div className="form-group"><label htmlFor="manual-total">Full amount (KES)</label><input id="manual-total" type="number" min="1" max="2147483647" step="1" required value={manualForm.full_amount_kes} onChange={event => setManualForm(prev => ({ ...prev, full_amount_kes: event.target.value }))} /></div>
                   <div className="form-group"><label htmlFor="manual-paid">Amount received (KES)</label><input id="manual-paid" type="number" min="1" max="2147483647" step="1" required value={manualForm.amount_kes} onChange={event => setManualForm(prev => ({ ...prev, amount_kes: event.target.value }))} /></div>
                   <div className="form-group"><label htmlFor="manual-receipt">M-Pesa reference code</label><input id="manual-receipt" required maxLength="30" value={manualForm.mpesa_receipt} onChange={event => setManualForm(prev => ({ ...prev, mpesa_receipt: event.target.value }))} /></div>
-                  <div className="form-group"><label htmlFor="manual-status">Status</label><select id="manual-status" value={manualForm.status} onChange={event => setManualForm(prev => ({ ...prev, status: event.target.value }))}><option value="confirmed">Confirmed</option><option value="refund_required">Refund required</option><option value="cancelled">Cancelled</option></select></div>
+                  <div className="form-group"><label htmlFor="manual-status">Status</label><Select id="manual-status" value={manualForm.status} onChange={event => setManualForm(prev => ({ ...prev, status: event.target.value }))}><option value="confirmed">Confirmed</option><option value="refund_required">Refund required</option><option value="cancelled">Cancelled</option></Select></div>
                 </div>
                 <p>Balance due: {manualForm.full_amount_kes && manualForm.amount_kes && Number(manualForm.amount_kes) <= Number(manualForm.full_amount_kes) ? formatPrice(Number(manualForm.full_amount_kes) - Number(manualForm.amount_kes)) : 'Enter valid amounts'}</p>
                 <p>The booking reference is generated automatically.</p>
@@ -534,7 +535,7 @@ export default function BookingsView({ formatPrice }) {
               <div className="modal-body">
                 {editError && <p className="form-status error" role="alert">{editError}</p>}
                 <p>Recorded prices and payments do not change. Arrange any adjustment separately and notify travelers of changes yourself.</p>
-                <div className="form-group"><label htmlFor="edit-booking-departure">Departure</label><select id="edit-booking-departure" disabled={bookingTripLocked} value={bookingEditForm.departure} onChange={event => setBookingEditForm(prev => ({ ...prev, departure: event.target.value }))}><option value={editingBooking.departure}>{editingBooking.safari_title} · {editingBooking.departure_date}</option>{departures.filter(item => item.id !== editingBooking.departure && item.is_open && !item.is_archived).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}</select></div>
+                <div className="form-group"><label htmlFor="edit-booking-departure">Departure</label><Select id="edit-booking-departure" disabled={bookingTripLocked} value={bookingEditForm.departure} onChange={event => setBookingEditForm(prev => ({ ...prev, departure: event.target.value }))}><option value={editingBooking.departure}>{editingBooking.safari_title} · {editingBooking.departure_date}</option>{departures.filter(item => item.id !== editingBooking.departure && item.is_open && !item.is_archived).map(item => <option key={item.id} value={item.id}>{item.safari_title} · {item.start_date} ({item.seats_available} available)</option>)}</Select></div>
                 <div className="form-row">
                   <div className="form-group"><label htmlFor="edit-booking-name">Booking contact name</label><input id="edit-booking-name" required maxLength="255" value={bookingEditForm.full_name} onChange={event => setBookingEditForm(prev => ({ ...prev, full_name: event.target.value }))} /></div>
                   <div className="form-group"><label htmlFor="edit-booking-email">Email</label><input id="edit-booking-email" type="email" required value={bookingEditForm.email} onChange={event => setBookingEditForm(prev => ({ ...prev, email: event.target.value }))} /></div>

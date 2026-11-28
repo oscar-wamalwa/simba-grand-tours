@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Edit2, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import api from '../api';
+import Select from './Select';
 
 const emptyItem = () => ({ description: '', quantity: '1', unit_price: '' });
 const today = () => {
@@ -212,7 +213,7 @@ export default function InvoicesView() {
             <div className="form-row">
               <InvoiceField form={form} setForm={setForm} name="issue_date" label="Invoice date" type="date" required />
               <InvoiceField form={form} setForm={setForm} name="due_date" label="Due date (optional)" type="date" min={form.issue_date} />
-              <div className="form-group"><label htmlFor="invoice-currency">Invoice currency</label><select id="invoice-currency" value={form.currency} onChange={event => setForm(prev => ({ ...prev, currency: event.target.value }))}><option value="KES">KES</option><option value="USD">USD</option></select></div>
+              <div className="form-group"><label htmlFor="invoice-currency">Invoice currency</label><Select id="invoice-currency" value={form.currency} onChange={event => setForm(prev => ({ ...prev, currency: event.target.value }))}><option value="KES">KES</option><option value="USD">USD</option></Select></div>
             </div>
             <h4>From (your business)</h4>
             <div className="form-row">

@@ -3,6 +3,7 @@ import api from '../api';
 import LineListField from './LineListField';
 import { prepareImage } from '../imageUpload';
 import { Search, Plus, Edit2, Trash2, Eye, EyeOff, Download, Star, Upload, X } from 'lucide-react';
+import Select from './Select';
 
 const normalizeSafari = (safari) => ({
   ...safari,
@@ -319,14 +320,14 @@ export default function SafarisView({ onRefresh }) {
                 <div className="form-row">
                   <div className="form-group"><label>Duration</label><input type="text" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="e.g., 7 Days" /></div>
                   <div className="form-group"><label>Trip style</label>
-                    <select value={form.trip_mode} onChange={e => setForm({ ...form, trip_mode: e.target.value })}>
+                    <Select value={form.trip_mode} onChange={e => setForm({ ...form, trip_mode: e.target.value })}>
                       <option value="either">Group or private</option><option value="group">Group</option><option value="private">Private</option>
-                    </select>
+                    </Select>
                   </div>
                   <div className="form-group"><label>Difficulty</label>
-                    <select value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })}>
+                    <Select value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })}>
                       <option value="Easy">Easy</option><option value="Moderate">Moderate</option><option value="Challenging">Challenging</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 <div className="form-group">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw, Users } from 'lucide-react';
 import api from '../api';
+import Select from './Select';
 
 const initialPromo = {
   code: '',
@@ -231,9 +232,9 @@ export default function CampaignsView({ formatPrice }) {
         <form className="departure-create-form" onSubmit={createPromo}>
           <label>Code<input required maxLength="40" value={promoForm.code} onChange={event => setPromoForm(prev => ({ ...prev, code: event.target.value.toUpperCase() }))} /></label>
           <label>Discount type
-            <select value={promoForm.discount_type} onChange={event => setPromoForm(prev => ({ ...prev, discount_type: event.target.value }))}>
+            <Select value={promoForm.discount_type} onChange={event => setPromoForm(prev => ({ ...prev, discount_type: event.target.value }))}>
               <option value="percent">Percent</option><option value="fixed_kes">Fixed KES</option>
-            </select>
+            </Select>
           </label>
           <label>{promoForm.discount_type === 'percent' ? 'Percent off' : 'KES off'}
             <input type="number" min="1" step={promoForm.discount_type === 'percent' ? '0.01' : '1'} max={promoForm.discount_type === 'percent' ? '100' : undefined} required value={promoForm.value} onChange={event => setPromoForm(prev => ({ ...prev, value: event.target.value }))} />

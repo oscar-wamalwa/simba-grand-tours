@@ -22,6 +22,7 @@ import {
   Megaphone
 } from 'lucide-react';
 import { fetchUsdKesRate, formatCurrencyPair, readCachedUsdKesRate } from './currency';
+import Select from './components/Select';
 import {
   DashboardView,
   SafarisView,
@@ -216,7 +217,8 @@ export default function AdminDashboard({ onLogout }) {
           <div className="header-right">
             <label className="admin-currency-control">
               <span>Display currency</span>
-              <select
+              <Select
+                compact
                 aria-label="Admin display currency"
                 title={exchangeRate?.rate
                   ? `USD values are rounded to whole dollars. 1 USD = KES ${exchangeRate.rate.toFixed(2)}.`
@@ -228,7 +230,7 @@ export default function AdminDashboard({ onLogout }) {
                 <option value="USD" disabled={!exchangeRate?.rate}>
                   {exchangeRateError && exchangeRate?.rate ? 'USD (saved rate)' : !exchangeRate?.rate ? 'USD unavailable' : 'USD'}
                 </option>
-              </select>
+              </Select>
             </label>
             <div className="admin-profile">
               <img src={profilePic} alt="Administrator" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />

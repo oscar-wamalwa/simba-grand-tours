@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Search, Mail, Clock, Trash2, Download, Send, Smartphone, Edit2, X } from 'lucide-react';
+import Select from './Select';
 
 export default function SubscribersView() {
   const [subscribers, setSubscribers] = useState([]);
@@ -145,11 +146,11 @@ export default function SubscribersView() {
         <h4><Send size={18} /> Share an update with subscribers</h4>
         <p>SMS is sent only to people who explicitly opted in. Longer SMS messages may cost more than one SMS per recipient.</p>
         <label>Send by
-          <select value={channel} onChange={event => setChannel(event.target.value)} disabled={sending}>
+          <Select value={channel} onChange={event => setChannel(event.target.value)} disabled={sending}>
             <option value="email">Email</option>
             <option value="sms">SMS</option>
             <option value="both">Email and SMS</option>
-          </select>
+          </Select>
         </label>
         {(channel === 'email' || channel === 'both') && (
           <label>Email subject

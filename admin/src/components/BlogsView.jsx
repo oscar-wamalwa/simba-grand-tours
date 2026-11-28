@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../api';
 import { Search, Plus, Edit2, Trash2, Eye, Download, FileText, Calendar, Upload, X, BookOpen, CheckCircle } from 'lucide-react';
+import Select from './Select';
 
 const MAX_BLOG_IMAGE_DATA_LENGTH = 2_000_000;
 
@@ -311,12 +312,12 @@ export default function BlogsView({ onRefresh }) {
           </div>
           <label className="blog-comment-filter">
             Show
-            <select value={commentFilter} onChange={event => setCommentFilter(event.target.value)}>
+            <Select value={commentFilter} onChange={event => setCommentFilter(event.target.value)}>
               <option value="all">All comments ({comments.length})</option>
               <option value="pending_review">Pending ({commentCounts.pending_review || 0})</option>
               <option value="approved">Published ({commentCounts.approved || 0})</option>
               <option value="rejected">Hidden ({commentCounts.rejected || 0})</option>
-            </select>
+            </Select>
           </label>
         </div>
         {commentError && <p className="contact-reply-feedback error" role="alert">{commentError}</p>}
@@ -607,14 +608,14 @@ function BlogEditorModal({ blog, categories, onClose, onSave }) {
             <div className="form-row">
               <div className="form-group">
                 <label>Category</label>
-                <select 
+                <Select 
                   value={form.category} 
                   onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}
                 >
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="form-group">
                 <label>Author</label>

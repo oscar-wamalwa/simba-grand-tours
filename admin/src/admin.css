@@ -446,7 +446,8 @@
   }
 
   .admin-currency-control span { display: none; }
-  .admin-currency-control select { min-width: 58px; padding: 7px 4px; font-size: 0.78rem; }
+  .admin-currency-control .styled-select { min-width: 0; }
+  .admin-currency-control .styled-select-trigger { padding: 6px 8px; font-size: 0.78rem; }
 
   .admin-profile {
     padding: 0;
@@ -610,3 +611,27 @@
   .campaign-row { align-items: flex-start; flex-direction: column; }
   .campaign-actions { flex-wrap: wrap; }
 }
+
+/* Styled single-choice dropdowns (components/Select.jsx) */
+.styled-select { position: relative; width: 100%; min-width: 0; }
+.styled-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 16px; border: 1px solid var(--gray-medium); border-radius: 8px; background: var(--white); color: var(--savanna-black); font: inherit; font-size: 0.95rem; text-align: left; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.styled-select-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.styled-select-trigger > span.placeholder { color: var(--gray-dark); }
+.styled-select-trigger svg { flex-shrink: 0; color: var(--deep-bronze); transition: transform 0.2s ease; }
+.styled-select-trigger:hover:not(:disabled), .styled-select.open .styled-select-trigger { border-color: var(--gold-majesty); }
+.styled-select.open .styled-select-trigger { box-shadow: 0 0 0 3px rgba(225, 173, 61, 0.22); }
+.styled-select.open .styled-select-trigger svg { transform: rotate(180deg); }
+.styled-select-trigger:focus-visible { outline: 3px solid var(--deep-bronze); outline-offset: 2px; }
+.styled-select-trigger:disabled { background: var(--gray-light); color: var(--gray-dark); cursor: not-allowed; }
+.styled-select-proxy { position: absolute; left: 0; bottom: 0; width: 100%; height: 1px; opacity: 0; pointer-events: none; padding: 0; border: 0; }
+.styled-select-menu { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; max-height: 240px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: var(--white); border: 1px solid var(--gray-medium); border-radius: 10px; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16); }
+.styled-select-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--savanna-black); font: inherit; font-size: 0.92rem; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.styled-select-menu button:hover:not(:disabled), .styled-select-menu button:focus-visible { background: var(--gray-light); outline: none; }
+.styled-select-menu button.active { background: linear-gradient(135deg, var(--gold-majesty), var(--deep-bronze)); color: #fff; font-weight: 600; }
+.styled-select-menu button:disabled { opacity: 0.45; cursor: not-allowed; }
+.styled-select.compact { width: auto; min-width: 84px; }
+.styled-select.compact .styled-select-trigger { padding: 8px 10px; font-size: 0.85rem; border-radius: 999px; }
+.styled-select.compact .styled-select-menu { left: auto; right: 0; min-width: 150px; }
+.blog-comment-filter .styled-select { width: auto; min-width: 180px; max-width: 220px; }
+.blog-comment-filter .styled-select-trigger { padding: 8px 12px; }
+.departure-create-form .styled-select-trigger, .booking-filter .styled-select-trigger, .subscriber-campaign-form .styled-select-trigger { padding: 10px 12px; border-radius: 7px; }
