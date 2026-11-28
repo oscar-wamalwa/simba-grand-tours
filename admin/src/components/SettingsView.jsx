@@ -19,7 +19,9 @@ export default function SettingsView() {
     instagram: '',
     facebook: '',
     tiktok: '',
-    whatsapp: ''
+    whatsapp: '',
+    mpesaTillNumber: '',
+    mpesaTillName: ''
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -47,7 +49,9 @@ export default function SettingsView() {
           instagram: data.instagram || '',
           facebook: data.facebook || '',
           tiktok: data.tiktok || '',
-          whatsapp: data.whatsapp || ''
+          whatsapp: data.whatsapp || '',
+          mpesaTillNumber: data.mpesa_till_number || '',
+          mpesaTillName: data.mpesa_till_name || ''
         });
         setLegalSettings({
           privacyPolicy: data.privacy_policy || '',
@@ -74,7 +78,9 @@ export default function SettingsView() {
         instagram: settings.instagram,
         facebook: settings.facebook,
         tiktok: settings.tiktok,
-        whatsapp: settings.whatsapp
+        whatsapp: settings.whatsapp,
+        mpesa_till_number: settings.mpesaTillNumber,
+        mpesa_till_name: settings.mpesaTillName
       };
       
       await api.settings.update(settingsData);
@@ -234,6 +240,19 @@ export default function SettingsView() {
               Include country code without the + symbol (e.g., 254707984287)
             </p>
           </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>M-Pesa Till Number</label>
+              <input type="text" value={settings.mpesaTillNumber} onChange={e => handleChange('mpesaTillNumber', e.target.value)} placeholder="e.g. 123456" />
+            </div>
+            <div className="form-group">
+              <label>Till Name</label>
+              <input type="text" value={settings.mpesaTillName} onChange={e => handleChange('mpesaTillName', e.target.value)} placeholder="Simba Grand Tours" />
+            </div>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--gray-dark)', marginTop: '-5px' }}>
+            Shown to clients after they reveal a promo code.
+          </p>
         </div>
         <div className="settings-actions">
           <button 

@@ -3,6 +3,7 @@ import { Plus, Users } from 'lucide-react';
 import api from '../api';
 import Select from './Select';
 import RefreshButton from './RefreshButton';
+import PromoPoolPanel from './PromoPoolPanel';
 import { notify } from '../toast';
 
 const initialPromo = {
@@ -265,6 +266,8 @@ export default function CampaignsView({ formatPrice }) {
           {!loading && promos.length === 0 && <p>No promo codes created yet.</p>}
         </div>
       </div>
+
+      <PromoPoolPanel />
 
       <div className="data-card">
         <div className="data-card-header"><h3>Seasonal announcements</h3></div>

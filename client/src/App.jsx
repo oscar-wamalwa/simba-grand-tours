@@ -197,7 +197,9 @@ export default function App() {
               tiktok: settingsData.tiktok || prev.tiktok,
               privacyPolicy: settingsData.privacy_policy || prev.privacyPolicy,
               termsConditions: settingsData.terms_conditions || prev.termsConditions,
-              whatsapp: settingsData.whatsapp || prev.whatsapp
+              whatsapp: settingsData.whatsapp || prev.whatsapp,
+              mpesaTillNumber: settingsData.mpesa_till_number || '',
+              mpesaTillName: settingsData.mpesa_till_name || ''
             }));
           })
           .catch(err => console.error('Error fetching website settings:', err.message)),

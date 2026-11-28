@@ -1528,3 +1528,11 @@ a { text-decoration: none; color: inherit; }
   transition: background 0.2s ease, color 0.2s ease;
 }
 .custom-trip-button:hover { background: var(--deep-bronze); color: #fff; }
+
+.promo-reveal { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 16px 0; padding: 16px 18px; border: 1px dashed var(--gold-majesty); border-radius: 12px; background: #fffaf0; }
+.promo-reveal h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.05rem; }
+.promo-reveal p { margin: 0; }
+.promo-reveal-result { display: grid; gap: 8px; width: 100%; }
+.promo-reveal-result .btn-large { justify-self: start; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.promo-price strong { font-size: 1.3rem; color: var(--deep-bronze); }
+.promo-price s { color: var(--text-light); }

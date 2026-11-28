@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, MessageCircle, Phone } from 'lucide-react';
 import api from '../api';
 import FilterDropdown from './FilterDropdown';
+import PromoReveal from './PromoReveal';
 
 import { TRIP_TYPES, TRIP_STYLES, DURATION_CATEGORIES, durationCategory, normalizeTripStyle, normalizeTripType } from '../tripCategories';
 
@@ -331,6 +332,7 @@ function SafarisPage({
                 </span>}
                 <span className="duration">{selectedSafari.duration || '7 Days'}</span>
               </div>
+              <PromoReveal safari={selectedSafari} settings={settings} formatPrice={formatPrice} />
               <p>{selectedSafari.description || 'A carefully designed safari experience with exceptional wildlife encounters and comfortable, memorable stays.'}</p>
               {highlights.length > 0 && (
                 <>

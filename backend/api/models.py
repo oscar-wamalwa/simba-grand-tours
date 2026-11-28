@@ -208,6 +208,23 @@ class PromoCode(models.Model):
         return self.code
 
 
+class PromoPoolCode(models.Model):
+    """One-off 'Get Code' promo handed to the next visitor who asks for it."""
+    code = models.CharField(max_length=40, unique=True)
+    discount_kes = models.PositiveIntegerField()
+    is_active = models.BooleanField(default=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    claimed_trip = models.CharField(max_length=255, blank=True)
+    claimed_price_kes = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', 'id']
+
+    def __str__(self):
+        return self.code
+
+
 class Booking(models.Model):
     class Status(models.TextChoices):
         PENDING_PAYMENT = 'pending_payment', 'Pending payment'
@@ -423,6 +440,8 @@ class Settings(models.Model):
     twitter = models.URLField(blank=True, null=True)
     tiktok = models.URLField(default='https://www.tiktok.com/@simba.grand.tours')
     whatsapp = models.CharField(max_length=50, blank=True, null=True)
+    mpesa_till_number = models.CharField(max_length=30, blank=True, default='')
+    mpesa_till_name = models.CharField(max_length=120, blank=True, default='')
     privacy_policy = models.TextField(default=DEFAULT_PRIVACY_POLICY, blank=True)
     terms_conditions = models.TextField(default=DEFAULT_TERMS_CONDITIONS, blank=True)
     featured_testimonials = models.JSONField(default=list, blank=True)

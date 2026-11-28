@@ -28,6 +28,7 @@ from .models import (
     ContactMessage,
     Destination,
     Passenger,
+    PromoPoolCode,
     PromoCode,
     Safari,
     Settings,
@@ -559,6 +560,7 @@ class SettingsSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'site_name', 'site_email', 'site_phone', 'address',
             'website', 'instagram', 'facebook', 'twitter', 'tiktok', 'whatsapp',
+            'mpesa_till_number', 'mpesa_till_name',
             'privacy_policy', 'terms_conditions',
             'featured_testimonials', 'updated_at'
         ]
@@ -633,3 +635,13 @@ class TestimonialSerializer(serializers.ModelSerializer):
         return data
 
 
+
+
+class PromoPoolCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PromoPoolCode
+        fields = [
+            'id', 'code', 'discount_kes', 'is_active', 'claimed_at',
+            'claimed_trip', 'claimed_price_kes', 'created_at',
+        ]
+        read_only_fields = ['id', 'code', 'discount_kes', 'claimed_at', 'claimed_trip', 'claimed_price_kes', 'created_at']

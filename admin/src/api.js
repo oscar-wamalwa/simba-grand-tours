@@ -142,6 +142,17 @@ export const invoicesApi = {
   delete: (id) => apiRequest(`/invoices/${id}/`, { method: 'DELETE' }),
 };
 
+export const promoPoolApi = {
+  getAll: async () => {
+    const response = await apiRequest('/promo-pool/');
+    return response.results || response;
+  },
+  generate: (items) => apiRequest('/promo-pool/generate/', { method: 'POST', body: { items } }),
+  update: (id, data) => apiRequest(`/promo-pool/${id}/`, { method: 'PATCH', body: data }),
+  delete: (id) => apiRequest(`/promo-pool/${id}/`, { method: 'DELETE' }),
+  clearUsed: () => apiRequest('/promo-pool/clear-used/', { method: 'POST' }),
+};
+
 export const promoCodesApi = {
   getAll: async () => {
     const response = await apiRequest('/promocodes/');
@@ -267,6 +278,7 @@ export default {
   bookings: bookingsApi,
   invoices: invoicesApi,
   promoCodes: promoCodesApi,
+  promoPool: promoPoolApi,
   announcements: announcementsApi,
   waitlist: waitlistApi,
   blogs: blogsApi,

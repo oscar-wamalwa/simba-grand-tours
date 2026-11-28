@@ -94,6 +94,11 @@ export const bookingsApi = {
   getStatus: (reference) => apiRequest(`/bookings/${encodeURIComponent(reference)}/status/`),
 };
 
+export const promoPoolApi = {
+  getStatus: () => apiRequest('/promo-pool-public/status/'),
+  claim: (safari) => apiRequest('/promo-pool-public/claim/', { method: 'POST', body: { safari } }),
+};
+
 export const waitlistApi = {
   create: (data) => apiRequest('/waitlist/', { method: 'POST', body: data }),
 };
@@ -161,6 +166,7 @@ export default {
   departures: departuresApi,
   bookings: bookingsApi,
   waitlist: waitlistApi,
+  promoPool: promoPoolApi,
   announcements: announcementsApi,
   blogs: blogsApi,
   blogComments: blogCommentsApi,
