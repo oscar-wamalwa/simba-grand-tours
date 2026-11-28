@@ -392,11 +392,19 @@ a { text-decoration: none; color: inherit; }
 .filter-group { margin-bottom: 25px; }
 .filter-label { display: block; font-weight: 600; font-size: 0.9rem; color: var(--savanna-black); margin-bottom: 12px; }
 
-.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { max-width: 100%; padding: 8px 15px; border: 1.5px solid var(--gray-medium); border-radius: 999px; background: var(--white); color: var(--savanna-black); font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.2; cursor: pointer; overflow-wrap: anywhere; text-align: left; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
-.chip:hover { border-color: var(--gold-majesty); transform: translateY(-1px); }
-.chip.active { background: linear-gradient(135deg, var(--gold-majesty), var(--deep-bronze)); border-color: transparent; color: #fff; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18); }
-.chip:focus-visible { outline: 3px solid var(--deep-bronze); outline-offset: 2px; }
+.filter-dropdown { position: relative; }
+.filter-dropdown-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-medium); border-radius: 12px; background: var(--white); color: var(--savanna-black); font: inherit; font-size: 0.92rem; font-weight: 600; text-align: left; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.filter-dropdown-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-dropdown-trigger > span.selected { color: var(--deep-bronze); }
+.filter-dropdown-trigger svg { flex-shrink: 0; color: var(--deep-bronze); transition: transform 0.2s ease; }
+.filter-dropdown-trigger:hover, .filter-dropdown.open .filter-dropdown-trigger { border-color: var(--gold-majesty); }
+.filter-dropdown.open .filter-dropdown-trigger { box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+.filter-dropdown.open .filter-dropdown-trigger svg { transform: rotate(180deg); }
+.filter-dropdown-trigger:focus-visible { outline: 3px solid var(--deep-bronze); outline-offset: 2px; }
+.filter-dropdown-menu { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; max-height: 240px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; background: var(--white); border: 1px solid var(--gray-medium); border-radius: 12px; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16); }
+.filter-dropdown-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--savanna-black); font: inherit; font-size: 0.9rem; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.filter-dropdown-menu button:hover, .filter-dropdown-menu button:focus-visible { background: var(--gray-light); outline: none; }
+.filter-dropdown-menu button.active { background: linear-gradient(135deg, var(--gold-majesty), var(--deep-bronze)); color: #fff; font-weight: 700; }
 
 .check-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer; }
 .check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold-majesty); cursor: pointer; }

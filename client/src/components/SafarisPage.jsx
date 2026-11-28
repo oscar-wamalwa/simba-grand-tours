@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, MessageCircle, Phone } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, CheckCircle, MapPin, Star, CalendarDays, Users, PackageCheck, Clock, RotateCcw, ChevronDown, Check, MessageCircle, Phone } from 'lucide-react';
 import api from '../api';
 
 const safarisBg = '/images/greatmigration.jpg';
@@ -30,13 +30,45 @@ function ContactBookingOptions({ safari, departure, settings }) {
   );
 }
 
-function ChipGroup({ labelledBy, value, options, allLabel, onChange }) {
+function FilterDropdown({ labelledBy, value, options, allLabel, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const choices = [{ value: '', label: allLabel }, ...options];
+  const current = choices.find(choice => choice.value === value) || choices[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = event => {
+      if (event.type === 'keydown' ? event.key === 'Escape' : !wrapRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+
   return (
-    <div className="chip-group" role="group" aria-labelledby={labelledBy}>
-      <button type="button" className={`chip${value === '' ? ' active' : ''}`} aria-pressed={value === ''} onClick={() => onChange('')}>{allLabel}</button>
-      {options.map(option => (
-        <button type="button" key={option.value} className={`chip${value === option.value ? ' active' : ''}`} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>
-      ))}
+    <div className={`filter-dropdown${open ? ' open' : ''}`} ref={wrapRef}>
+      <button type="button" className="filter-dropdown-trigger" aria-haspopup="listbox" aria-expanded={open} aria-labelledby={labelledBy} onClick={() => setOpen(prev => !prev)}>
+        <span className={value ? 'selected' : ''}>{current.label}</span>
+        <ChevronDown size={18} aria-hidden="true" />
+      </button>
+      {open && (
+        <ul className="filter-dropdown-menu" role="listbox" aria-labelledby={labelledBy}>
+          {choices.map(choice => (
+            <li key={choice.value || 'all'} role="option" aria-selected={choice.value === value}>
+              <button type="button" className={choice.value === value ? 'active' : ''} onClick={() => { onChange(choice.value); setOpen(false); }}>
+                {choice.label}
+                {choice.value === value && <Check size={16} aria-hidden="true" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -635,19 +667,19 @@ function SafarisPage({
           <h3>Filter Tours</h3>
           <div className="filter-group">
             <span className="filter-label" id="filter-destination">Destinations</span>
-            <ChipGroup labelledBy="filter-destination" value={filters.destination} allLabel="All" options={destinations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, destination: value }))} />
+            <FilterDropdown labelledBy="filter-destination" value={filters.destination} allLabel="All" options={destinations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, destination: value }))} />
           </div>
           <div className="filter-group">
             <span className="filter-label" id="filter-trip-type">Trip type</span>
-            <ChipGroup labelledBy="filter-trip-type" value={filters.tripType} allLabel="All" options={tripTypes.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, tripType: value }))} />
+            <FilterDropdown labelledBy="filter-trip-type" value={filters.tripType} allLabel="All" options={tripTypes.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, tripType: value }))} />
           </div>
           <div className="filter-group">
             <span className="filter-label" id="filter-duration">Duration</span>
-            <ChipGroup labelledBy="filter-duration" value={filters.duration} allLabel="Any" options={durations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, duration: value }))} />
+            <FilterDropdown labelledBy="filter-duration" value={filters.duration} allLabel="Any" options={durations.map(item => ({ value: item, label: item }))} onChange={value => setFilters(prev => ({ ...prev, duration: value }))} />
           </div>
           <div className="filter-group">
             <span className="filter-label" id="filter-trip-mode">Group or private</span>
-            <ChipGroup labelledBy="filter-trip-mode" value={filters.tripMode} allLabel="Any" options={[{ value: 'group', label: 'Group' }, { value: 'private', label: 'Private' }]} onChange={value => setFilters(prev => ({ ...prev, tripMode: value }))} />
+            <FilterDropdown labelledBy="filter-trip-mode" value={filters.tripMode} allLabel="Any" options={[{ value: 'group', label: 'Group' }, { value: 'private', label: 'Private' }]} onChange={value => setFilters(prev => ({ ...prev, tripMode: value }))} />
           </div>
           <div className="filter-group">
             <label className="filter-label">Maximum price: {formatPrice(filters.priceRange)}</label>
