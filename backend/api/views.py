@@ -82,7 +82,7 @@ class SafariViewSet(viewsets.ModelViewSet):
     public_read = True
 
     def get_queryset(self):
-        queryset = Safari.objects.all()
+        queryset = Safari.objects.prefetch_related('departures')
         if not (self.request.user and self.request.user.is_staff):
             queryset = queryset.filter(visible=True)
         

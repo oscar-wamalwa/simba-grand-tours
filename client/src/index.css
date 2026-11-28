@@ -1488,4 +1488,3 @@ a { text-decoration: none; color: inherit; }
 .card-body > .trip-status.closed { background: #b3261e; }
 .card.card-closed { opacity: 0.5; filter: grayscale(0.8); cursor: not-allowed; }
 .card.card-closed * { pointer-events: none; }
-.card.card-closed .btn-gold-sm { cursor: not-allowed; }

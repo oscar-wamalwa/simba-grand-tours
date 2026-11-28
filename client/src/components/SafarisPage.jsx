@@ -683,9 +683,9 @@ function SafarisPage({
               {filteredSafaris.map(safari => (
                 <div
                   key={safari.id}
-                  className={`card${safari.is_open === false ? ' card-closed' : ''}`}
-                  aria-disabled={safari.is_open === false}
-                  onClick={() => safari.is_open !== false && onSelect('details', safari)}
+                  className={`card${safari.bookings_open === false ? ' card-closed' : ''}`}
+                  aria-disabled={safari.bookings_open === false}
+                  onClick={() => safari.bookings_open !== false && onSelect('details', safari)}
                 >
                   <div className="card-image">
                     <img 
@@ -710,8 +710,8 @@ function SafarisPage({
                     <div className="card-footer">
                       <span className="price">{formatPrice(safari.price)}</span>
                     </div>
-                    <span className={`trip-status ${safari.is_open === false ? 'closed' : 'open'}`}>{safari.is_open === false ? 'Closed' : 'Open'}</span>
-                    <button className="btn-gold-sm" disabled={safari.is_open === false}>View Details</button>
+                    <span className={`trip-status ${safari.bookings_open === false ? 'closed' : 'open'}`}>{safari.bookings_open === false ? 'Closed' : 'Open'}</span>
+                    <button className="btn-gold-sm" disabled={safari.bookings_open === false}>View Details</button>
                   </div>
                 </div>
               ))}

@@ -51,16 +51,26 @@ class URLWithDefaultSchemeField(serializers.URLField):
 
 class SafariSerializer(serializers.ModelSerializer):
     """Serializer for Safari model."""
-    
+
+    bookings_open = serializers.SerializerMethodField()
+
+    def get_bookings_open(self, safari):
+        # Closed once every scheduled departure is closed or past; trips without departures stay open.
+        departures = [item for item in safari.departures.all() if not item.is_archived]
+        if not departures:
+            return True
+        today = timezone.localdate()
+        return any(item.is_open and item.start_date >= today for item in departures)
+
     class Meta:
         model = Safari
         fields = [
             'id', 'title', 'description', 'location', 'price', 'booking_fee_kes',
             'booking_terms', 'duration',
             'difficulty', 'images', 'videos', 'highlights', 'inclusions', 'exclusions',
-            'itinerary', 'visible', 'is_open', 'is_signature', 'trip_type', 'trip_mode',
+            'itinerary', 'visible', 'is_signature', 'trip_type', 'trip_mode',
             'county', 'pickup_points', 'packing_checklist', 'is_featured',
-            'created_at', 'updated_at'
+            'bookings_open', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {

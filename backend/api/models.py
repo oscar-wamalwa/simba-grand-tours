@@ -92,7 +92,6 @@ class Safari(models.Model):
     pickup_points = models.JSONField(default=list, blank=True)
     packing_checklist = models.JSONField(default=list, blank=True)
     visible = models.BooleanField(default=True)
-    is_open = models.BooleanField(default=True)
     is_signature = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

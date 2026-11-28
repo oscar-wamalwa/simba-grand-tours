@@ -77,7 +77,6 @@ class TripDepartureViewSet(viewsets.ModelViewSet):
                 is_open=True,
                 is_archived=False,
                 safari__visible=True,
-                safari__is_open=True,
                 start_date__gte=timezone.localdate(),
             )
         return queryset.order_by('start_date')
@@ -394,7 +393,6 @@ class BookingCreateView(APIView):
                     is_open=True,
                     is_archived=False,
                     safari__visible=True,
-                    safari__is_open=True,
                     start_date__gte=timezone.localdate(),
                 )
             except TripDeparture.DoesNotExist as error:
